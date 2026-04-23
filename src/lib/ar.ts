@@ -11,6 +11,22 @@ import type {
   ArSessionMode,
 } from './constants'
 
+// ---------------------------------------------------------------------------
+// Helper : résout profiles.id depuis la session SSR (RLS profiles_select_own OK).
+// Nécessaire car mukti.profiles.id ≠ auth.users.id (id = gen_random_uuid()).
+// Accepte n'importe quel SupabaseClient (schema mukti ou public).
+// ---------------------------------------------------------------------------
+type MuktiSbClient = Awaited<ReturnType<typeof createServerSupabaseClient>>
+
+export async function resolveProfileId(sb: MuktiSbClient): Promise<string | null> {
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
+  if (!user) return null
+  const { data } = await sb.from('profiles').select('id').eq('auth_user_id', user.id).maybeSingle()
+  return (data as { id: string } | null)?.id ?? null
+}
+
 export interface ArSpecies {
   id: string
   slug: ArSpeciesSlug

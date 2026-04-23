@@ -4,9 +4,10 @@
 // Composant interne : <video> caché + Three.js Canvas plein écran + tracker MediaPipe.
 // Chargé UNIQUEMENT via dynamic import ssr:false (WebGL + MediaPipe = browser only).
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { createTracker, type TrackerHandle } from '@/lib/ar/tracker'
+import { FrameProvider } from '@/lib/ar/frame-context'
 import type { TrackerFrameResult } from '@/lib/ar/types'
 import PoseDebug from './PoseDebug'
 
@@ -21,6 +22,8 @@ export interface ARCanvasInnerProps {
   showDebug?: boolean
   /** Enfants r3f (mesh silhouette, phantom hands, etc.) injectés dans le Canvas. */
   children?: React.ReactNode
+  /** Overlay DOM au-dessus du Canvas (UI calibration, counters, boutons). */
+  overlay?: React.ReactNode | ((frameRef: MutableRefObject<TrackerFrameResult | null>) => React.ReactNode)
   /** Classe CSS extra pour le wrapper. */
   className?: string
 }
@@ -31,6 +34,7 @@ export default function ARCanvasInner({
   onFrame,
   showDebug = false,
   children,
+  overlay,
   className,
 }: ARCanvasInnerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -96,55 +100,62 @@ export default function ARCanvasInner({
     }
   }, [stream, enabled, onFrame])
 
+  const resolvedOverlay = typeof overlay === 'function' ? overlay(latestFrameRef) : overlay
+
   return (
-    <div
-      className={`relative h-full w-full overflow-hidden bg-black ${className ?? ''}`}
-      data-testid="ar-canvas-inner"
-    >
-      {/* Flux vidéo local — on l'affiche en fond plein écran, mirroir (selfie) */}
-      <video
-        ref={videoRef}
-        muted
-        playsInline
-        autoPlay
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full scale-x-[-1] object-cover opacity-[0.55]"
-      />
-
-      {/* Scene 3D r3f — transparente, overlay sur la vidéo, aussi mirroir */}
-      <Canvas
-        className="absolute inset-0 h-full w-full scale-x-[-1]"
-        gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 0, 5], fov: 50 }}
+    <FrameProvider frameRef={latestFrameRef}>
+      <div
+        className={`relative h-full w-full overflow-hidden bg-black ${className ?? ''}`}
+        data-testid="ar-canvas-inner"
       >
-        <ambientLight intensity={0.4} />
-        {children}
-      </Canvas>
-
-      {/* Debug overlay (dev / ?debug=1) */}
-      {showDebug && (
-        <PoseDebug
-          frameRef={latestFrameRef}
-          className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1]"
+        {/* Flux vidéo local — on l'affiche en fond plein écran, mirroir (selfie) */}
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          autoPlay
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full scale-x-[-1] object-cover opacity-[0.55]"
         />
-      )}
 
-      {/* Badge status discret en haut-droite */}
-      <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-white/10 bg-black/60 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-white/60 backdrop-blur">
-        {trackerStatus === 'idle' && 'idle'}
-        {trackerStatus === 'loading' && '◌ chargement IA…'}
-        {trackerStatus === 'running' && <span className="text-[var(--cyan,#06B6D4)]">● tracking</span>}
-        {trackerStatus === 'error' && <span className="text-red-300">! erreur</span>}
-      </div>
-
-      {trackerError && (
-        <div
-          role="alert"
-          className="pointer-events-auto absolute bottom-4 left-1/2 w-[min(90vw,360px)] -translate-x-1/2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200 backdrop-blur"
+        {/* Scene 3D r3f — transparente, overlay sur la vidéo, aussi mirroir */}
+        <Canvas
+          className="absolute inset-0 h-full w-full scale-x-[-1]"
+          gl={{ antialias: true, alpha: true }}
+          camera={{ position: [0, 0, 5], fov: 50 }}
         >
-          {trackerError}
+          <ambientLight intensity={0.4} />
+          {children}
+        </Canvas>
+
+        {/* Debug overlay (dev / ?debug=1) */}
+        {showDebug && (
+          <PoseDebug
+            frameRef={latestFrameRef}
+            className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1]"
+          />
+        )}
+
+        {/* Overlay DOM (UI calibration, counters, boutons) — au-dessus du Canvas, NON mirroir */}
+        {resolvedOverlay}
+
+        {/* Badge status discret en haut-droite */}
+        <div className="pointer-events-none absolute right-3 top-3 rounded-full border border-white/10 bg-black/60 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-white/60 backdrop-blur">
+          {trackerStatus === 'idle' && 'idle'}
+          {trackerStatus === 'loading' && '◌ chargement IA…'}
+          {trackerStatus === 'running' && <span className="text-[var(--cyan,#06B6D4)]">● tracking</span>}
+          {trackerStatus === 'error' && <span className="text-red-300">! erreur</span>}
         </div>
-      )}
-    </div>
+
+        {trackerError && (
+          <div
+            role="alert"
+            className="pointer-events-auto absolute bottom-4 left-1/2 w-[min(90vw,360px)] -translate-x-1/2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200 backdrop-blur"
+          >
+            {trackerError}
+          </div>
+        )}
+      </div>
+    </FrameProvider>
   )
 }
