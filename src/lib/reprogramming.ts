@@ -8,11 +8,13 @@ import { listForSession, type Affirmation } from './affirmations-bank'
 import {
   REPROG_CATEGORIES,
   NATURE_SOUNDS,
-  REPROG_DAY_REMINDER_HOURS,
-  REPROG_NIGHT_VOLUME_RAMP_MIN,
   type ReprogCategory,
   type NatureSound,
 } from './constants'
+
+// Re-export pure-logic helpers pour compatibilité ascendante G5.1 (server-side callers).
+// Les clients (NightPlayer etc.) doivent importer directement depuis './reprogramming-utils'.
+export { computeRampVolume, nextDayReminderHour } from './reprogramming-utils'
 
 export type ReprogMode = 'night' | 'day'
 export type VolumeProfile = 'adaptive' | 'fixed'
@@ -217,26 +219,8 @@ export async function listRecentSessions(opts: { limit?: number } = {}): Promise
   return { sessions: (data as ReprogrammingSession[]) ?? [], error: null }
 }
 
-/**
- * Calcule le prochain créneau notification journée (2h gap, 9h-19h local).
- * Pure-logic — utilisée par CRON notifs (G5.5) ou client-side scheduling.
- */
-export function nextDayReminderHour(nowLocalHour: number): number | null {
-  if (nowLocalHour < 0 || nowLocalHour > 23) return null
-  const slots = REPROG_DAY_REMINDER_HOURS
-  for (const h of slots) {
-    if (h > nowLocalHour) return h
-  }
-  return null // aucun créneau restant aujourd'hui — reprendre demain
-}
-
-/** Courbe volume ramp linéaire descendante sur 30 min (mode nuit). */
-export function computeRampVolume(elapsedSec: number, startVolume = 1.0): number {
-  const rampSec = REPROG_NIGHT_VOLUME_RAMP_MIN * 60
-  if (elapsedSec <= 0) return startVolume
-  if (elapsedSec >= rampSec) return 0
-  return Math.max(0, startVolume * (1 - elapsedSec / rampSec))
-}
+// computeRampVolume + nextDayReminderHour déplacés dans ./reprogramming-utils
+// (re-exported en haut de ce fichier pour compat server-side callers).
 
 // Helper : résout profiles.id via auth_user_id
 async function resolveProfileId(
