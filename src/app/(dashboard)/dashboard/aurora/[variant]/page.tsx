@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AURORA_VARIANTS } from '@/lib/constants'
 import { isValidVariant, getVariantTotalSec } from '@/lib/aurora'
-import AuroraSessionPreview from '@/components/aurora/AuroraSessionPreview'
+import AuroraSessionFull from '@/components/aurora/AuroraSessionFull'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,8 +56,8 @@ export default async function AuroraVariantPage({ params }: PageProps) {
         </div>
       </header>
 
-      {/* Canvas + preview driver demo */}
-      <AuroraSessionPreview variant={variant} />
+      {/* Engine complet 5 phases + audio + haptic + persistence */}
+      <AuroraSessionFull variant={variant} />
 
       {/* Disclaimer permanent (sécurité — brief section 5) */}
       <footer className="absolute bottom-0 left-0 right-0 z-30 pb-6 text-center">

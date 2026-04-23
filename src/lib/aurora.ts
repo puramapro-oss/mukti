@@ -1,6 +1,6 @@
 // MUKTI — AURORA OMEGA helpers (G5)
 // Respiration neural override — 4 variantes × 5 phases + cohérence + niveaux Brume→Polaris.
-// Utilisable server & client (pure logic, aucun window/audio ici).
+// Pure-logic en haut (utilisable server & client). Helpers DB en bas (server only).
 
 import {
   AURORA_VARIANTS,
@@ -12,6 +12,8 @@ import {
   type AuroraLevel,
   type AuroraPowerSwitch,
 } from './constants'
+import { createServerSupabaseClient } from './supabase-server'
+import { createServiceClient } from './supabase'
 
 export interface AuroraSession {
   id: string
@@ -199,4 +201,178 @@ export function getPhaseTimeline(variant: AuroraVariant) {
     cursor += p.duration_sec
     return { phase: p.name, start_sec: start, end_sec: cursor, breath: p.breath, label_fr: p.label_fr, label_en: p.label_en }
   })
+}
+
+// ===========================================================================
+// Server-side DB helpers (utilisés par API routes aurora/session)
+// ===========================================================================
+
+/** Helper : résout profiles.id depuis auth.users.id (pattern G4 ar.ts). */
+export async function resolveProfileIdAurora(
+  sb: Awaited<ReturnType<typeof createServerSupabaseClient>>
+): Promise<string | null> {
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
+  if (!user) return null
+  const { data } = await sb
+    .schema('mukti')
+    .from('profiles')
+    .select('id')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+  return (data as { id: string } | null)?.id ?? null
+}
+
+/**
+ * Crée une aurora_session (row INSERT). Retourne l'id inséré.
+ * Utilise service client (bypass RLS côté serveur, contrôle auth déjà fait par API route).
+ */
+export async function dbCreateSession(input: {
+  user_id: string
+  variant: AuroraVariant
+  voice_guidance: boolean
+  power_switch: AuroraPowerSwitch
+}): Promise<{ id: string | null; error: string | null }> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .schema('mukti')
+    .from('aurora_sessions')
+    .insert({
+      user_id: input.user_id,
+      variant: input.variant,
+      voice_guidance: input.voice_guidance,
+      power_switch: input.power_switch,
+    })
+    .select('id')
+    .single()
+  if (error || !data) {
+    return { id: null, error: 'Impossible de démarrer la session.' }
+  }
+  return { id: (data as { id: string }).id, error: null }
+}
+
+/**
+ * Complète une aurora_session (UPDATE completed_at + phases + coherence + level)
+ * ET met à jour aurora_streaks via nextStreakState().
+ */
+export async function dbCompleteSession(input: {
+  session_id: string
+  user_id: string
+  phases_completed: Array<{
+    phase: string
+    duration_sec: number
+    breaths_counted: number
+    coherence: number | null
+  }>
+  coherence_score: number
+  stopped_reason: 'user_stop' | 'dizzy' | 'glide_out_complete' | 'timeout' | 'error'
+  total_duration_sec: number
+}): Promise<{
+  ok: boolean
+  error: string | null
+  level_reached: AuroraLevel | null
+  streak_days: number
+}> {
+  const sb = createServiceClient()
+
+  // Vérifie ownership + pas déjà complété
+  const { data: existing, error: readError } = await sb
+    .schema('mukti')
+    .from('aurora_sessions')
+    .select('id, user_id, completed_at, variant')
+    .eq('id', input.session_id)
+    .eq('user_id', input.user_id)
+    .maybeSingle()
+  if (readError || !existing) {
+    return { ok: false, error: 'Session introuvable.', level_reached: null, streak_days: 0 }
+  }
+  const existingRow = existing as { completed_at: string | null; variant: AuroraVariant }
+  if (existingRow.completed_at) {
+    return { ok: false, error: 'Session déjà complétée.', level_reached: null, streak_days: 0 }
+  }
+
+  // Lit streak courante (trigger auto-create garantit la présence)
+  const { data: streakRow } = await sb
+    .schema('mukti')
+    .from('aurora_streaks')
+    .select('current_days, best_days, last_session_date, total_minutes, total_sessions, current_level')
+    .eq('user_id', input.user_id)
+    .maybeSingle()
+  const prev = (streakRow as {
+    current_days: number
+    best_days: number
+    last_session_date: string | null
+    total_minutes: number
+    total_sessions: number
+  } | null) ?? {
+    current_days: 0,
+    best_days: 0,
+    last_session_date: null,
+    total_minutes: 0,
+    total_sessions: 0,
+  }
+
+  const next = nextStreakState(
+    {
+      current_days: prev.current_days,
+      best_days: prev.best_days,
+      last_session_date: prev.last_session_date,
+      total_minutes: prev.total_minutes,
+      total_sessions: prev.total_sessions,
+    },
+    new Date().toISOString(),
+    input.total_duration_sec
+  )
+
+  // Update session row
+  const { error: updError } = await sb
+    .schema('mukti')
+    .from('aurora_sessions')
+    .update({
+      completed_at: new Date().toISOString(),
+      duration_sec: Math.max(0, Math.min(1800, Math.round(input.total_duration_sec))),
+      phases_completed: input.phases_completed,
+      coherence_score: Math.max(0, Math.min(1, input.coherence_score)),
+      level_reached: next.current_level,
+      stopped_reason: input.stopped_reason,
+    })
+    .eq('id', input.session_id)
+    .eq('user_id', input.user_id)
+  if (updError) {
+    return { ok: false, error: 'Impossible de compléter la session.', level_reached: null, streak_days: 0 }
+  }
+
+  // Upsert streak
+  const { error: streakError } = await sb
+    .schema('mukti')
+    .from('aurora_streaks')
+    .upsert(
+      {
+        user_id: input.user_id,
+        current_days: next.current_days,
+        best_days: next.best_days,
+        last_session_date: next.last_session_date,
+        total_minutes: next.total_minutes,
+        total_sessions: next.total_sessions,
+        current_level: next.current_level,
+      },
+      { onConflict: 'user_id' }
+    )
+  if (streakError) {
+    // Session OK mais streak KO — renvoie warning non-bloquant
+    return {
+      ok: true,
+      error: null,
+      level_reached: next.current_level,
+      streak_days: next.current_days,
+    }
+  }
+
+  return {
+    ok: true,
+    error: null,
+    level_reached: next.current_level,
+    streak_days: next.current_days,
+  }
 }
