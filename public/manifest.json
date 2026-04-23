@@ -1,0 +1,21 @@
+{
+  "name": "MUKTI",
+  "short_name": "Aide",
+  "description": "Dis-moi ta situation. En 2 minutes, MUKTI trouve tout l'argent que tu laisses sur la table — aides, remboursements, droits oubliés.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#10B981",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "fr",
+  "categories": ["finance", "lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

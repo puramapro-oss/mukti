@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 120
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/contest-weekly",
+      "schedule": "59 23 * * 0"
+    }
+  ]
+}
