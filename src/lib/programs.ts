@@ -238,6 +238,26 @@ const PROGRAM_TOOL_SCHEMA = {
 }
 
 /**
+ * Stream Opus 4.7 (tool-use forcé produce_program) — pour SSE UX premium.
+ * Le consumer doit appeler `await stream.finalMessage()` pour récupérer le résultat complet.
+ */
+export function createOpusProgramStream(addiction: Addiction) {
+  const anthropic = getAnthropic()
+  return anthropic.messages.stream({
+    model: getOpusModel(),
+    max_tokens: 16384,
+    system: buildSystemPrompt(),
+    tools: [PROGRAM_TOOL_SCHEMA],
+    tool_choice: { type: 'tool', name: 'produce_program' },
+    messages: [{ role: 'user', content: buildUserPrompt(addiction) }],
+  })
+}
+
+export function getOpusModelName(): string {
+  return getOpusModel()
+}
+
+/**
  * Génère le programme via Opus + force JSON-mode via tool_use forcé.
  * Retourne la structure parsée + usage tokens.
  */
