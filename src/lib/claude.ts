@@ -125,6 +125,37 @@ export async function* streamMUKTI(
   }
 }
 
+// ---------------------------------------------------------------------------
+// askClaudeJSON — helper générique JSON-mode (G5+)
+// Utilisé par affirmations-bank.ts (suggestions), boite-noire.ts (patterns).
+// ---------------------------------------------------------------------------
+export async function askClaudeJSON<T>(input: {
+  prompt: string
+  model?: string
+  maxTokens?: number
+  system?: string
+}): Promise<T | null> {
+  const anthropic = getAnthropic()
+  const model = input.model || process.env.ANTHROPIC_MODEL_MAIN || 'claude-sonnet-4-6'
+  const resp = await anthropic.messages.create({
+    model,
+    max_tokens: input.maxTokens ?? 2048,
+    system: input.system ?? 'Tu réponds UNIQUEMENT en JSON valide, sans markdown ni prose autour.',
+    messages: [{ role: 'user', content: input.prompt }],
+  })
+  const block = resp.content[0]
+  if (!block || block.type !== 'text') return null
+  const text = block.text.trim()
+  const jsonStart = text.indexOf('{')
+  const jsonEnd = text.lastIndexOf('}')
+  if (jsonStart === -1 || jsonEnd === -1) return null
+  try {
+    return JSON.parse(text.slice(jsonStart, jsonEnd + 1)) as T
+  } catch {
+    return null
+  }
+}
+
 // JSON-mode for structured scan results
 export async function scanFinancialJSON(
   situation: Situation,

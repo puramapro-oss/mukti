@@ -186,13 +186,150 @@ export const CIRCLE_DURATION_PRESETS_SEC = [180, 300, 600, 900] as const // 3, 5
 // Audio mode auto-switch : mesh ≤8, SFU >8
 export const CIRCLE_MESH_MAX_PARTICIPANTS = 8
 
-// 4 variantes AURORA OMEGA (P5)
+// 4 variantes AURORA OMEGA (G5)
+// Les phases sont définies à part dans AURORA_PHASES (structure 5 phases/variante)
 export const AURORA_VARIANTS = [
-  { id: 'aurora-calm', name: 'Calm', duration_min: 7, description: 'Anti-stress profond', color: '#06b6d4' },
-  { id: 'aurora-focus', name: 'Focus', duration_min: 4, description: 'Avant travail créatif', color: '#7c3aed' },
-  { id: 'aurora-sleep', name: 'Sleep', duration_min: 10, description: 'Endormissement guidé', color: '#1e1b4b' },
-  { id: 'aurora-ignite', name: 'Ignite', duration_min: 2, description: 'Énergie immédiate', color: '#F59E0B' },
+  { id: 'calm',   name: 'Calm',   duration_min: 7,  description: 'Anti-stress profond',       color: '#06b6d4', glyph: '🌊' },
+  { id: 'focus',  name: 'Focus',  duration_min: 4,  description: 'Avant travail créatif',     color: '#7c3aed', glyph: '🎯' },
+  { id: 'sleep',  name: 'Sleep',  duration_min: 10, description: 'Endormissement guidé',      color: '#1e1b4b', glyph: '🌙' },
+  { id: 'ignite', name: 'Ignite', duration_min: 2,  description: 'Énergie immédiate',         color: '#F59E0B', glyph: '⚡' },
 ] as const
+export type AuroraVariant = typeof AURORA_VARIANTS[number]['id']
+
+// Phases AURORA OMEGA (brief section 5) — durations en secondes
+// Total : calm=428s≈7min / focus=248s≈4min / sleep=612s≈10min / ignite=128s≈2min
+export type AuroraPhaseName = 'armement' | 'double_sigh' | 'resonance_core' | 'omega_lock' | 'glide_out'
+export interface AuroraPhase {
+  name: AuroraPhaseName
+  duration_sec: number
+  breath: { in: number; top_up?: number; out: number; hold?: number }
+  label_fr: string
+  label_en: string
+}
+export const AURORA_PHASES: Record<AuroraVariant, AuroraPhase[]> = {
+  calm: [
+    { name: 'armement',       duration_sec: 8,   breath: { in: 2, out: 2 },                   label_fr: 'Armement',           label_en: 'Arming' },
+    { name: 'double_sigh',    duration_sec: 40,  breath: { in: 3, top_up: 1, out: 8 },        label_fr: 'Double Sigh Reset',  label_en: 'Double Sigh Reset' },
+    { name: 'resonance_core', duration_sec: 240, breath: { in: 5, out: 7 },                   label_fr: 'Résonance Core',     label_en: 'Resonance Core' },
+    { name: 'omega_lock',     duration_sec: 120, breath: { in: 4, out: 6, hold: 2 },          label_fr: 'Omega Lock',         label_en: 'Omega Lock' },
+    { name: 'glide_out',      duration_sec: 60,  breath: { in: 4, out: 8 },                   label_fr: 'Glide Out',          label_en: 'Glide Out' },
+  ],
+  focus: [
+    { name: 'armement',       duration_sec: 8,   breath: { in: 2, out: 2 },                   label_fr: 'Armement',           label_en: 'Arming' },
+    { name: 'double_sigh',    duration_sec: 30,  breath: { in: 3, top_up: 1, out: 6 },        label_fr: 'Double Sigh Reset',  label_en: 'Double Sigh Reset' },
+    { name: 'resonance_core', duration_sec: 120, breath: { in: 4, out: 6 },                   label_fr: 'Résonance Core',     label_en: 'Resonance Core' },
+    { name: 'omega_lock',     duration_sec: 60,  breath: { in: 4, out: 5, hold: 1 },          label_fr: 'Omega Lock',         label_en: 'Omega Lock' },
+    { name: 'glide_out',      duration_sec: 30,  breath: { in: 3, out: 5 },                   label_fr: 'Glide Out',          label_en: 'Glide Out' },
+  ],
+  sleep: [
+    { name: 'armement',       duration_sec: 8,   breath: { in: 2, out: 2 },                   label_fr: 'Armement',           label_en: 'Arming' },
+    { name: 'double_sigh',    duration_sec: 60,  breath: { in: 3, top_up: 1, out: 9 },        label_fr: 'Double Sigh Reset',  label_en: 'Double Sigh Reset' },
+    { name: 'resonance_core', duration_sec: 360, breath: { in: 4, out: 8 },                   label_fr: 'Résonance Core',     label_en: 'Resonance Core' },
+    { name: 'omega_lock',     duration_sec: 120, breath: { in: 4, out: 7, hold: 1 },          label_fr: 'Omega Lock',         label_en: 'Omega Lock' },
+    { name: 'glide_out',      duration_sec: 60,  breath: { in: 3, out: 9 },                   label_fr: 'Glide Out',          label_en: 'Glide Out' },
+  ],
+  ignite: [
+    { name: 'armement',       duration_sec: 8,   breath: { in: 2, out: 2 },                   label_fr: 'Armement',           label_en: 'Arming' },
+    { name: 'double_sigh',    duration_sec: 20,  breath: { in: 2, top_up: 1, out: 4 },        label_fr: 'Double Sigh Reset',  label_en: 'Double Sigh Reset' },
+    { name: 'resonance_core', duration_sec: 60,  breath: { in: 3, out: 3 },                   label_fr: 'Résonance Core',     label_en: 'Resonance Core' },
+    { name: 'omega_lock',     duration_sec: 20,  breath: { in: 3, out: 3, hold: 1 },          label_fr: 'Omega Lock',         label_en: 'Omega Lock' },
+    { name: 'glide_out',      duration_sec: 20,  breath: { in: 2, out: 4 },                   label_fr: 'Glide Out',          label_en: 'Glide Out' },
+  ],
+}
+
+// Niveaux cohérence AURORA (section 5 du brief) — Brume → Onde → Aura → Polaris
+export const AURORA_LEVELS = [
+  { id: 'brume',   name: 'Brume',   min_days: 0,  min_sessions: 0,  color: '#64748b', glyph: '🌫️',  description_fr: 'Tu poses tes premiers souffles.' },
+  { id: 'onde',    name: 'Onde',    min_days: 7,  min_sessions: 5,  color: '#06b6d4', glyph: '🌊',  description_fr: 'Ton rythme commence à stabiliser.' },
+  { id: 'aura',    name: 'Aura',    min_days: 21, min_sessions: 15, color: '#7c3aed', glyph: '✨',  description_fr: 'Tu ressens la fractale en toi.' },
+  { id: 'polaris', name: 'Polaris', min_days: 60, min_sessions: 40, color: '#f472b6', glyph: '⭐',  description_fr: 'Cohérence stable. Tu es une ancre.' },
+] as const
+export type AuroraLevel = typeof AURORA_LEVELS[number]['id']
+
+// Power Switch — 3 niveaux auto-ajustés (sécurité)
+export const AURORA_POWER_SWITCHES = [
+  { id: 'soft', name: 'Soft',  holds: false, description_fr: 'Pas de pause (débutant·e·s, vertiges)' },
+  { id: 'core', name: 'Core',  holds: true,  description_fr: 'Pause 1-2s (utilisateur·rice régulier·e)' },
+  { id: 'omega',name: 'Omega', holds: true,  description_fr: 'Pause 2s fluide (cohérence stable)' },
+] as const
+export type AuroraPowerSwitch = typeof AURORA_POWER_SWITCHES[number]['id']
+
+// Reprogrammation subconscient — 9 catégories (match CHECK SQL affirmations)
+export const REPROG_CATEGORIES = [
+  { id: 'abondance',             name: 'Abondance',             emoji: '💫', color: '#F59E0B', solfeggio_hz: 639 },
+  { id: 'amour-soi',             name: 'Amour de soi',          emoji: '❤️', color: '#ec4899', solfeggio_hz: 528 },
+  { id: 'confiance',             name: 'Confiance',             emoji: '🦁', color: '#7c3aed', solfeggio_hz: 417 },
+  { id: 'liberation-addictions', name: 'Libération addictions', emoji: '🔓', color: '#06b6d4', solfeggio_hz: 396 },
+  { id: 'guerison-emotionnelle', name: 'Guérison émotionnelle', emoji: '🌿', color: '#10b981', solfeggio_hz: 528 },
+  { id: 'sommeil-reparateur',    name: 'Sommeil réparateur',    emoji: '🌙', color: '#1e1b4b', solfeggio_hz: 174 },
+  { id: 'manifestation',         name: 'Manifestation',         emoji: '🌠', color: '#a855f7', solfeggio_hz: 852 },
+  { id: 'protection',            name: 'Protection',            emoji: '🧿', color: '#6366f1', solfeggio_hz: 741 },
+  { id: 'paix',                  name: 'Paix',                  emoji: '🕊️', color: '#0ea5e9', solfeggio_hz: 432 },
+] as const
+export type ReprogCategory = typeof REPROG_CATEGORIES[number]['id']
+
+// Sons nature — Mode Nuit + Mode Journée (Web Audio synthèse procédurale ou loops futurs)
+export const NATURE_SOUNDS = [
+  { id: 'foret',   name: 'Forêt',   emoji: '🌲', description_fr: 'Feuillage, oiseaux lointains' },
+  { id: 'riviere', name: 'Rivière', emoji: '🏞️', description_fr: 'Eau vive, galets' },
+  { id: 'vent',    name: 'Vent',    emoji: '🍃', description_fr: 'Brise douce' },
+  { id: 'pluie',   name: 'Pluie',   emoji: '🌧️', description_fr: 'Pluie douce régulière' },
+  { id: 'ocean',   name: 'Océan',   emoji: '🌊', description_fr: 'Vagues lentes et profondes' },
+  { id: 'silence', name: 'Silence', emoji: '🤍', description_fr: 'Voix uniquement' },
+] as const
+export type NatureSound = typeof NATURE_SOUNDS[number]['id']
+
+// Mode Journée : notifs toutes les 2h entre 9h-20h (6 slots max/jour)
+export const REPROG_DAY_REMINDER_HOURS = [9, 11, 13, 15, 17, 19] as const
+// Mode Nuit : timer ramp down — volume descend linéairement en 30 min
+export const REPROG_NIGHT_VOLUME_RAMP_MIN = 30
+
+// Modes avancés anti-addiction (G5 Scope A + teasers G6+)
+// Scope A = 4 modes complets : rituel_7s, boucle_urgence, exorcisme, boite_noire
+// Teasers = 5 modes future : parfum_virtuel, predicteur_envie, hypnose_mouvement, hologramme, armure
+export const ADVANCED_MODES = [
+  { id: 'rituel_7s',          slug: 'rituel-7-secondes',   brief_num: 15, name: 'Rituel 7 Secondes',        emoji: '⚡', color: '#F59E0B', status: 'active', gate: 'G5.6',
+    tagline_fr: 'Micro-rituel qui coupe n\'importe quelle envie, utilisable partout.' },
+  { id: 'boucle_urgence',     slug: 'boucle-urgence',      brief_num: 9,  name: 'Boucle Urgence Invisible', emoji: '🔇', color: '#06b6d4', status: 'active', gate: 'G5.7',
+    tagline_fr: 'En société : micro-vibrations + mini-respiration + lettres flottantes. Personne ne remarque.' },
+  { id: 'exorcisme',          slug: 'exorcisme',           brief_num: 10, name: 'Exorcisme de l\'Addiction', emoji: '🌑', color: '#1e1b4b', status: 'active', gate: 'G5.7',
+    tagline_fr: 'Séance immersive : ombre → destruction virtuelle → reprogrammation → effacement.' },
+  { id: 'boite_noire',        slug: 'boite-noire',         brief_num: 13, name: 'Boîte Noire',              emoji: '📓', color: '#7c3aed', status: 'active', gate: 'G5.8',
+    tagline_fr: 'Enregistre quand/où/qui/quoi déclenche, révèle ton schéma secret.' },
+  { id: 'parfum_virtuel',     slug: 'parfum-virtuel',      brief_num: 7,  name: 'Parfum Virtuel',           emoji: '🌸', color: '#ec4899', status: 'teaser', gate: 'G6+',
+    tagline_fr: 'Illusion olfactive via suggestion multisensorielle.' },
+  { id: 'predicteur_envie',   slug: 'predicteur',          brief_num: 8,  name: 'Prédicteur d\'Envie',       emoji: '🔮', color: '#a855f7', status: 'teaser', gate: 'G6+',
+    tagline_fr: 'IA analyse comportement + stress → alerte 22 min avant pulsion probable.' },
+  { id: 'hypnose_mouvement',  slug: 'hypnose-mouvement',   brief_num: 11, name: 'Hypnose en Mouvement',     emoji: '🚶', color: '#10b981', status: 'teaser', gate: 'G6+',
+    tagline_fr: 'Tu marches, l\'IA synchronise pas avec rythme de libération mentale.' },
+  { id: 'hologramme',         slug: 'hologramme',          brief_num: 12, name: 'Hologramme Motivationnel', emoji: '✨', color: '#F59E0B', status: 'teaser', gate: 'G6+',
+    tagline_fr: 'Caméra active, ton "toi futur libéré" apparaît et te parle.' },
+  { id: 'armure',             slug: 'armure',              brief_num: 14, name: 'Armure Anti-Habitudes',    emoji: '🛡️', color: '#6366f1', status: 'teaser', gate: 'G6+',
+    tagline_fr: 'Champ de protection virtuel + vibrations bouclier + son protecteur.' },
+] as const
+export type AdvancedModeId = typeof ADVANCED_MODES[number]['id']
+
+// Boîte Noire : 6 location presets (RGPD — jamais de GPS brut)
+export const BOITE_NOIRE_LOCATIONS = [
+  { id: 'maison',    name: 'Maison',       emoji: '🏠' },
+  { id: 'bureau',    name: 'Bureau',       emoji: '💼' },
+  { id: 'transport', name: 'Transport',    emoji: '🚆' },
+  { id: 'cafe_bar',  name: 'Café / Bar',   emoji: '☕' },
+  { id: 'exterieur', name: 'Extérieur',    emoji: '🌳' },
+  { id: 'autre',     name: 'Autre',        emoji: '•' },
+] as const
+export type BoiteNoireLocation = typeof BOITE_NOIRE_LOCATIONS[number]['id']
+
+export const BOITE_NOIRE_WHO = [
+  { id: 'seul',       name: 'Seul·e',       emoji: '👤' },
+  { id: 'famille',    name: 'Famille',      emoji: '👨‍👩‍👧' },
+  { id: 'collegues',  name: 'Collègues',    emoji: '💼' },
+  { id: 'ami',        name: 'Ami·e·s',      emoji: '👯' },
+  { id: 'partenaire', name: 'Partenaire',   emoji: '💞' },
+  { id: 'inconnu',    name: 'Inconnu·e·s',  emoji: '👥' },
+] as const
+export type BoiteNoireWho = typeof BOITE_NOIRE_WHO[number]['id']
+
 
 // 7 modules cœur MUKTI (homepage + dashboard)
 export const MUKTI_MODULES = [
