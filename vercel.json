@@ -26,6 +26,14 @@
     {
       "path": "/api/cron/circles-replays-purge",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/ar-ceremony-auto-start",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/ar-ceremony-auto-finish",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
