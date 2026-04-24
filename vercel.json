@@ -50,6 +50,18 @@
     {
       "path": "/api/cron/mental-journal-relapse-scan",
       "schedule": "10 * * * *"
+    },
+    {
+      "path": "/api/cron/contest-karma-weekly-close",
+      "schedule": "59 23 * * 0"
+    },
+    {
+      "path": "/api/cron/contest-karma-monthly-draw",
+      "schedule": "55 23 28-31 * *"
+    },
+    {
+      "path": "/api/cron/contest-karma-annual-schedule",
+      "schedule": "0 2 1 1 *"
     }
   ]
 }
