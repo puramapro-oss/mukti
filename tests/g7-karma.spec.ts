@@ -180,7 +180,7 @@ test.describe('G7 — PostgREST mukti schema (13 nouvelles tables)', () => {
   for (const t of PUBLIC_TABLES) {
     test(`${t} public read OK`, async ({ request }) => {
       const r = await request.get(`${PGREST}/${t}?select=*&limit=1`, {
-        headers: { apikey: ANON_KEY, Accept: 'application/json' },
+        headers: { apikey: ANON_KEY, Accept: 'application/json', 'Accept-Profile': 'mukti' },
       })
       expect([200, 206]).toContain(r.status())
     })
@@ -188,7 +188,7 @@ test.describe('G7 — PostgREST mukti schema (13 nouvelles tables)', () => {
   for (const t of PRIVATE_TABLES) {
     test(`${t} anon access → [] or 401 (jamais 500)`, async ({ request }) => {
       const r = await request.get(`${PGREST}/${t}?select=*&limit=1`, {
-        headers: { apikey: ANON_KEY, Accept: 'application/json' },
+        headers: { apikey: ANON_KEY, Accept: 'application/json', 'Accept-Profile': 'mukti' },
       })
       expect([200, 206, 401, 403]).toContain(r.status())
     })
@@ -215,7 +215,7 @@ test.describe('G7 — Seeds DB (3 promos + 8 tiers)', () => {
   const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzQwNTI0ODAwLCJleHAiOjE4OTgyOTEyMDB9.GkiVoEuCykK7vIpNzY_Zmc6XPNnJF3BUPvijXXZy2aU'
   test('8 ambassador tiers seedés', async ({ request }) => {
     const r = await request.get('https://auth.purama.dev/rest/v1/ambassador_tiers?select=slug', {
-      headers: { apikey: ANON_KEY, Accept: 'application/json' },
+      headers: { apikey: ANON_KEY, Accept: 'application/json', 'Accept-Profile': 'mukti' },
     })
     expect(r.status()).toBe(200)
     const j = await r.json() as Array<{ slug: string }>
@@ -223,7 +223,7 @@ test.describe('G7 — Seeds DB (3 promos + 8 tiers)', () => {
   })
   test('3 promos seedées (WELCOME10/ANNUAL30/INFLUENCEUR50)', async ({ request }) => {
     const r = await request.get('https://auth.purama.dev/rest/v1/promos?select=code&active=eq.true', {
-      headers: { apikey: ANON_KEY, Accept: 'application/json' },
+      headers: { apikey: ANON_KEY, Accept: 'application/json', 'Accept-Profile': 'mukti' },
     })
     expect(r.status()).toBe(200)
     const j = await r.json() as Array<{ code: string }>
