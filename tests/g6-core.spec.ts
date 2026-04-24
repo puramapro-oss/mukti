@@ -55,7 +55,7 @@ test.describe('G6 — Régression zéro (G1→G5 intacts)', () => {
     '/api/boite-noire/capture',
     '/api/modes-avances/notify',
     '/api/rituel-7s/start',
-    '/api/aurora/sessions',
+    '/api/aurora/session',
   ]) {
     test(`G5 API ${api} 401 (régression)`, async ({ request }) => {
       const res = await request.post(`${BASE}${api}`, { data: {} })
