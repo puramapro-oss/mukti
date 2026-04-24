@@ -7,6 +7,7 @@ import Rituel7sButton from '@/components/rituel7s/Rituel7sButton'
 import Rituel7sOverlay from '@/components/rituel7s/Rituel7sOverlay'
 import { BoucleUrgenceProvider } from '@/components/boucle-urgence/BoucleUrgenceProvider'
 import BoucleUrgenceOverlay from '@/components/boucle-urgence/BoucleUrgenceOverlay'
+import { HelpBubble } from '@/components/qa/HelpBubble'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Rituel7sButton />
           <Rituel7sOverlay />
           <BoucleUrgenceOverlay />
+          <HelpBubble />
         </div>
       </BoucleUrgenceProvider>
     </Rituel7sProvider>
