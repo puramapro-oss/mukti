@@ -3,10 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = [
   '/', '/pricing', '/how-it-works', '/ecosystem', '/associations',
-  '/impact-global', '/rituels-publics', '/status', '/changelog',
+  '/impact', '/impact-global', '/rituels-publics', '/status', '/changelog',
   '/privacy', '/terms', '/legal', '/offline', '/login', '/signup', '/register',
   '/mentions-legales', '/politique-confidentialite', '/cgv', '/cgu',
   '/aide', '/contact', '/accessibilite', '/forgot-password',
+  '/fiscal', '/subscribe', '/confirmation',
 ]
 
 function isPublicPath(pathname: string): boolean {
