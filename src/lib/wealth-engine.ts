@@ -129,7 +129,7 @@ export async function getImpactStats(force = false): Promise<ImpactStats> {
     admin.from('payments').select('split_user_cents, split_asso_cents').eq('status', 'paid'),
     admin.from('magic_moments').select('id', { count: 'exact', head: true }).eq('kind', 'addiction_freed'),
     admin.from('core_events').select('id', { count: 'exact', head: true }).eq('status', 'finished'),
-    admin.from('circle_sessions').select('id', { count: 'exact', head: true }).eq('status', 'finished'),
+    admin.from('circles').select('id', { count: 'exact', head: true }).eq('status', 'finished'),
   ])
   const redistributed = ((splits ?? []) as Array<{ split_user_cents: number; split_asso_cents: number }>)
     .reduce((a, r) => a + (r.split_user_cents ?? 0) + (r.split_asso_cents ?? 0), 0)
