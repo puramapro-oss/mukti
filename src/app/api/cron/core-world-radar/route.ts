@@ -1,0 +1,36 @@
+// CRON : World Radar IA — Tavily scan crises → Claude Haiku classify → auto-publish.
+// Toutes les 15 minutes. Horaire décalé 5,20,35,50 pour éviter les pics.
+
+import { NextResponse } from 'next/server'
+import { scanWorldCrises } from '@/lib/world-radar'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
+function authorize(req: Request): boolean {
+  const secret = process.env.CRON_SECRET
+  const header = req.headers.get('authorization') ?? ''
+  if (secret && header === `Bearer ${secret}`) return true
+  if (req.headers.get('x-vercel-cron')) return true
+  return false
+}
+
+export async function POST(req: Request) {
+  if (!authorize(req)) {
+    return NextResponse.json({ error: 'Accès refusé.' }, { status: 401 })
+  }
+  try {
+    const stats = await scanWorldCrises()
+    return NextResponse.json({ ok: true, ...stats })
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'CRON failure.' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET(req: Request) {
+  return POST(req)
+}
