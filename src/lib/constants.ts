@@ -910,12 +910,42 @@ export const ADMIN_SETTING_KEYS = [
   'vida_angel_active',
   'vida_angel_multiplier',
   'pricing_main_monthly_cents',
+  'pricing_main_annual_cents',
   'pricing_anti_churn_cents',
   'feature_flags',
+  'wording_bank',
 ] as const
 export type AdminSettingKey = typeof ADMIN_SETTING_KEYS[number]
 
 export const VIDA_ANGEL_DEFAULT_MULTIPLIER = 2
+
+// Feature flags par défaut (override possible via admin_settings.feature_flags JSONB)
+export const FEATURE_FLAGS_DEFAULT: Record<string, boolean> = {
+  ar_mirror: true,
+  aurora: true,
+  core_events: true,
+  fil_de_vie: true,
+  rituel_hebdo: true,
+  cercles: true,
+  liberation: true,
+  accompagnants: true,
+  aide_ia: true,
+}
+
+// Wording bank — sections structurées (form admin)
+export const WORDING_BANK_SECTIONS = [
+  'greetings',
+  'errors',
+  'success',
+  'cta',
+  'faq',
+  'meta',
+] as const
+export type WordingBankSection = typeof WORDING_BANK_SECTIONS[number]
+
+// Mission types catalog
+export const MISSION_TYPES = ['action', 'share', 'referral', 'meditation', 'community', 'other'] as const
+export type MissionType = typeof MISSION_TYPES[number]
 
 // Q&R — détection détresse
 export const DISTRESS_THRESHOLD = 0.7
