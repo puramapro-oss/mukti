@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LifeBuoy, X, Phone } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SOS_RESOURCES_FR } from '@/lib/constants'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 const HIDE_ON = ['/login', '/signup', '/forgot-password', '/auth/callback']
 
@@ -12,6 +13,7 @@ export default function SOSButton() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     setMounted(true)
@@ -35,9 +37,9 @@ export default function SOSButton() {
       <motion.button
         type="button"
         onClick={() => setOpen(true)}
-        initial={{ scale: 0, opacity: 0 }}
+        initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.5 }}
+        transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 25, delay: 0.5 }}
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-2xl shadow-red-500/40 ring-2 ring-white/10 transition-transform hover:scale-110 lg:bottom-8 lg:right-8"
         aria-label="Ouvrir les ressources d'urgence"
         data-testid="sos-button"

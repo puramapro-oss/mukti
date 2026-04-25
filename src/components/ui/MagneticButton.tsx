@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode, type MouseEvent } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 interface MagneticButtonProps {
   children: ReactNode
@@ -10,6 +11,7 @@ interface MagneticButtonProps {
   strength?: number
   onClick?: () => void
   disabled?: boolean
+  ariaLabel?: string
 }
 
 export default function MagneticButton({
@@ -18,12 +20,14 @@ export default function MagneticButton({
   strength = 0.3,
   onClick,
   disabled,
+  ariaLabel,
 }: MagneticButtonProps) {
   const ref = useRef<HTMLButtonElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
+  const reducedMotion = useReducedMotion()
 
   function handleMouseMove(e: MouseEvent<HTMLButtonElement>) {
-    if (!ref.current || disabled) return
+    if (!ref.current || disabled || reducedMotion) return
     const rect = ref.current.getBoundingClientRect()
     const x = (e.clientX - rect.left - rect.width / 2) * strength
     const y = (e.clientY - rect.top - rect.height / 2) * strength
@@ -34,6 +38,20 @@ export default function MagneticButton({
     setPosition({ x: 0, y: 0 })
   }
 
+  if (reducedMotion) {
+    return (
+      <button
+        ref={ref}
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        className={cn('magnetic-btn', className)}
+      >
+        {children}
+      </button>
+    )
+  }
+
   return (
     <motion.button
       ref={ref}
@@ -41,6 +59,7 @@ export default function MagneticButton({
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       animate={{ x: position.x, y: position.y }}
       transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.5 }}
       className={cn('magnetic-btn', className)}

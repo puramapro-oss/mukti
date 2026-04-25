@@ -433,7 +433,7 @@ select:focus-visible {
   white-space: normal;
 }
 
-/* Reduced motion — disable heavy animations */
+/* Reduced motion — disable heavy animations (G8.7.5 catch-all) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -444,7 +444,29 @@ select:focus-visible {
     scroll-behavior: auto !important;
   }
   .aurora::before,
-  .aurora::after {
+  .aurora::after,
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
     animation: none !important;
   }
+}
+
+/* Focus visible AAA — G8.7.5 universal accessibility */
+:focus-visible {
+  outline: 3px solid #06b6d4;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role='button']:focus-visible,
+[role='switch']:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #06b6d4;
+  outline-offset: 2px;
 }

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Sparkles, Share2, Heart, Users, Award } from 'lucide-react'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 const STEPS = [
   { icon: Sparkles, label: 'Libère-toi', color: '#7C3AED' },
@@ -12,6 +13,7 @@ const STEPS = [
 ]
 
 export default function Flywheel() {
+  const reducedMotion = useReducedMotion()
   return (
     <section data-testid="flywheel" className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
       <h3 className="text-xl font-semibold mb-2">Le flywheel MUKTI</h3>
@@ -24,9 +26,9 @@ export default function Flywheel() {
           return (
             <motion.div
               key={s.label}
-              initial={{ opacity: 0, y: 20 }}
+              initial={reducedMotion ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.15 }}
+              transition={reducedMotion ? { duration: 0 } : { delay: i * 0.15 }}
               className="flex flex-col items-center text-center flex-1 min-w-[80px]"
             >
               <div

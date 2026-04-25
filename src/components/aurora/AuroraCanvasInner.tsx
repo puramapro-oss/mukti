@@ -9,6 +9,7 @@ import { Canvas } from '@react-three/fiber'
 import FractalMesh from './FractalMesh'
 import EventHorizon from './EventHorizon'
 import ParticleField from './ParticleField'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { BreathState } from './types'
 
 export interface AuroraCanvasInnerProps {
@@ -36,6 +37,8 @@ export default function AuroraCanvasInner({
 }: AuroraCanvasInnerProps) {
   const halo = accentColor ?? color
   const dark = Math.max(0, Math.min(0.85, darkening))
+  const reducedMotion = useReducedMotion()
+  const particlesActive = particlesEnabled && !reducedMotion
   // Overlay sombre : appliqué via un black sprite plane fullscreen à l'extérieur du Canvas pour perf.
   return (
     <div className={`relative h-full w-full ${className ?? ''}`}>
@@ -59,7 +62,7 @@ export default function AuroraCanvasInner({
           phaseProgress={breathState.progress}
           accentColor={halo}
         />
-        {particlesEnabled && (
+        {particlesActive && (
           <ParticleField
             breathPhase={breathState.phase}
             phaseProgress={breathState.progress}
