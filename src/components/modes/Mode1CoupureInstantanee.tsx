@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import ModeFrame from './ModeFrame'
 import { type ModeId } from '@/lib/constants'
+import { safeVibrate } from '@/lib/accessibility'
 
 const MODE_ID: ModeId = 'coupure_40s'
 const DURATION = 40
@@ -86,7 +87,7 @@ function CoupureActive({ onCompleted }: { onCompleted: (outcome?: 'resisted' | '
         }
         return next
       })
-      if ('vibrate' in navigator) navigator.vibrate(40)
+      void safeVibrate(40)
     }, 1000)
     return () => clearInterval(timer)
   }, [onCompleted])

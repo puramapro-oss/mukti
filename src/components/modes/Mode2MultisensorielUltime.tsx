@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import ModeFrame from './ModeFrame'
 import { type ModeId } from '@/lib/constants'
+import { safeVibrate } from '@/lib/accessibility'
 
 const MODE_ID: ModeId = 'multisensoriel'
 const DURATION = 180 // 3 minutes
@@ -78,11 +79,9 @@ function MultisensorielActive({ onCompleted }: { onCompleted: (outcome?: 'resist
         return next
       })
       setCycleSec(c => (c + 1) % 19)
-      // Vibration sur chaque transition de phase
-      if ('vibrate' in navigator) {
-        const c = cycleSec
-        if (c === 0 || c === 4 || c === 11) navigator.vibrate(60)
-      }
+      // Vibration sur chaque transition de phase (G8.7.6 safeVibrate)
+      const c = cycleSec
+      if (c === 0 || c === 4 || c === 11) void safeVibrate(60)
     }, 1000)
     return () => clearInterval(timer)
   }, [onCompleted, cycleSec])

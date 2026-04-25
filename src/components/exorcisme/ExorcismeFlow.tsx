@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { safeVibrate } from '@/lib/accessibility'
 import { X } from 'lucide-react'
 import {
   EXORCISME_PHASES,
@@ -26,13 +27,8 @@ interface SessionState {
 }
 
 function haptic(pattern: number | number[]) {
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-    try {
-      navigator.vibrate(pattern)
-    } catch {
-      // ignore
-    }
-  }
+  // safeVibrate (G8.7.6) respecte mode silencieux + hapticEnabled
+  void safeVibrate(pattern)
 }
 
 function usePrefersReducedMotion(): boolean {

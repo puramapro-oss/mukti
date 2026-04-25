@@ -3,6 +3,7 @@
 // Brief section 5 : inspire montée continue, expire glide long, pause tap unique.
 
 import type { BreathPhase } from '@/components/aurora/types'
+import { safeVibrate } from '@/lib/accessibility'
 
 export interface AuroraHapticHandle {
   pulse: (phase: BreathPhase) => void
@@ -50,7 +51,7 @@ export function createAuroraHaptic(): AuroraHapticHandle {
       return
     }
     try {
-      navigator.vibrate(pattern)
+      safeVibrate(pattern)
     } catch {
       /* noop */
     }

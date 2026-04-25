@@ -16,15 +16,11 @@ import {
   pickWord,
 } from '@/lib/boucle-urgence-utils'
 import { useBoucleUrgence } from './BoucleUrgenceProvider'
+import { safeVibrate } from '@/lib/accessibility'
 
 function vibrate(pattern: number | number[]) {
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-    try {
-      navigator.vibrate(pattern)
-    } catch {
-      // ignore
-    }
-  }
+  // safeVibrate (G8.7.6) respecte mode silencieux + hapticEnabled
+  void safeVibrate(pattern)
 }
 
 export default function BoucleUrgenceOverlay() {

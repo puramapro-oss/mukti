@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
+import { safeVibrate } from '@/lib/accessibility'
 import {
   RITUEL_7S_PHASES,
   RITUEL_7S_TOTAL_MS,
@@ -40,13 +41,8 @@ function phaseScale(phase: Rituel7sPhase, elapsedMs: number): number {
 }
 
 function vibrate(pattern: number | number[]) {
-  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-    try {
-      navigator.vibrate(pattern)
-    } catch {
-      // ignore
-    }
-  }
+  // safeVibrate respecte mode silencieux + hapticEnabled (G8.7.6)
+  void safeVibrate(pattern)
 }
 
 export default function Rituel7sOverlay() {
