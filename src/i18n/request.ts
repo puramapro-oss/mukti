@@ -1,14 +1,22 @@
 import { getRequestConfig } from 'next-intl/server'
 import { cookies, headers } from 'next/headers'
 
+// MUKTI G8.7.3 — 32 locales (LOCALES_EXTENDED)
 export const locales = [
-  'fr', 'en', 'es', 'de', 'it', 'pt', 'ar', 'zh', 'ja', 'ko',
-  'hi', 'ru', 'tr', 'nl', 'pl', 'sv',
+  'fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'pl', 'sv', 'no', 'da', 'fi',
+  'cs', 'el', 'hu', 'ro', 'tr', 'ar', 'he', 'hi', 'zh', 'ja', 'ko', 'th',
+  'vi', 'id', 'ms', 'tl', 'ru', 'uk', 'bn', 'ur',
 ] as const
 
 export type Locale = (typeof locales)[number]
 
 export const defaultLocale: Locale = 'fr'
+
+// Locales RTL pour direction CSS
+export const RTL_LOCALES: ReadonlySet<Locale> = new Set(['ar', 'he', 'ur'] as const)
+export function isRtlLocale(l: Locale): boolean {
+  return RTL_LOCALES.has(l)
+}
 
 async function getLocale(): Promise<Locale> {
   const cookieStore = await cookies()

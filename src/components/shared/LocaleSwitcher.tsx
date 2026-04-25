@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useLocale } from 'next-intl'
 import { Globe, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { locales, localeNames, type Locale } from '@/i18n/config'
+import { locales, localeNames, localeFlags, type Locale } from '@/i18n/config'
 
 export default function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
   const currentLocale = useLocale() as Locale
@@ -56,20 +56,30 @@ export default function LocaleSwitcher({ compact = false }: { compact?: boolean 
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 mb-2 max-h-80 w-48 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--bg-nebula)] p-1 shadow-2xl backdrop-blur-xl z-[1000]">
+        <div
+          role="listbox"
+          aria-label="Choisir une langue"
+          className="absolute bottom-full right-0 mb-2 max-h-96 w-60 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--bg-nebula)] p-1 shadow-2xl backdrop-blur-xl z-[1000]"
+        >
           {locales.map((locale) => (
             <button
               key={locale}
+              role="option"
+              aria-selected={locale === currentLocale}
               onClick={() => switchLocale(locale)}
               className={cn(
-                'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors',
+                'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
                 locale === currentLocale
                   ? 'bg-[var(--cyan)]/10 text-[var(--cyan)]'
                   : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]'
               )}
             >
-              <span>{localeNames[locale]}</span>
-              {locale === currentLocale && <Check className="h-3.5 w-3.5" />}
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="text-base leading-none" aria-hidden="true">{localeFlags[locale]}</span>
+                <span className="truncate">{localeNames[locale]}</span>
+                <span className="ml-1 text-[10px] uppercase text-white/40" aria-hidden="true">{locale}</span>
+              </span>
+              {locale === currentLocale && <Check className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />}
             </button>
           ))}
         </div>
