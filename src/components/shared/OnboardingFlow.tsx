@@ -82,8 +82,10 @@ export default function OnboardingFlow() {
     if (typeof window === 'undefined') return
 
     const tutoDone = localStorage.getItem(STORAGE_TUTO) === '1' || profile.tutorial_completed
-    if (!tutoDone) setPhase('tutorial')
-    else setPhase('done')
+    queueMicrotask(() => {
+      if (!tutoDone) setPhase('tutorial')
+      else setPhase('done')
+    })
   }, [user, profile])
 
   const current = useMemo(() => STEPS[stepIdx], [stepIdx])

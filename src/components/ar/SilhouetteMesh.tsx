@@ -63,7 +63,9 @@ export default function SilhouetteMesh({
     if (!pose || pose.length < 33) {
       coreGeom.setDrawRange(0, 0)
       haloGeom.setDrawRange(0, 0)
+      // eslint-disable-next-line react-hooks/immutability
       core.needsUpdate = true
+      // eslint-disable-next-line react-hooks/immutability
       halo.needsUpdate = true
       return
     }
@@ -110,7 +112,9 @@ export default function SilhouetteMesh({
 
     coreGeom.setDrawRange(0, drawn * 2)
     haloGeom.setDrawRange(0, drawn * 2)
+     
     core.needsUpdate = true
+     
     halo.needsUpdate = true
   })
 

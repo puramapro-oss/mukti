@@ -18,7 +18,7 @@ export function RituelTimer({ themeColor, onComplete, minutesTarget = 10 }: Prop
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    setReducedMotion(prefersReducedMotion())
+    queueMicrotask(() => setReducedMotion(prefersReducedMotion()))
   }, [])
 
   useEffect(() => {

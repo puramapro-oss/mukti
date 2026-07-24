@@ -203,13 +203,16 @@ function StatCard({
   )
 }
 
+const confettiConfig = Array.from({ length: 30 }, (_, i) => {
+  const angle = (i / 30) * 2 * Math.PI
+  const distance = 200 + Math.random() * 200
+  return { angle, distance, index: i }
+})
+
 function ConfettiBurst() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      {Array.from({ length: 30 }).map((_, i) => {
-        const angle = (i / 30) * 2 * Math.PI
-        const distance = 200 + Math.random() * 200
-        return (
+      {confettiConfig.map(({ angle, distance, index: i }) => (
           <motion.div
             key={i}
             initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
@@ -225,8 +228,7 @@ function ConfettiBurst() {
               background: i % 3 === 0 ? '#06B6D4' : i % 3 === 1 ? '#7C3AED' : '#F59E0B',
             }}
           />
-        )
-      })}
+        ))}
     </div>
   )
 }

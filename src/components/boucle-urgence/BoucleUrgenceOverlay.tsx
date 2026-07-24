@@ -10,7 +10,6 @@ import { toast } from 'sonner'
 import {
   BOUCLE_URGENCE_HAPTIC_PATTERN,
   BOUCLE_URGENCE_HAPTIC_INTERVAL_MS,
-  BOUCLE_URGENCE_BREATH_CYCLE_MS,
   BOUCLE_URGENCE_WORD_INTERVAL_MS,
   BOUCLE_URGENCE_WORD_VISIBLE_MS,
   pickWord,
@@ -121,7 +120,7 @@ export default function BoucleUrgenceOverlay() {
   // Démarrer la session quand l'overlay s'ouvre
   useEffect(() => {
     if (!isOpen) {
-      resetLocalState()
+      queueMicrotask(() => resetLocalState())
       return
     }
     let aborted = false
@@ -178,8 +177,10 @@ export default function BoucleUrgenceOverlay() {
     if (!isOpen || !session || error) return
     // Premier mot tout de suite
     wordCountRef.current = 1
-    setWordIndex(0)
-    setWordVisible(true)
+    queueMicrotask(() => {
+      setWordIndex(0)
+      setWordVisible(true)
+    })
     wordHideTimerRef.current = setTimeout(
       () => setWordVisible(false),
       BOUCLE_URGENCE_WORD_VISIBLE_MS

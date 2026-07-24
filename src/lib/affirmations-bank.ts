@@ -235,7 +235,7 @@ Retourne STRICTEMENT ce JSON sans texte autour :
     // Locale swap si EN demandé (on ne change rien, les deux sont retournés)
     void locale
     return { suggestions: valid, error: null }
-  } catch (_e) {
+  } catch {
     return { suggestions: [], error: 'Le générateur d\'affirmations est indisponible — réessaie dans un instant.' }
   }
 }

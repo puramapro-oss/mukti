@@ -5,7 +5,7 @@
 // + user-controlled début/fin. SpeechSynthesis opt-in OFF par défaut.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Play, Pause, Square, Volume2, VolumeX, Moon, ChevronDown } from 'lucide-react'
+import { Play, Square, Volume2, VolumeX, Moon, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { createNatureSoundEngine, type NatureSoundHandle } from '@/lib/nature-sounds'
 import { computeRampVolume } from '@/lib/reprogramming-utils'

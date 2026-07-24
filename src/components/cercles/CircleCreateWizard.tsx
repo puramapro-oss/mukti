@@ -51,7 +51,7 @@ export default function CircleCreateWizard({ initialCategory }: WizardProps) {
   // Charge les phrases quand catégorie change
   useEffect(() => {
     if (!category) return
-    setPhrasesLoading(true)
+    queueMicrotask(() => setPhrasesLoading(true))
     fetch(`/api/intention-phrases?category=${category}`)
       .then((r) => r.json())
       .then((d) => {
@@ -63,7 +63,7 @@ export default function CircleCreateWizard({ initialCategory }: WizardProps) {
 
   // Reset sélection si catégorie change
   useEffect(() => {
-    setSelectedPhraseIds([])
+    queueMicrotask(() => setSelectedPhraseIds([]))
   }, [category])
 
   const selectedCat = useMemo(() => CIRCLE_CATEGORIES.find((c) => c.id === category), [category])

@@ -9,7 +9,7 @@ import {
   getEventSessions,
   computeCurrentPhase,
 } from '@/lib/core-events'
-import { CORE_FORMATS, CORE_PHASES, type CoreFormat } from '@/lib/constants'
+import { CORE_FORMATS, CORE_PHASES } from '@/lib/constants'
 import COREIntentionDisplay from '@/components/core/COREIntentionDisplay'
 import COREPhaseIndicator from '@/components/core/COREPhaseIndicator'
 import COREPulseVisualizer from '@/components/core/COREPulseVisualizer'

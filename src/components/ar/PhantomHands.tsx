@@ -51,6 +51,7 @@ function HandTrack({ side }: { side: 'left' | 'right' }) {
 
     if (!hand || hand.landmarks.length < 21) {
       lineGeom.setDrawRange(0, 0)
+      // eslint-disable-next-line react-hooks/immutability
       positionAttr.needsUpdate = true
       for (const mesh of tipRefs.current) {
         if (mesh) mesh.visible = false
@@ -80,6 +81,7 @@ function HandTrack({ side }: { side: 'left' | 'right' }) {
       drawn++
     }
     lineGeom.setDrawRange(0, drawn * 2)
+     
     positionAttr.needsUpdate = true
 
     for (let i = 0; i < FINGER_TIPS.length; i++) {

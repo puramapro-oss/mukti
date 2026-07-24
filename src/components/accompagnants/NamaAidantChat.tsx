@@ -65,7 +65,7 @@ export function NamaAidantChat() {
         </div>
         <div>
           <h2 className="text-sm font-semibold text-white">NAMA-Aidant</h2>
-          <p className="text-xs text-white/50">Coach IA dédié à toi, l'aidant·e</p>
+          <p className="text-xs text-white/50">Coach IA dédié à toi, l&apos;aidant·e</p>
         </div>
       </header>
 

@@ -60,7 +60,7 @@ export function ProjectionChart({ hasHistory }: Props) {
       <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-xl">
         <Sparkles className="mx-auto h-7 w-7 text-white/40" aria-hidden="true" />
         <p className="mt-3 text-sm text-white/70">
-          Commence par vivre quelques moments sur MUKTI pour que la projection ait un point d'ancrage.
+          Commence par vivre quelques moments sur MUKTI pour que la projection ait un point d&apos;ancrage.
         </p>
       </div>
     )

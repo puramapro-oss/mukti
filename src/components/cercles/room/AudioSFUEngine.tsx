@@ -126,11 +126,12 @@ export default function AudioSFUEngine(props: AudioSFUEngineProps) {
 
     return () => {
       cancelled = true
-      audioElementsRef.current.forEach((el) => {
+      const audioElements = audioElementsRef.current
+      audioElements.forEach((el) => {
         el.srcObject = null
         el.remove()
       })
-      audioElementsRef.current.clear()
+      audioElements.clear()
       const room = roomRef.current
       if (room) {
         room.disconnect().catch(() => {})

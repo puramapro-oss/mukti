@@ -36,14 +36,17 @@ export default function ProgressRing5Phases({
   const radius = size * RADIUS_FACTOR
 
   // Proportionne chaque arc à la durée de sa phase
-  let cursor = -90 // départ haut (12h)
-  const arcs = phases.map((p) => {
-    const span = (p.duration_sec / sessionTotalSec) * availableDeg
-    const start = cursor
-    const end = cursor + span
-    cursor = end + GAP_DEG
-    return { phase: p.name, start_deg: start, end_deg: end, duration_sec: p.duration_sec }
-  })
+  const arcs = phases.reduce<Array<{ phase: AuroraPhaseName; start_deg: number; end_deg: number; duration_sec: number }>>(
+    (acc, p) => {
+      const cursor = acc.length === 0 ? -90 : acc[acc.length - 1]!.end_deg + GAP_DEG
+      const span = (p.duration_sec / sessionTotalSec) * availableDeg
+      const start = cursor
+      const end = cursor + span
+      acc.push({ phase: p.name, start_deg: start, end_deg: end, duration_sec: p.duration_sec })
+      return acc
+    },
+    []
+  )
 
   const elapsedPct = Math.max(0, Math.min(1, sessionElapsedSec / sessionTotalSec))
 

@@ -89,6 +89,7 @@ export default function DistanceBeacon({
 
     if (!ready || beamOpacityRef.current < 0.01) {
       beamGeom.setDrawRange(0, 0)
+      // eslint-disable-next-line react-hooks/immutability
       attr.needsUpdate = true
       return
     }
@@ -113,6 +114,7 @@ export default function DistanceBeacon({
       arr[off + 5] = targetZ
     }
     beamGeom.setDrawRange(0, BEAM_LINES * 2)
+     
     attr.needsUpdate = true
   })
 

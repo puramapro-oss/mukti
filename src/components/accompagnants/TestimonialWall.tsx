@@ -51,10 +51,10 @@ export function TestimonialWall({ initial }: Props) {
       <div className="flex items-baseline justify-between">
         <div>
           <h2 id="testimonials-title" className="text-2xl font-semibold text-white">
-            Voix d'aidants
+            Voix d&apos;aidants
           </h2>
           <p className="mt-1 text-sm text-white/60">
-            D'autres, anonymement, te tendent la main. Tu peux leur répondre.
+            D&apos;autres, anonymement, te tendent la main. Tu peux leur répondre.
           </p>
         </div>
         <button

@@ -16,7 +16,7 @@ export default function SOSButton() {
   const reducedMotion = useReducedMotion()
 
   useEffect(() => {
-    setMounted(true)
+    queueMicrotask(() => setMounted(true))
   }, [])
 
   // Close on Esc

@@ -14,7 +14,7 @@ export function useReducedMotion(): boolean {
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
     const mql = window.matchMedia(QUERY)
-    setReduced(mql.matches)
+    queueMicrotask(() => setReduced(mql.matches))
     const onChange = (e: MediaQueryListEvent) => setReduced(e.matches)
     if (typeof mql.addEventListener === 'function') {
       mql.addEventListener('change', onChange)

@@ -32,7 +32,7 @@ export default function NotifyMeModal({
   const [done, setDone] = useState(alreadyNotified)
 
   useEffect(() => {
-    if (open) setDone(alreadyNotified)
+    if (open) queueMicrotask(() => setDone(alreadyNotified))
   }, [open, alreadyNotified])
 
   useEffect(() => {

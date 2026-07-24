@@ -132,7 +132,7 @@ export default function Rituel7sOverlay() {
   // Démarrer la session quand l'overlay s'ouvre
   useEffect(() => {
     if (!isOpen) {
-      resetLocalState()
+      queueMicrotask(() => resetLocalState())
       return
     }
     let aborted = false

@@ -35,13 +35,13 @@ export default function BoiteNoirePatternPanel({ addictionId, entriesCount }: Pr
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [cooldownUntil, setCooldownUntil] = useState<number>(0)
-  const [now, setNow] = useState<number>(Date.now())
+  const [now, setNow] = useState<number>(() => Date.now())
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_PREFIX + addictionId)
       const v = raw ? Number(raw) : 0
-      if (v && v > Date.now()) setCooldownUntil(v)
+      if (v && v > Date.now()) queueMicrotask(() => setCooldownUntil(v))
     } catch {
       // ignore
     }

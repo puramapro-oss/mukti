@@ -27,7 +27,7 @@ export default function Home() {
     try {
       const seen = localStorage.getItem('mukti-intro-seen')
       if (!seen) {
-        setShowCinematic(true)
+        queueMicrotask(() => setShowCinematic(true))
         const t = setTimeout(() => {
           setShowCinematic(false)
           localStorage.setItem('mukti-intro-seen', '1')

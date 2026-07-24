@@ -35,7 +35,7 @@ export function HelpBubble() {
           >
             <header className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <h2 id="help-bubble-title" className="text-sm font-semibold text-white">
-                Besoin d'aide ?
+                Besoin d&apos;aide ?
               </h2>
               <button
                 type="button"
@@ -58,7 +58,7 @@ export function HelpBubble() {
                 <div>
                   <p className="text-sm font-semibold text-white">Poser une question à MUKTI</p>
                   <p className="mt-1 text-xs text-white/55">
-                    Addictions, app, rituels, soutien — je t'écoute sans jugement.
+                    Addictions, app, rituels, soutien — je t&apos;écoute sans jugement.
                   </p>
                 </div>
               </Link>
@@ -73,7 +73,7 @@ export function HelpBubble() {
                 <div>
                   <p className="text-sm font-semibold text-red-100">Je ne me sens pas bien</p>
                   <p className="mt-1 text-xs text-red-200/80">
-                    Accède immédiatement aux ressources d'urgence de ton pays.
+                    Accède immédiatement aux ressources d&apos;urgence de ton pays.
                   </p>
                 </div>
               </Link>
@@ -85,7 +85,7 @@ export function HelpBubble() {
               >
                 <div className="mt-0.5 text-lg" aria-hidden="true">📚</div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Centre d'aide</p>
+                  <p className="text-sm font-semibold text-white">Centre d&apos;aide</p>
                   <p className="mt-1 text-xs text-white/55">FAQ, guides, articles.</p>
                 </div>
               </Link>

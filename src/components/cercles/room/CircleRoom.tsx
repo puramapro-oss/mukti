@@ -104,12 +104,15 @@ export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomPro
     if (loading || !circle) return
     const me = participants.find((p) => p.user_id === myUserId && !p.left_at)
     if (me) {
-      setHasJoined(true)
-      setMicMuted(me.mic_muted)
+      queueMicrotask(() => {
+        setHasJoined(true)
+        setMicMuted(me.mic_muted)
+      })
       return
     }
     if (joining) return
-    setJoining(true)
+     
+    queueMicrotask(() => setJoining(true))
     fetch(`/api/circles/${circleId}/join`, { method: 'POST' })
       .then(async (res) => {
         const data = await res.json()
@@ -149,7 +152,6 @@ export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomPro
       window.removeEventListener('beforeunload', handleBeforeUnload)
       void doLeave()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasJoined, circleId])
 
   function handleSpeakingChange(userId: string, speaking: boolean) {
@@ -183,6 +185,18 @@ export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomPro
     setReportOpenFor(null)
   }
 
+  // Hooks must be called before conditional returns
+  const myParticipant = participants.find((p) => p.user_id === myUserId)
+  const canAdvance = myParticipant?.role === 'creator' || myParticipant?.role === 'moderator'
+
+  const sync = useRotationSync({
+    circleId,
+    currentRotation,
+    rotationMode: circle?.rotation_mode ?? 'auto',
+    canAdvance,
+    circleStatus: circle?.status ?? 'open',
+  })
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-white/60">
@@ -209,16 +223,6 @@ export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomPro
   }
 
   const cat = CIRCLE_CATEGORIES.find((c) => c.id === circle.category)
-  const myParticipant = participants.find((p) => p.user_id === myUserId)
-  const canAdvance = myParticipant?.role === 'creator' || myParticipant?.role === 'moderator'
-
-  const sync = useRotationSync({
-    circleId,
-    currentRotation,
-    rotationMode: circle.rotation_mode,
-    canAdvance,
-    circleStatus: circle.status,
-  })
 
   const focusedUserId = sync.focusedUserId
   const focusedProfile = focusedUserId ? profiles.get(focusedUserId) : null

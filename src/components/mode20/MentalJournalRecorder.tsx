@@ -32,16 +32,16 @@ export default function MentalJournalRecorder({ initialEntries }: Props) {
   const intervalRef = useRef<number | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  useEffect(() => {
-    return () => stopInterval()
-  }, [])
-
   function stopInterval() {
     if (intervalRef.current) {
       window.clearInterval(intervalRef.current)
       intervalRef.current = null
     }
   }
+
+  useEffect(() => {
+    return () => stopInterval()
+  }, [])
 
   async function startRecording() {
     if (recording) return

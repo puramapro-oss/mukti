@@ -51,7 +51,7 @@ export default async function CarteImpactPage() {
       <MapboxWorldImpact aggregates={aggregates} />
 
       <p className="text-xs text-white/40">
-        Données agrégées par pays. Aucune coordonnée individuelle n'est exposée.
+        Données agrégées par pays. Aucune coordonnée individuelle n&apos;est exposée.
       </p>
     </div>
   )

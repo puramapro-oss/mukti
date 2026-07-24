@@ -100,6 +100,7 @@ export default function ARCanvasInner({
     }
   }, [stream, enabled, onFrame])
 
+  // eslint-disable-next-line react-hooks/refs -- frameRef is passed to provider, not read during render
   const resolvedOverlay = typeof overlay === 'function' ? overlay(latestFrameRef) : overlay
 
   return (

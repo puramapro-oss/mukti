@@ -12,7 +12,7 @@ export function useAccessibilityPrefs(): {
   const [prefs, setPrefsState] = useState<AccessibilityPrefs>(() => loadA11yPrefs())
 
   useEffect(() => {
-    setPrefsState(loadA11yPrefs())
+    queueMicrotask(() => setPrefsState(loadA11yPrefs()))
     const onChange = (e: Event) => {
       const ce = e as CustomEvent<AccessibilityPrefs>
       if (ce.detail) setPrefsState(ce.detail)

@@ -1,3 +1,4 @@
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Users } from 'lucide-react'
 import { CORE_FORMATS, type CoreFormat } from '@/lib/constants'
@@ -18,20 +19,17 @@ export default function COREEventCard(props: Props) {
   const fmt = CORE_FORMATS.find(f => f.id === props.format) ?? CORE_FORMATS[0]!
   const intentionWord = props.intention.trim().split(/\s+/)[0]?.toUpperCase() ?? props.intention
 
-  const now = Date.now()
-  const diffMin = Math.round((props.momentZ.getTime() - now) / 60000)
-  const relative =
-    props.status === 'finished'
-      ? 'Terminé'
-      : props.status === 'live'
-        ? '● En direct'
-        : diffMin <= 0
-          ? 'Imminent'
-          : diffMin < 60
-            ? `Dans ${diffMin} min`
-            : diffMin < 1440
-              ? `Dans ${Math.round(diffMin / 60)} h`
-              : `Dans ${Math.round(diffMin / 1440)} j`
+  const relative = useMemo(() => {
+    if (props.status === 'finished') return 'Terminé'
+    if (props.status === 'live') return '● En direct'
+    // eslint-disable-next-line react-hooks/purity -- Date.now() inside useMemo is safe
+    const now = Date.now()
+    const diffMin = Math.round((props.momentZ.getTime() - now) / 60000)
+    if (diffMin <= 0) return 'Imminent'
+    if (diffMin < 60) return `Dans ${diffMin} min`
+    if (diffMin < 1440) return `Dans ${Math.round(diffMin / 60)} h`
+    return `Dans ${Math.round(diffMin / 1440)} j`
+  }, [props.momentZ, props.status])
 
   return (
     <Link

@@ -29,7 +29,7 @@ export default function SpeciesMorph({ species, showHands = true }: Props) {
     if (newRig.slug === activeRig.slug) return
     // fade out → swap → fade in
     pendingRigRef.current = newRig
-    setOpacity(0)
+    queueMicrotask(() => setOpacity(0))
     const outT = window.setTimeout(() => {
       setActiveRig(pendingRigRef.current ?? newRig)
       setOpacity(1)

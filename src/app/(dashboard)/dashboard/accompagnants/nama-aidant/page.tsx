@@ -27,7 +27,7 @@ export default async function NamaAidantPage() {
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/50 transition hover:text-white"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          Retour à l'espace Accompagnants
+          Retour à l&apos;espace Accompagnants
         </Link>
       </div>
 
@@ -46,7 +46,7 @@ export default async function NamaAidantPage() {
       <NamaAidantChat />
 
       <p className="text-xs text-white/40">
-        NAMA n'est pas un thérapeute. Si tu traverses une détresse grave, compose le 3114 (gratuit, 24/7 en France).
+        NAMA n&apos;est pas un thérapeute. Si tu traverses une détresse grave, compose le 3114 (gratuit, 24/7 en France).
       </p>
     </div>
   )

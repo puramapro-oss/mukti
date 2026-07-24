@@ -2,7 +2,7 @@
 
 // MUKTI G8.6 — VIDA ANGEL : gros toggle ON/OFF + slider multiplier 1-5
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Heart, AlertCircle, Check } from 'lucide-react'
 
 interface Props {
@@ -53,7 +53,12 @@ export default function VidaAngelClient({ initialActive, initialMultiplier }: Pr
     })
   }
 
-  const showSaved = savedAt && Date.now() - savedAt < 2500
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 500)
+    return () => clearInterval(t)
+  }, [])
+  const showSaved = savedAt && now - savedAt < 2500
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">

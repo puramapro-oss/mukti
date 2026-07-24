@@ -5,7 +5,7 @@
 // Varie avec la phase : invocation (convergence), destruction (burst), reprogrammation (warm), scellement (golden sphere).
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useState, useRef } from 'react'
 import * as THREE from 'three'
 import type { ExorcismePhaseName } from '@/lib/exorcisme-utils'
 
@@ -21,13 +21,14 @@ function ParticleField({ phase, destructionProgress }: { phase: ExorcismePhaseNa
   const pointsRef = useRef<THREE.Points>(null)
   const COUNT = 1400
 
-  const [positions, initialPositions] = useMemo(() => {
+  const [[positions, initialPositions]] = useState(() => {
     const pos = new Float32Array(COUNT * 3)
     const init = new Float32Array(COUNT * 3)
+    const rng = Math.random
     for (let i = 0; i < COUNT; i++) {
-      const r = 2 + Math.random() * 6
-      const phi = Math.random() * Math.PI * 2
-      const costh = Math.random() * 2 - 1
+      const r = 2 + rng() * 6
+      const phi = rng() * Math.PI * 2
+      const costh = rng() * 2 - 1
       const sinth = Math.sqrt(1 - costh * costh)
       const x = r * sinth * Math.cos(phi)
       const y = r * sinth * Math.sin(phi) * 0.7
@@ -40,7 +41,7 @@ function ParticleField({ phase, destructionProgress }: { phase: ExorcismePhaseNa
       init[i * 3 + 2] = z
     }
     return [pos, init] as const
-  }, [])
+  })
 
   useFrame((state, delta) => {
     const pts = pointsRef.current

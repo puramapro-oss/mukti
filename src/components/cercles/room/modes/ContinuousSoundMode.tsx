@@ -35,6 +35,25 @@ export default function ContinuousSoundMode({ category, accentColor = '#7C3AED' 
 
   const freq = FREQS[category] ?? FREQS.paix
 
+  function stopTone() {
+    const ctx = ctxRef.current
+    const gain = gainRef.current
+    const osc = oscRef.current
+    if (ctx && gain && osc) {
+      const now = ctx.currentTime
+      gain.gain.cancelScheduledValues(now)
+      gain.gain.linearRampToValueAtTime(0, now + 0.8)
+      setTimeout(() => {
+        try { osc.stop() } catch {}
+        try { ctx.close() } catch {}
+      }, 900)
+    }
+    ctxRef.current = null
+    oscRef.current = null
+    gainRef.current = null
+    setPlaying(false)
+  }
+
   useEffect(() => {
     return () => {
       stopTone()
@@ -66,25 +85,6 @@ export default function ContinuousSoundMode({ category, accentColor = '#7C3AED' 
     } catch {
       setError('Audio non disponible sur ce navigateur.')
     }
-  }
-
-  function stopTone() {
-    const ctx = ctxRef.current
-    const gain = gainRef.current
-    const osc = oscRef.current
-    if (ctx && gain && osc) {
-      const now = ctx.currentTime
-      gain.gain.cancelScheduledValues(now)
-      gain.gain.linearRampToValueAtTime(0, now + 0.8)
-      setTimeout(() => {
-        try { osc.stop() } catch {}
-        try { ctx.close() } catch {}
-      }, 900)
-    }
-    ctxRef.current = null
-    oscRef.current = null
-    gainRef.current = null
-    setPlaying(false)
   }
 
   function toggle() {

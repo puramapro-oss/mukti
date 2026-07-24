@@ -3,7 +3,7 @@
 // MUKTI G8.6 — Promos client : table + create/edit/delete + audit auto
 
 import { useState, useTransition } from 'react'
-import { Plus, Pencil, Trash2, X, Save, AlertCircle, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Save, AlertCircle } from 'lucide-react'
 import type { PromoRow } from '@/lib/admin-promos'
 
 interface Props {

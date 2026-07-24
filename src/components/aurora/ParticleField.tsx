@@ -5,7 +5,7 @@
 // éjectées en gerbe sur inspire, wobble subtil sur hold.
 // Performance 60fps cible mobile.
 
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { BreathPhase } from './types'
@@ -46,15 +46,17 @@ export default function ParticleField({
   const colorObj = useMemo(() => new THREE.Color(color), [color])
 
   // Init états particules (positions stables entre renders)
-  const particlesRef = useRef<ParticleState[]>(
-    Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      angle: Math.random() * Math.PI * 2,
-      radius: MIN_RADIUS + Math.random() * (MAX_RADIUS - MIN_RADIUS),
-      azimuth: (Math.random() - 0.5) * Math.PI * 0.5,
-      baseSpeed: 0.3 + Math.random() * 0.7,
+  const [particles] = useState(() => {
+    const rng = Math.random
+    return Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+      angle: rng() * Math.PI * 2,
+      radius: MIN_RADIUS + rng() * (MAX_RADIUS - MIN_RADIUS),
+      azimuth: (rng() - 0.5) * Math.PI * 0.5,
+      baseSpeed: 0.3 + rng() * 0.7,
       seed: i,
     }))
-  )
+  })
+  const particlesRef = useRef(particles)
 
   useFrame((state, delta) => {
     const mesh = meshRef.current

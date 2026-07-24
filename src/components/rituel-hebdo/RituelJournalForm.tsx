@@ -54,7 +54,7 @@ export function RituelJournalForm({ minutesPracticed, weekIso, themeSlug, onSave
       </p>
       <label className="mt-3 block">
         <span className="text-sm text-white/80">
-          Ton intention (optionnelle, privée sauf si tu cliques "partager")
+          Ton intention (optionnelle, privée sauf si tu cliques &quot;partager&quot;)
         </span>
         <textarea
           rows={3}
@@ -76,7 +76,7 @@ export function RituelJournalForm({ minutesPracticed, weekIso, themeSlug, onSave
           data-testid="rituel-share-checkbox"
         />
         <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-        Partager anonymement pour inspirer d'autres
+        Partager anonymement pour inspirer d&apos;autres
       </label>
 
       {err && (

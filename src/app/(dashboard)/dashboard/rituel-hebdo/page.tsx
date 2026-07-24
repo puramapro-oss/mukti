@@ -38,7 +38,7 @@ export default async function RituelHebdoPage() {
           {meta.title_fr}
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/60">
-          Cette semaine, des milliers d'humains tiennent la même intention. Dix minutes suffisent.
+          Cette semaine, des milliers d&apos;humains tiennent la même intention. Dix minutes suffisent.
           Ton souffle rejoint le leur.
         </p>
       </header>

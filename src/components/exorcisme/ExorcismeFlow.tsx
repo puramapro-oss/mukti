@@ -36,7 +36,7 @@ function usePrefersReducedMotion(): boolean {
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReduced(mq.matches)
+    queueMicrotask(() => setReduced(mq.matches))
     const onChange = (e: MediaQueryListEvent) => setReduced(e.matches)
     mq.addEventListener?.('change', onChange)
     return () => mq.removeEventListener?.('change', onChange)
@@ -59,8 +59,15 @@ export default function ExorcismeFlow() {
   const [sealing, setSealing] = useState(false)
   const [closing, setClosing] = useState(false)
 
-  const startTsRef = useRef<number>(performance.now())
-  const phaseStartRef = useRef<number>(performance.now())
+  const startTsRef = useRef<number>(0)
+  const phaseStartRef = useRef<number>(0)
+  useEffect(() => {
+    if (startTsRef.current === 0) {
+      const now = performance.now()
+      startTsRef.current = now
+      phaseStartRef.current = now
+    }
+  }, [])
   const phaseMsRef = useRef<PhaseMs>({})
   const sessionRef = useRef<SessionState | null>(null)
   const completedRef = useRef(false)
@@ -428,7 +435,7 @@ export default function ExorcismeFlow() {
               {affirmationLoading && !affirmationFr && (
                 <div className="mt-8 flex flex-col items-center gap-2 text-white/60">
                   <div className="h-8 w-8 animate-pulse rounded-full bg-[#F59E0B]/40" />
-                  <p className="text-xs uppercase tracking-[0.25em]">L'affirmation arrive…</p>
+                  <p className="text-xs uppercase tracking-[0.25em]">L&apos;affirmation arrive…</p>
                 </div>
               )}
 

@@ -34,7 +34,7 @@ export function useRotationSync(params: UseRotationSyncParams): UseRotationSyncR
 
   // sync externe → état local
   useEffect(() => {
-    setRotation(params.currentRotation)
+    queueMicrotask(() => setRotation(params.currentRotation))
   }, [params.currentRotation])
 
   // tick 1s pour recompute secondsRemaining

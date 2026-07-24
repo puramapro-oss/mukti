@@ -125,7 +125,8 @@ async function loginViaCookies(playwrightFx: any, browserContext: BrowserContext
   await browserContext.addCookies(cookies)
 }
 
-async function gotoAuthed(page: Page, path: string) {
+// Removed unused gotoAuthed function
+async function _gotoAuthed(page: Page, path: string) {
   await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 })
   // Wait until either an authed page rendered (any data-testid ending in -page)
   // OR we got bounced back to /login (which means something is wrong).

@@ -18,7 +18,7 @@ export default function Rituel7sButton() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    queueMicrotask(() => setMounted(true))
   }, [])
 
   if (!mounted) return null

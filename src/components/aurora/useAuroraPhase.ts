@@ -156,8 +156,8 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   }, [])
 
   // --------- RAF loop ---------
-  const loop = useCallback(
-    (now: number) => {
+  // Function declaration to hoist and avoid TDZ errors
+  function loop(now: number): void {
       if (!runningRef.current) return
       if (pausedRef.current) {
         rafRef.current = requestAnimationFrame(loop)
@@ -291,9 +291,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
       }))
 
       rafRef.current = requestAnimationFrame(loop)
-    },
-    [phases, sessionTotalSec, computeRollingCoherence, recordSubStepCoherence, opts]
-  )
+  }
 
   // --------- Actions ---------
   const start = useCallback(() => {

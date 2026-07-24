@@ -123,6 +123,7 @@ export function SpeciesTail({ color = '#A78BFA', opacity = 0.7 }: DecorationProp
     const attr = geom.attributes.position as THREE.BufferAttribute
     if (!pose || pose.length < 33) {
       geom.setDrawRange(0, 0)
+      // eslint-disable-next-line react-hooks/immutability
       attr.needsUpdate = true
       return
     }
@@ -131,6 +132,7 @@ export function SpeciesTail({ color = '#A78BFA', opacity = 0.7 }: DecorationProp
     if (!hipL || !hipR) return
     if ((hipL.visibility ?? 0) < 0.3 && (hipR.visibility ?? 0) < 0.3) {
       geom.setDrawRange(0, 0)
+       
       attr.needsUpdate = true
       return
     }
@@ -149,6 +151,7 @@ export function SpeciesTail({ color = '#A78BFA', opacity = 0.7 }: DecorationProp
       arr[i * 3 + 2] = -0.02
     }
     geom.setDrawRange(0, TAIL_POINTS)
+     
     attr.needsUpdate = true
   })
 
@@ -185,7 +188,9 @@ export function SpeciesWings({ color = '#10B981', opacity = 0.55 }: DecorationPr
     if (!pose || pose.length < 33) {
       leftGeom.setDrawRange(0, 0)
       rightGeom.setDrawRange(0, 0)
+      // eslint-disable-next-line react-hooks/immutability
       ;(leftGeom.attributes.position as THREE.BufferAttribute).needsUpdate = true
+      // eslint-disable-next-line react-hooks/immutability
       ;(rightGeom.attributes.position as THREE.BufferAttribute).needsUpdate = true
       return
     }
@@ -261,6 +266,7 @@ function updateWing(
     arr[off + 5] = -0.03
   }
   geom.setDrawRange(0, rayCount * 2)
+   
   attr.needsUpdate = true
 }
 

@@ -56,8 +56,8 @@ export default async function AccompagnantsPage() {
           Accompagner sans se perdre
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/60">
-          Cet espace est pour toi. Tu portes l'autre — tu as le droit de te poser.
-          Dix sections pour t'outiller. NAMA-Aidant, un coach IA qui t'écoute. Et une communauté anonyme.
+          Cet espace est pour toi. Tu portes l&apos;autre — tu as le droit de te poser.
+          Dix sections pour t&apos;outiller. NAMA-Aidant, un coach IA qui t&apos;écoute. Et une communauté anonyme.
         </p>
       </header>
 
@@ -91,7 +91,7 @@ export default async function AccompagnantsPage() {
         <div className="flex items-baseline justify-between">
           <div>
             <h2 id="sections-title" className="text-2xl font-semibold text-white">
-              10 sections pour t'appuyer
+              10 sections pour t&apos;appuyer
             </h2>
             <p className="mt-1 text-sm text-white/60">
               Textes, rituels, audios. Avance à ton rythme.
@@ -133,8 +133,8 @@ export default async function AccompagnantsPage() {
       <footer className="mt-6 rounded-3xl border border-white/10 bg-gradient-to-br from-pink-500/10 to-purple-500/10 p-6 text-center backdrop-blur-xl">
         <Heart className="mx-auto h-6 w-6 text-pink-300" aria-hidden="true" />
         <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/80">
-          « Ta joie n'insulte pas sa peine. Vivre pleinement est la plus belle façon
-          d'honorer celui ou celle qui ne peut plus le faire autant. »
+          « Ta joie n&apos;insulte pas sa peine. Vivre pleinement est la plus belle façon
+          d&apos;honorer celui ou celle qui ne peut plus le faire autant. »
         </p>
       </footer>
     </div>

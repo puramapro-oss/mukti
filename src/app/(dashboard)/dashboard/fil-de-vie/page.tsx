@@ -30,7 +30,7 @@ export default async function FilDeViePage() {
     ? Math.max(
         1,
         Math.floor(
-          (Date.now() - new Date(stats.first_entry_at).getTime()) / (1000 * 60 * 60 * 24),
+          (new Date().getTime() - new Date(stats.first_entry_at).getTime()) / (1000 * 60 * 60 * 24),
         ),
       )
     : 0

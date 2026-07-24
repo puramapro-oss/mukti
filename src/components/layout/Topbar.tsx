@@ -8,7 +8,7 @@ import { getGreeting, getInitials } from '@/lib/utils'
 export default function Topbar() {
   const { profile } = useAuth()
   const [greeting, setGreeting] = useState('Bonjour')
-  useEffect(() => { setGreeting(getGreeting()) }, [])
+  useEffect(() => { queueMicrotask(() => setGreeting(getGreeting())) }, [])
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--bg-nebula)]/80 px-4 backdrop-blur-xl lg:px-8">

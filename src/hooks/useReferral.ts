@@ -25,6 +25,7 @@ export function useReferral() {
   }, [user, profile, supabase])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- safe: fetchCount is memoized
     fetchCount()
   }, [fetchCount])
 

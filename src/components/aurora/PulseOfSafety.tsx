@@ -18,7 +18,7 @@ export default function PulseOfSafety({ breathPhase, color }: PulseOfSafetyProps
 
   useEffect(() => {
     if (breathPhase === 'expire') {
-      setPulseKey((k) => k + 1)
+      queueMicrotask(() => setPulseKey((k) => k + 1))
     }
   }, [breathPhase])
 

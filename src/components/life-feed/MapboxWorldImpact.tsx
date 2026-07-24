@@ -141,7 +141,7 @@ export function MapboxWorldImpact({ aggregates }: Props) {
       )}
       {status === 'error' && (
         <p role="alert" className="py-3 text-center text-xs text-red-300">
-          La carte n'a pas pu charger. Ton impact reste le même.
+          La carte n&apos;a pas pu charger. Ton impact reste le même.
         </p>
       )}
     </div>

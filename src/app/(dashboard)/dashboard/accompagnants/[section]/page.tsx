@@ -110,7 +110,7 @@ export default async function AccompagnantsSectionPage({
 
           <div className="rounded-3xl border border-pink-400/30 bg-gradient-to-br from-pink-500/10 to-purple-500/10 p-6 backdrop-blur-xl">
             <p className="text-sm text-white/85">
-              Besoin d'en parler ? NAMA-Aidant t'écoute sans jugement.
+              Besoin d&apos;en parler ? NAMA-Aidant t&apos;écoute sans jugement.
             </p>
             <Link
               href="/dashboard/accompagnants/nama-aidant"

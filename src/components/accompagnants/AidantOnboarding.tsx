@@ -72,7 +72,7 @@ export function AidantOnboarding({ initialLien = null, initialSituation = null, 
             Qui accompagnes-tu ?
           </h2>
           <p className="mt-1 text-sm text-white/60">
-            Cet espace t'appartient. Tes réponses restent privées — elles nous aident à te proposer les bons appuis.
+            Cet espace t&apos;appartient. Tes réponses restent privées — elles nous aident à te proposer les bons appuis.
           </p>
         </div>
       </div>
@@ -117,7 +117,7 @@ export function AidantOnboarding({ initialLien = null, initialSituation = null, 
 
       <label className="mt-6 block">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-          Ton énergie aujourd'hui — {energy}/100
+          Ton énergie aujourd&apos;hui — {energy}/100
         </span>
         <input
           type="range"

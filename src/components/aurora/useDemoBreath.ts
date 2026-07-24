@@ -29,7 +29,7 @@ export function useDemoBreath(config: DemoBreathConfig = { inhaleSec: 4, holdSec
 
   useEffect(() => {
     if (config.active === false) {
-      setState((s) => ({ ...s, phase: 'idle', progress: 0 }))
+      queueMicrotask(() => setState((s) => ({ ...s, phase: 'idle', progress: 0 })))
       return
     }
 

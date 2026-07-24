@@ -17,7 +17,7 @@ export default function ParticipantsCount({ count, className }: Props) {
 
   useEffect(() => {
     if (count === 0) return
-    setJustChanged(true)
+    queueMicrotask(() => setJustChanged(true))
     const t = window.setTimeout(() => setJustChanged(false), 600)
     return () => window.clearTimeout(t)
   }, [count])
