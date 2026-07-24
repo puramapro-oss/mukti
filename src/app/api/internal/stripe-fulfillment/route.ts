@@ -188,7 +188,13 @@ async function handleConnectAccountUpdated(account: Stripe.Account) {
 }
 
 export async function POST(req: Request) {
-  const sig = req.headers.get('stripe-signature')
+  // Defense 1: internal secret from karma dispatcher
+  const internalSecret = req.headers.get('x-internal-secret')
+  if (internalSecret !== process.env.INTERNAL_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+  // Defense 2: still verify Stripe signature (defense in depth)
+  const sig = req.headers.get('x-stripe-signature')
   if (!sig) return NextResponse.json({ error: 'Signature manquante.' }, { status: 400 })
   const raw = await req.text()
   let event: Stripe.Event

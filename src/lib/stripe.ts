@@ -60,12 +60,14 @@ export async function createCheckoutSession(params: {
     subscription_data: {
       trial_period_days: params.trialDays ?? planCfg.trial_days,
       metadata: {
+        app_slug: 'mukti',
         plan: params.plan,
         interval: params.interval,
         ...(params.referralCode ? { referral_code: params.referralCode } : {}),
       },
     },
     metadata: {
+      app_slug: 'mukti',
       plan: params.plan,
       interval: params.interval,
       ...(params.referralCode ? { referral_code: params.referralCode } : {}),
@@ -139,12 +141,14 @@ export async function createSubscriptionCheckoutV7(params: {
     subscription_data: {
       trial_period_days: isTrial ? cfg.trial_days : undefined,
       metadata: {
+        app_slug: 'mukti',
         plan_slug: params.planSlug,
         mukti_user_id: params.userId,
         ...(params.referralCode ? { referral_code: params.referralCode } : {}),
       },
     },
     metadata: {
+      app_slug: 'mukti',
       plan_slug: params.planSlug,
       mukti_user_id: params.userId,
       ...(params.promoCode ? { promo_code: params.promoCode } : {}),
