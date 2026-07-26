@@ -47,7 +47,7 @@ export default function CookieBanner() {
             type="button"
             onClick={decline}
             aria-label="Fermer la bannière cookies"
-            className="shrink-0 rounded-lg p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>

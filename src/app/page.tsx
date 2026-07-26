@@ -196,7 +196,7 @@ export default function Home() {
           <ImpactCard label="Cercles d'Intention créés" value={counters.circles} suffix="" tint="cyan" />
           <ImpactCard label="Respirations partagées" value={counters.breaths} suffix="" tint="emerald" />
         </div>
-        <p className="mx-auto mt-6 max-w-md text-center text-xs text-white/40">
+        <p className="mx-auto mt-6 max-w-md text-center text-xs text-white/60">
           Compteurs en temps réel, jamais inventés. {counters.users === 0 ? 'Sois la première âme à rejoindre le mouvement.' : 'Tu n&apos;es pas seul·e.'}
         </p>
       </section>
@@ -265,18 +265,18 @@ export default function Home() {
 
       {/* Footer minimal */}
       <footer className="border-t border-white/[0.06] py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-xs text-white/40 sm:flex-row sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-xs text-white/60 sm:flex-row sm:px-6 lg:px-8">
           <p>© {new Date().getFullYear()} MUKTI · SASU PURAMA · Frasne</p>
           <nav className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/mentions-legales" className="hover:text-white/70">Mentions légales</Link>
-            <Link href="/politique-confidentialite" className="hover:text-white/70">Confidentialité</Link>
-            <Link href="/cgv" className="hover:text-white/70">CGV</Link>
-            <Link href="/cgu" className="hover:text-white/70">CGU</Link>
-            <Link href="/cookies" className="hover:text-white/70">Cookies</Link>
-            <Link href="/aide" className="hover:text-white/70">Aide</Link>
+            <Link href="/mentions-legales" className="hover:text-white/90">Mentions légales</Link>
+            <Link href="/politique-confidentialite" className="hover:text-white/90">Confidentialité</Link>
+            <Link href="/cgv" className="hover:text-white/90">CGV</Link>
+            <Link href="/cgu" className="hover:text-white/90">CGU</Link>
+            <Link href="/cookies" className="hover:text-white/90">Cookies</Link>
+            <Link href="/aide" className="hover:text-white/90">Aide</Link>
           </nav>
         </div>
-        <p className="mx-auto mt-4 max-w-3xl px-4 text-center text-[11px] text-white/30">
+        <p className="mx-auto mt-4 max-w-3xl px-4 text-center text-[11px] text-white/60">
           Expérience spirituelle personnelle, ne remplace aucun accompagnement médical ou psychologique. En cas d&apos;urgence : 112.
         </p>
       </footer>
