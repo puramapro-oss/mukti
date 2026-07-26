@@ -81,9 +81,9 @@ export default function SOSButton() {
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Fermer"
-                  className="rounded-full p-1.5 text-white/60 transition hover:bg-white/5 hover:text-white"
+                  className="rounded-full p-2.5 text-white/60 transition hover:bg-white/5 hover:text-white"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 

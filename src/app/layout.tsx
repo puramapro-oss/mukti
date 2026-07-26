@@ -85,9 +85,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SkipToContent />
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ErrorBoundary>
-            <div id="main-content" tabIndex={-1} className="outline-none">
+            <main id="main-content" tabIndex={-1} className="outline-none">
               {children}
-            </div>
+            </main>
             <SOSButton />
           </ErrorBoundary>
           <CookieBanner />

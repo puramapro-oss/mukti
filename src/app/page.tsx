@@ -85,7 +85,7 @@ export default function Home() {
           {!loading && user ? (
             <Link
               href="/dashboard"
-              className="rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--cyan)] px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
+              className="rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--cyan)] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
             >
               Mon espace
             </Link>
@@ -93,14 +93,14 @@ export default function Home() {
             <>
               <Link
                 href="/login"
-                className="rounded-full px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
+                className="rounded-full px-5 py-3 text-sm font-medium text-white/80 transition-colors hover:text-white"
               >
                 Se connecter
               </Link>
               <Link
                 href="/signup"
                 data-testid="hero-cta"
-                className="rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--cyan)] px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
+                className="rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--cyan)] px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:scale-[1.02]"
               >
                 Commencer
               </Link>
@@ -179,7 +179,7 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="mt-5 text-xs text-white/40"
+          className="mt-5 text-xs text-white/70"
         >
           14 jours d&apos;essai gratuit. Sans engagement. Sans carte requise.
         </motion.p>
