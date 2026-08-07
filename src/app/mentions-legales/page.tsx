@@ -100,7 +100,7 @@ export default function MentionsLegales() {
               <a href="mailto:matiss.frasne@gmail.com" className="text-[var(--cyan)] hover:underline ml-1">matiss.frasne@gmail.com</a>
             </p>
             <p className="mt-2">
-              En cas de litige et après tentative de résolution amiable, vous pouvez recourir à un médiateur de la consommation. La Commission Européenne met à disposition une plateforme de Règlement en Ligne des Litiges (RLL) accessible sur <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer" className="text-[var(--cyan)] hover:underline">ec.europa.eu/consumers/odr</a>.
+              En cas de litige et après tentative de résolution amiable, vous pouvez recourir à un médiateur de la consommation.
             </p>
           </section>
 
