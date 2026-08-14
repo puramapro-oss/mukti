@@ -14,6 +14,7 @@ const BodySchema = z.object({
   plan_slug: z.enum(PLAN_SLUGS),
   promo_code: z.string().min(2).max(40).optional().nullable(),
   referral_code: z.string().min(2).max(40).optional().nullable(),
+  idempotency_key: z.string().uuid().optional(),
 })
 
 export async function POST(req: Request) {
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
       promoCode: parsed.data.promo_code ?? null,
       referralCode: parsed.data.referral_code ?? null,
       userId: p.id,
+      idempotencyKey: parsed.data.idempotency_key,
     })
     return NextResponse.json({ url: session.url })
   } catch (e) {

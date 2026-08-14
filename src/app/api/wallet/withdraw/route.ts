@@ -44,12 +44,16 @@ export async function POST(req: Request) {
     status: 'processing',
   }).select('id').maybeSingle()
   const withdrawalId = (withdrawal as { id: string } | null)?.id
+  if (!withdrawalId) {
+    return NextResponse.json({ error: 'Impossible de créer le retrait. Réessaie.' }, { status: 500 })
+  }
   try {
     const transfer = await createTransferToConnectedAccount({
       destinationAccountId: c.stripe_account_id,
       amountCents: parsed.data.amount_cents,
       description: `MUKTI withdrawal — user ${profileId}`,
-      metadata: { mukti_user_id: profileId, withdrawal_id: withdrawalId ?? '' },
+      metadata: { mukti_user_id: profileId, withdrawal_id: withdrawalId },
+      idempotencyKey: `mukti-withdrawal-${withdrawalId}`,
     })
     await admin.from('profiles').update({ wallet_balance_cents: balance - parsed.data.amount_cents }).eq('id', profileId)
     if (withdrawalId) {

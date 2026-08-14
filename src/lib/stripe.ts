@@ -31,6 +31,7 @@ export async function createCheckoutSession(params: {
   cancelUrl: string
   referralCode?: string
   trialDays?: number
+  idempotencyKey?: string
 }) {
   const stripe = getStripe()
   const planCfg = VIDA_AIDE_STRIPE_PLANS[params.plan]
@@ -74,7 +75,7 @@ export async function createCheckoutSession(params: {
     },
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
-  })
+  }, { idempotencyKey: params.idempotencyKey ?? crypto.randomUUID() })
 }
 
 export async function createPortalSession(customerId: string, returnUrl: string) {
@@ -107,7 +108,7 @@ export async function ensureCustomer(params: {
     email: params.email,
     name: params.fullName ?? undefined,
     metadata: { mukti_user_id: params.userId },
-  })
+  }, { idempotencyKey: `mukti-customer-${params.userId}` })
   return created.id
 }
 
@@ -119,6 +120,7 @@ export async function createSubscriptionCheckoutV7(params: {
   promoCode?: string | null
   referralCode?: string | null
   userId: string
+  idempotencyKey?: string
 }) {
   const stripe = getStripe()
   const cfg = PLANS_STRIPE[params.planSlug]
@@ -156,7 +158,7 @@ export async function createSubscriptionCheckoutV7(params: {
     },
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
-  })
+  }, { idempotencyKey: params.idempotencyKey ?? crypto.randomUUID() })
 }
 
 export async function cancelSubscriptionAtPeriodEnd(subscriptionId: string) {

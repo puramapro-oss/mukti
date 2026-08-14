@@ -48,6 +48,7 @@ export default function PricingPage() {
         body: JSON.stringify({
           plan_slug: plan,
           promo_code: promoValidated ? promoCode.trim().toUpperCase() : null,
+          idempotency_key: crypto.randomUUID(),
         }),
       })
       const data = await res.json()

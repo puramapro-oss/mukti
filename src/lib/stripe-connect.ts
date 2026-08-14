@@ -61,6 +61,7 @@ export async function createTransferToConnectedAccount(params: {
   currency?: string
   description?: string
   metadata?: Record<string, string>
+  idempotencyKey: string
 }) {
   const stripe = getStripe()
   return stripe.transfers.create({
@@ -69,5 +70,5 @@ export async function createTransferToConnectedAccount(params: {
     destination: params.destinationAccountId,
     description: params.description,
     metadata: params.metadata,
-  })
+  }, { idempotencyKey: params.idempotencyKey })
 }
