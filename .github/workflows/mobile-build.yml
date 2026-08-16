@@ -30,7 +30,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Setup JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
@@ -45,12 +45,11 @@ jobs:
 
       - name: Generate icons + splash
         run: |
-          npx @capacitor/assets generate --android --iconBackgroundColor '#03040a' --iconBackgroundColorDark '#03040a' --splashBackgroundColor '#03040a' --splashBackgroundColorDark '#03040a'
+          npx @capacitor/assets generate --android --iconBackgroundColor '#0a0a0f' --iconBackgroundColorDark '#0a0a0f' --splashBackgroundColor '#0a0a0f' --splashBackgroundColorDark '#0a0a0f'
 
       - name: Inject release signing config
         run: |
-          cat >> android/app/build.gradle << 'GRADLE_EOF'
-
+          cat > android/app/signing.gradle << 'GRADLE_EOF'
           android {
               signingConfigs {
                   release {
@@ -58,8 +57,6 @@ jobs:
                       storePassword System.getenv("PURAMA_KEYSTORE_PASSWORD")
                       keyAlias System.getenv("PURAMA_KEY_ALIAS")
                       keyPassword System.getenv("PURAMA_KEY_PASSWORD")
-                      v1SigningEnabled true
-                      v2SigningEnabled true
                   }
               }
               buildTypes {
@@ -69,6 +66,8 @@ jobs:
               }
           }
           GRADLE_EOF
+          echo "" >> android/app/build.gradle
+          echo "apply from: 'signing.gradle'" >> android/app/build.gradle
 
       - name: Decode keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/purama-mobile-release.jks"
@@ -86,22 +85,7 @@ jobs:
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           echo "APK: $APK"
-          if [ -z "$APK" ]; then
-            echo "::error::Aucun APK trouve dans android/app/build/outputs/apk/release"
-            exit 1
-          fi
-          # apksigner (schemas v1/v2/v3) est la source de verite ; le grep META-INF
-          # seul ne detecte QUE la signature JAR v1 et donne un faux "NOT SIGNED"
-          # des que v2/v3 (bloc de signature APK moderne) est utilise sans v1.
-          APKSIGNER=$(find "$ANDROID_HOME" "$ANDROID_SDK_ROOT" -name apksigner -type f 2>/dev/null | sort -V | tail -1)
-          echo "apksigner: ${APKSIGNER:-introuvable}"
-          if [ -z "$APKSIGNER" ]; then
-            echo "::error::apksigner introuvable dans le SDK Android"
-            exit 1
-          fi
-          "$APKSIGNER" verify --print-certs "$APK" || (echo "::error::APK NOT SIGNED (apksigner verify a echoue)" && exit 1)
-          echo "--- entrees META-INF (signature v1 JAR, attendue car v1SigningEnabled=true) ---"
-          unzip -l "$APK" | grep -i "META-INF/.*\.\(RSA\|SF\)" || echo "::warning::Pas d'entrees META-INF v1 — jarsigner -verify echouera meme si apksigner confirme la signature v2/v3"
+          unzip -l "$APK" | grep -i "META-INF/.*\.\(RSA\|SF\)" || (echo "APK NOT SIGNED" && exit 1)
 
       - uses: actions/upload-artifact@v4
         with:
@@ -127,28 +111,22 @@ jobs:
 
       - name: Scaffold iOS platform (Capacitor)
         run: |
-          npx cap add ios
+          npx cap add ios --packagemanager CocoaPods
           npx cap sync ios
 
       - name: Generate icons + splash
         run: |
-          npx @capacitor/assets generate --ios --iconBackgroundColor '#03040a' --iconBackgroundColorDark '#03040a' --splashBackgroundColor '#03040a' --splashBackgroundColorDark '#03040a'
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#0a0a0f' --iconBackgroundColorDark '#0a0a0f' --splashBackgroundColor '#0a0a0f' --splashBackgroundColorDark '#0a0a0f'
 
-      - name: Resolve Swift Package dependencies
+      - name: Install CocoaPods dependencies
         working-directory: ios/App
-        run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+        run: pod install
 
       - name: Compile check (unsigned — prouve que le projet Xcode compile)
         working-directory: ios/App
         run: |
-          # Capacitor 8 utilise Swift Package Manager par defaut (plus de CocoaPods) :
-          # ios/App ne contient QUE App.xcodeproj, jamais App.xcworkspace au niveau
-          # racine (seul project.xcworkspace interne au .xcodeproj existe, ce n'est
-          # pas la meme chose). -workspace App.xcworkspace => exit 66 "does not exist".
-          echo "--- schemes disponibles ---"
-          xcodebuild -list -project App.xcodeproj
           xcodebuild build \
-            -project App.xcodeproj \
+            -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -sdk iphonesimulator \
@@ -166,7 +144,7 @@ jobs:
         working-directory: ios/App
         run: |
           xcodebuild archive \
-            -project App.xcodeproj \
+            -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
