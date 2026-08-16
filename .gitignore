@@ -27,3 +27,7 @@ task_plan.md
 progress.md
 .claude/settings.local.json
 .env*
+
+# Capacitor platforms (régénérés par CI)
+/ios
+/android

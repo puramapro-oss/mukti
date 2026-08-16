@@ -1,0 +1,184 @@
+name: Mobile Wrapper Build (Capacitor)
+
+# Enveloppement mobile du site web live (mukti.purama.dev) — AUCUNE réécriture.
+# ios/ et android/ ne sont jamais commit (gitignore) : régénérés à chaque run
+# depuis capacitor.config.ts + resources/ (source unique de vérité).
+# Recette générique documentée dans ~/purama/MOBILE.md — reproductible sur
+# n'importe quelle app Purama en changeant juste le nom du repo/secrets.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'capacitor.config.ts'
+      - 'resources/**'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Scaffold Android platform (Capacitor)
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Generate icons + splash
+        run: |
+          npx @capacitor/assets generate --android --iconBackgroundColor '#03040a' --iconBackgroundColorDark '#03040a' --splashBackgroundColor '#03040a' --splashBackgroundColorDark '#03040a'
+
+      - name: Inject release signing config
+        run: |
+          cat >> android/app/build.gradle << 'GRADLE_EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv("PURAMA_KEYSTORE_PATH"))
+                      storePassword System.getenv("PURAMA_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("PURAMA_KEY_ALIAS")
+                      keyPassword System.getenv("PURAMA_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          GRADLE_EOF
+
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/purama-mobile-release.jks"
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          PURAMA_KEYSTORE_PATH: ${{ runner.temp }}/purama-mobile-release.jks
+          PURAMA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PURAMA_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PURAMA_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Verify APK is signed
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "APK: $APK"
+          unzip -l "$APK" | grep -i "META-INF/.*\.\(RSA\|SF\)" || (echo "APK NOT SIGNED" && exit 1)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mukti-android-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci --legacy-peer-deps
+
+      - name: Scaffold iOS platform (Capacitor)
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Generate icons + splash
+        run: |
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#03040a' --iconBackgroundColorDark '#03040a' --splashBackgroundColor '#03040a' --splashBackgroundColorDark '#03040a'
+
+      - name: Compile check (unsigned — prouve que le projet Xcode compile)
+        working-directory: ios/App
+        run: |
+          xcodebuild build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Import App Store Connect API key
+        if: ${{ env.ASC_KEY_ID != '' && env.APPLE_TEAM_ID != '' }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "${{ secrets.ASC_KEY_CONTENT }}" | base64 -d > ~/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8
+
+      - name: Archive + export signed IPA (App Store Connect API key)
+        if: ${{ env.ASC_KEY_ID != '' && env.APPLE_TEAM_ID != '' }}
+        working-directory: ios/App
+        run: |
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }} \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" << 'PLIST_EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict>
+          </plist>
+          PLIST_EOF
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_${{ secrets.ASC_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }}
+
+      - name: Skip signed archive (secrets manquants)
+        if: ${{ env.ASC_KEY_ID == '' || env.APPLE_TEAM_ID == '' }}
+        run: |
+          echo "::warning::Archive signée iOS sautée — APPLE_TEAM_ID manquant (secret repo) et/ou agreement App Store Connect non signé (voir MOBILE.md §Blocages)."
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ env.ASC_KEY_ID != '' && env.APPLE_TEAM_ID != '' }}
+        with:
+          name: mukti-ios-release-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 30
