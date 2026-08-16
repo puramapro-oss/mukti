@@ -1,6 +1,6 @@
 name: Mobile Wrapper Build (Capacitor)
 
-# Enveloppement mobile du site web live (mukti.purama.dev) — AUCUNE réécriture.
+# Enveloppement mobile du site web live (kaia.purama.dev) — AUCUNE réécriture.
 # ios/ et android/ ne sont jamais commit (gitignore) : régénérés à chaque run
 # depuis capacitor.config.ts + resources/ (source unique de vérité).
 # Recette générique documentée dans ~/purama/MOBILE.md — reproductible sur
@@ -57,6 +57,12 @@ jobs:
                       storePassword System.getenv("PURAMA_KEYSTORE_PASSWORD")
                       keyAlias System.getenv("PURAMA_KEY_ALIAS")
                       keyPassword System.getenv("PURAMA_KEY_PASSWORD")
+                      // v1 explicite: certains minSdk/AGP récents désactivent le schéma v1
+                      // par défaut, ce qui rend l'APK invisible à jarsigner/unzip (mais
+                      // valide via v2/v3). On force les deux pour rester détectable par
+                      // les deux méthodes de vérif.
+                      enableV1Signing true
+                      enableV2Signing true
                   }
               }
               buildTypes {
@@ -85,7 +91,12 @@ jobs:
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           echo "APK: $APK"
-          unzip -l "$APK" | grep -i "META-INF/.*\.\(RSA\|SF\)" || (echo "APK NOT SIGNED" && exit 1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --verbose "$APK" || (echo "APK NOT SIGNED (apksigner)" && exit 1)
+          else
+            unzip -l "$APK" | grep -i "META-INF/.*\.\(RSA\|SF\)" || (echo "APK NOT SIGNED (v1 fallback check)" && exit 1)
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
