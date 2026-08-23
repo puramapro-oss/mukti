@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@purama/eslint-config": "file:../packages/eslint-config-purama",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.39",
     "@types/react": "^19",
