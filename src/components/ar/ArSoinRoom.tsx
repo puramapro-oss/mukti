@@ -5,14 +5,16 @@
 // Fallback mode imaginaire : sans caméra, la silhouette est absente mais le timer + species morph tournent pour le rituel intérieur.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Camera, CameraOff, Eye, Loader2, Play, Square, Sparkles } from 'lucide-react'
+import { Loader2, Play, Square, Sparkles } from 'lucide-react'
 import { useCameraPermission } from '@/hooks/useCameraPermission'
 import ARCanvas from '@/components/ar/ARCanvas'
 import SpeciesMorph from '@/components/ar/SpeciesMorph'
 import SpeciesPicker, { type SpeciesPickerSpecies } from '@/components/ar/SpeciesPicker'
 import CalibrationOverlay from '@/components/ar/CalibrationOverlay'
+import CameraLine from '@/components/ar/CameraLine'
 import { AR_SESSION_DURATIONS_SEC, type ArSpeciesSlug } from '@/lib/constants'
 import { SPECIES_RIGS } from '@/lib/ar/species-rigs'
+import { formatTime } from '@/components/ar/ar-helpers'
 
 type Phase = 'pick' | 'in-session' | 'completed'
 
@@ -337,18 +339,3 @@ export default function ArSoinRoom({ species }: Props) {
   )
 }
 
-function formatTime(sec: number) {
-  const m = Math.floor(sec / 60).toString().padStart(2, '0')
-  const s = (sec % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
-
-function CameraLine({ icon, text }: { icon: 'on' | 'off' | 'imaginary'; text: string }) {
-  const Icon = icon === 'on' ? Camera : icon === 'imaginary' ? Eye : CameraOff
-  return (
-    <p className="flex items-start gap-2">
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/70" />
-      <span>{text}</span>
-    </p>
-  )
-}
