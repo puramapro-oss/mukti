@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Button from '@/components/ui/Button'
+import CollapsibleSection from '@/components/liberation/CollapsibleSection'
+import GeneratingCard from '@/components/liberation/GeneratingCard'
 import { PROGRAM_REGEN_COOLDOWN_DAYS } from '@/lib/constants'
 import type { StoredProgram } from '@/lib/programs'
 
@@ -347,90 +349,5 @@ export default function ProgramView({ addictionId, currentProgram, canRegenerate
         <p className="mt-1">{currentProgram.emergency_message}</p>
       </div>
     </section>
-  )
-}
-
-function CollapsibleSection({
-  title,
-  icon,
-  count,
-  children,
-}: {
-  title: string
-  icon: React.ReactNode
-  count: number
-  children: React.ReactNode
-}) {
-  const [open, setOpen] = useState(true)
-  return (
-    <div className="rounded-2xl border border-[var(--border)] bg-white/5 p-5">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="mb-3 flex w-full items-center justify-between gap-3"
-        aria-expanded={open}
-      >
-        <span className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-          {icon} {title}
-        </span>
-        <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-[var(--text-muted)]">{count}</span>
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-function GeneratingCard({
-  phase,
-  status,
-  chars,
-  outputTokens,
-  compact,
-}: {
-  phase: Phase
-  status: string
-  chars: number
-  outputTokens: number
-  compact?: boolean
-}) {
-  return (
-    <div
-      className={`flex flex-col items-center gap-3 rounded-2xl border border-[var(--cyan)]/30 bg-gradient-to-br from-[var(--cyan)]/10 to-[var(--purple)]/10 ${
-        compact ? 'w-full max-w-xs p-4' : 'w-full max-w-sm p-6'
-      }`}
-      data-testid="generating-card"
-    >
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10"
-      >
-        <Sparkles className="h-5 w-5 text-[var(--cyan)]" />
-      </motion.div>
-      <p className="text-center text-sm font-medium text-[var(--text-primary)]">{status}</p>
-      <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-        <span>
-          <strong className="text-[var(--cyan)]">{chars.toLocaleString('fr-FR')}</strong> caractères
-        </span>
-        <span className="text-white/20">·</span>
-        <span>
-          <strong className="text-[var(--purple)]">{outputTokens.toLocaleString('fr-FR')}</strong> tokens
-        </span>
-      </div>
-      <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
-        {phase === 'persisting' ? 'sauvegarde' : phase === 'streaming' ? 'composition' : 'préparation'}
-      </p>
-    </div>
   )
 }
