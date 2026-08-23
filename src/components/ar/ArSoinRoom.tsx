@@ -12,6 +12,7 @@ import SpeciesMorph from '@/components/ar/SpeciesMorph'
 import SpeciesPicker, { type SpeciesPickerSpecies } from '@/components/ar/SpeciesPicker'
 import CalibrationOverlay from '@/components/ar/CalibrationOverlay'
 import CameraLine from '@/components/ar/CameraLine'
+import ArSessionRating from '@/components/ar/ArSessionRating'
 import { AR_SESSION_DURATIONS_SEC, type ArSpeciesSlug } from '@/lib/constants'
 import { SPECIES_RIGS } from '@/lib/ar/species-rigs'
 import { formatTime } from '@/components/ar/ar-helpers'
@@ -286,39 +287,12 @@ export default function ArSoinRoom({ species }: Props) {
         <p className="mt-1 text-sm text-white/60">Merci à toi. Comment te sens-tu ?</p>
       </div>
 
-      {intensity === null && completionStatus !== 'saved' && (
-        <div role="radiogroup" aria-label="Intensité ressentie" className="flex gap-2">
-          {[1, 2, 3, 4, 5].map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => handleSubmitRating(v)}
-              data-testid={`intensity-${v}`}
-              className="h-11 w-11 rounded-full border border-white/10 bg-white/5 text-sm font-medium text-white/80 transition-all hover:scale-110 hover:bg-white/10"
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {completionStatus === 'saving' && (
-        <p className="text-xs text-white/50">
-          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Enregistrement…
-        </p>
-      )}
-      {completionMsg && (
-        <p
-          role={completionStatus === 'error' ? 'alert' : 'status'}
-          className={`rounded-xl border px-3 py-2 text-xs ${
-            completionStatus === 'error'
-              ? 'border-red-500/30 bg-red-500/10 text-red-200'
-              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-          }`}
-        >
-          {completionMsg}
-        </p>
-      )}
+      <ArSessionRating
+        intensity={intensity}
+        completionStatus={completionStatus}
+        completionMsg={completionMsg}
+        onSubmitRating={handleSubmitRating}
+      />
 
       <div className="flex flex-wrap justify-center gap-2">
         <button
