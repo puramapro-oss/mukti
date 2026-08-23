@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import Card from '@/components/ui/Card'
@@ -50,6 +51,16 @@ export default function SettingsPage() {
         <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">Compte</h2>
         <p className="mb-3 text-sm text-[var(--text-secondary)]">{profile.email}</p>
         <Button variant="danger" onClick={signOut}>Se déconnecter</Button>
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">Mes données</h2>
+        <p className="mb-3 text-sm text-[var(--text-secondary)]">
+          Consulte tes acceptations légales, exporte tes données ou supprime ton compte.
+        </p>
+        <Link href="/dashboard/ma-memoire">
+          <Button variant="secondary">Ma mémoire</Button>
+        </Link>
       </Card>
     </div>
   )

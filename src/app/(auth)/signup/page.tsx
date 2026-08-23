@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
+import LegalAcceptanceNotice from '@/lib/legal/components/LegalAcceptanceNotice'
 
 function getPasswordStrength(password: string): number {
   let score = 0
@@ -29,7 +30,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [cguAccepted, setCguAccepted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
@@ -41,8 +41,7 @@ export default function SignupPage() {
     name.trim().length > 0 &&
     email.length > 0 &&
     password.length >= 8 &&
-    passwordsMatch &&
-    cguAccepted
+    passwordsMatch
 
   async function handleGoogleSignup() {
     setGoogleLoading(true)
@@ -64,6 +63,17 @@ export default function SignupPage() {
       return
     }
     toast.success('Bienvenue dans MUKTI. Ta libération commence maintenant.')
+
+    // Preuve d'acceptation horodatée (NIYAMA-BRIEF.md §1) — non bloquant, l'onboarding
+    // continue même si l'enregistrement échoue (ex. confirmation email requise avant session).
+    for (const docType of ['cgu', 'cgv', 'confidentialite']) {
+      fetch('/api/legal/accept', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ docType }),
+      }).catch(() => {})
+    }
+
     router.push('/dashboard')
   }
 
@@ -179,26 +189,7 @@ export default function SignupPage() {
             required
           />
 
-          {/* CGU checkbox */}
-          <label className="flex cursor-pointer items-start gap-3 text-sm text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              className="mt-0.5 accent-[var(--cyan)]"
-              checked={cguAccepted}
-              onChange={(e) => setCguAccepted(e.target.checked)}
-              data-testid="cgu-checkbox"
-            />
-            <span>
-              J&apos;accepte les{' '}
-              <Link href="/cgu" className="text-[var(--cyan)] hover:underline" target="_blank">
-                Conditions Generales
-              </Link>{' '}
-              et la{' '}
-              <Link href="/politique-confidentialite" className="text-[var(--cyan)] hover:underline" target="_blank">
-                Politique de confidentialite
-              </Link>
-            </span>
-          </label>
+          <LegalAcceptanceNotice actionLabel="Créer mon compte" />
 
           <Button
             type="submit"

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { NamaAidantChat } from '@/components/accompagnants/NamaAidantChat'
+import AIDisclosure from '@/lib/legal/components/AIDisclosure'
 
 export const metadata: Metadata = {
   title: 'NAMA-Aidant — Accompagnants — MUKTI',
@@ -42,6 +43,8 @@ export default async function NamaAidantPage() {
           Écoute sans jugement. Tutoie tes émotions. Ce que tu dis ici reste avec toi.
         </p>
       </header>
+
+      <AIDisclosure appName="MUKTI" className="text-xs text-white/40" />
 
       <NamaAidantChat />
 

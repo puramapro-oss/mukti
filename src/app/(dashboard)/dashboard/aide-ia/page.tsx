@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { resolveProfileId } from '@/lib/ar'
 import { QaChat } from '@/components/qa/QaChat'
 import { inferCountryFromHeaders } from '@/lib/emergency-resources'
+import AIDisclosure from '@/lib/legal/components/AIDisclosure'
 
 export const metadata: Metadata = {
   title: 'Aide IA — MUKTI',
@@ -63,6 +64,8 @@ export default async function AideIaPage({
             : "Je ne suis pas thérapeute. Si tu traverses une détresse, je t'oriente vers des ressources dans ton pays."}
         </p>
       </header>
+
+      <AIDisclosure appName="MUKTI" className="text-xs text-white/40" />
 
       <QaChat
         initialSignalDistress={initialSignalDistress}

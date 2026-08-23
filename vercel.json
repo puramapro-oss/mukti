@@ -74,6 +74,10 @@
     {
       "path": "/api/cron/rituel-hebdo-rotate",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/account-deletion",
+      "schedule": "0 3 * * *"
     }
   ]
 }
