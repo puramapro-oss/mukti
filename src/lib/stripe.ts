@@ -90,6 +90,7 @@ export async function createPortalSession(customerId: string, returnUrl: string)
 // G7 — Économie KARMA : 3 plans officiels + anti-churn
 // ============================================================
 import { PLANS_STRIPE, type PlanSlug } from './constants'
+import { getEffectivePriceCents } from './admin-settings'
 
 export async function ensureCustomer(params: {
   userId: string
@@ -125,6 +126,7 @@ export async function createSubscriptionCheckoutV7(params: {
   const stripe = getStripe()
   const cfg = PLANS_STRIPE[params.planSlug]
   const isTrial = cfg.trial_days > 0
+  const price_cents = await getEffectivePriceCents(params.planSlug)
   return stripe.checkout.sessions.create({
     customer: params.customerId,
     mode: 'subscription',
@@ -136,7 +138,7 @@ export async function createSubscriptionCheckoutV7(params: {
         currency: 'eur',
         product_data: { name: cfg.label_fr },
         recurring: { interval: cfg.interval },
-        unit_amount: cfg.price_cents,
+        unit_amount: price_cents,
       },
       quantity: 1,
     }],
@@ -169,6 +171,7 @@ export async function cancelSubscriptionAtPeriodEnd(subscriptionId: string) {
 export async function switchSubscriptionToAntiChurn(subscriptionId: string) {
   const stripe = getStripe()
   const cfg = PLANS_STRIPE.anti_churn
+  const price_cents = await getEffectivePriceCents('anti_churn')
   const sub = await stripe.subscriptions.retrieve(subscriptionId)
   const itemId = sub.items.data[0]?.id
   if (!itemId) throw new Error('Subscription item introuvable.')
@@ -179,7 +182,7 @@ export async function switchSubscriptionToAntiChurn(subscriptionId: string) {
         currency: 'eur',
         product: sub.items.data[0]!.price.product as string,
         recurring: { interval: cfg.interval },
-        unit_amount: cfg.price_cents,
+        unit_amount: price_cents,
       },
     }],
     cancel_at_period_end: false,

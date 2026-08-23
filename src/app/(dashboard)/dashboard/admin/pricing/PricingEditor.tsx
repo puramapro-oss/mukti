@@ -26,7 +26,7 @@ const FIELDS: ReadonlyArray<FieldDef> = [
   {
     key: 'pricing_main_annual_cents',
     label: 'Abonnement annuel',
-    description: '-33% vs mensuel ×12. Facturé une fois par an.',
+    description: 'Économie vs mensuel ×12. Facturé une fois par an.',
   },
   {
     key: 'pricing_anti_churn_cents',

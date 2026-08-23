@@ -3,8 +3,8 @@
 import { createServerSupabaseClient } from './supabase-server'
 import { createServiceClient } from './supabase'
 import { resolveProfileId } from './ar'
-import type { AdminSettingKey, WordingBankSection } from './constants'
-import { VIDA_ANGEL_DEFAULT_MULTIPLIER, FEATURE_FLAGS_DEFAULT } from './constants'
+import type { AdminSettingKey, WordingBankSection, PlanSlug } from './constants'
+import { VIDA_ANGEL_DEFAULT_MULTIPLIER, FEATURE_FLAGS_DEFAULT, PLANS_STRIPE } from './constants'
 
 export async function isSuperAdminCurrentUser(): Promise<{ ok: boolean; userId: string | null }> {
   const sb = await createServerSupabaseClient()
@@ -91,6 +91,44 @@ export async function applyVidaAngelMultiplier(amount_cents: number): Promise<{ 
   if (!active) return { amount_cents, multiplier: 1, vida_angel: false }
   const mult = await getVidaAngelMultiplier()
   return { amount_cents: Math.round(amount_cents * mult), multiplier: mult, vida_angel: true }
+}
+
+// ============================================================================
+// PRICING EFFECTIF — 1 source de vérité runtime (audit CONFORMITE.md 2026-08-23,
+// écart #8) : la page admin /dashboard/admin/pricing édite `admin_settings.pricing_*`.
+// Avant ce correctif, /pricing (public) et Stripe checkout lisaient uniquement la
+// constante figée `PLANS_STRIPE`, jamais ces réglages — un admin changeait le prix ici
+// en croyant qu'il s'appliquait "en live partout", ce qui était faux. Cette fonction
+// est maintenant LA source lue par le checkout Stripe (`lib/stripe.ts`) et par l'API
+// publique `GET /api/pricing` (consommée par `/pricing`) : réglage admin s'il existe,
+// sinon repli sur `PLANS_STRIPE` (prix par défaut codés en dur).
+// ============================================================================
+
+const PRICING_SETTING_KEY: Record<Extract<PlanSlug, 'main_monthly' | 'main_annual' | 'anti_churn'>, AdminSettingKey> = {
+  main_monthly: 'pricing_main_monthly_cents',
+  main_annual: 'pricing_main_annual_cents',
+  anti_churn: 'pricing_anti_churn_cents',
+}
+
+export async function getEffectivePriceCents(planSlug: PlanSlug): Promise<number> {
+  const key = PRICING_SETTING_KEY[planSlug]
+  const override = await getSetting<number>(key)
+  if (typeof override === 'number' && Number.isFinite(override) && override >= 0) return override
+  return PLANS_STRIPE[planSlug].price_cents
+}
+
+export async function getEffectivePricing(): Promise<{
+  main_monthly_cents: number
+  main_annual_cents: number
+  anti_churn_cents: number
+  trial_days: number
+}> {
+  const [main_monthly_cents, main_annual_cents, anti_churn_cents] = await Promise.all([
+    getEffectivePriceCents('main_monthly'),
+    getEffectivePriceCents('main_annual'),
+    getEffectivePriceCents('anti_churn'),
+  ])
+  return { main_monthly_cents, main_annual_cents, anti_churn_cents, trial_days: PLANS_STRIPE.main_monthly.trial_days }
 }
 
 export interface AuditLogRow {

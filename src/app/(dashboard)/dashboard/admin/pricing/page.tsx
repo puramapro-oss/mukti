@@ -1,6 +1,7 @@
 // MUKTI G8.6 — Sous-page admin Pricing : 3 prix live editables
 
 import { getSetting } from '@/lib/admin-settings'
+import { PLANS_STRIPE } from '@/lib/constants'
 import PricingEditor from './PricingEditor'
 
 export const dynamic = 'force-dynamic'
@@ -22,9 +23,9 @@ export default async function AdminPricingPage() {
         </p>
       </header>
       <PricingEditor
-        initialMonthly={typeof monthly === 'number' ? monthly : 999}
-        initialAnnual={typeof annual === 'number' ? annual : 7990}
-        initialAntiChurn={typeof antiChurn === 'number' ? antiChurn : 499}
+        initialMonthly={typeof monthly === 'number' ? monthly : PLANS_STRIPE.main_monthly.price_cents}
+        initialAnnual={typeof annual === 'number' ? annual : PLANS_STRIPE.main_annual.price_cents}
+        initialAntiChurn={typeof antiChurn === 'number' ? antiChurn : PLANS_STRIPE.anti_churn.price_cents}
       />
     </div>
   )

@@ -1,11 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Check, Sparkles, Tag } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { PLANS_STRIPE, TRIAL_DAYS, type PlanSlug } from '@/lib/constants'
+
+// Prix effectifs — repli sur la constante figée le temps que /api/pricing réponde
+// (garde le rendu instantané), puis remplacés par la valeur réellement facturée par
+// Stripe checkout (admin_settings si un admin l'a modifiée, cf lib/admin-settings.ts
+// getEffectivePricing — audit CONFORMITE.md 2026-08-23, écart #8).
+const DEFAULT_PRICING = {
+  main_monthly_cents: PLANS_STRIPE.main_monthly.price_cents,
+  main_annual_cents: PLANS_STRIPE.main_annual.price_cents,
+}
 
 export default function PricingPage() {
   const { user } = useAuth()
@@ -13,6 +22,22 @@ export default function PricingPage() {
   const [promoCode, setPromoCode] = useState('')
   const [promoValidated, setPromoValidated] = useState<{ label: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [pricing, setPricing] = useState(DEFAULT_PRICING)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/pricing')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        setPricing({
+          main_monthly_cents: data.main_monthly_cents ?? DEFAULT_PRICING.main_monthly_cents,
+          main_annual_cents: data.main_annual_cents ?? DEFAULT_PRICING.main_annual_cents,
+        })
+      })
+      .catch(() => { /* garde les prix par défaut, pas de blocage UX */ })
+    return () => { cancelled = true }
+  }, [])
 
   async function validatePromo() {
     if (!promoCode.trim()) return
@@ -60,10 +85,11 @@ export default function PricingPage() {
     }
   }
 
-  const monthly = PLANS_STRIPE.main_monthly.price_cents / 100
-  const annual = PLANS_STRIPE.main_annual.price_cents / 100
+  const monthly = pricing.main_monthly_cents / 100
+  const annual = pricing.main_annual_cents / 100
   const annualEqMonth = annual / 12
   const savings = monthly * 12 - annual
+  const savingsPct = Math.round((savings / (monthly * 12)) * 100)
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white">
@@ -103,7 +129,7 @@ export default function PricingPage() {
             }`}
           >
             <span className="absolute -top-3 right-6 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-              <Sparkles className="h-3 w-3" /> -33% · POPULAIRE
+              <Sparkles className="h-3 w-3" /> -{savingsPct}% · POPULAIRE
             </span>
             <div className="text-white/60 text-sm mb-2 uppercase tracking-wider">Annuel</div>
             <div className="flex items-baseline gap-2 mb-1">

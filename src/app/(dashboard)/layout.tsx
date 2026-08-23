@@ -8,12 +8,14 @@ import Rituel7sOverlay from '@/components/rituel7s/Rituel7sOverlay'
 import { BoucleUrgenceProvider } from '@/components/boucle-urgence/BoucleUrgenceProvider'
 import BoucleUrgenceOverlay from '@/components/boucle-urgence/BoucleUrgenceOverlay'
 import { HelpBubble } from '@/components/qa/HelpBubble'
+import LegalReacceptanceGateMount from '@/components/shared/LegalReacceptanceGateMount'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <Rituel7sProvider>
       <BoucleUrgenceProvider>
         <div className="min-h-screen">
+          <LegalReacceptanceGateMount />
           <Sidebar />
           <div className="lg:pl-60">
             <Topbar />
