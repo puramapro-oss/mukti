@@ -6,6 +6,8 @@ import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight, Heart, Users, Globe, Wind, Moon, Eye, HeartPulse } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { MUKTI_MODULES, APP_TAGLINE, APP_DESCRIPTION } from '@/lib/constants'
+import ImpactCard from '@/components/landing/ImpactCard'
+import CinematicIntro from '@/components/landing/CinematicIntro'
 
 const moduleIcon: Record<string, typeof Heart> = {
   liberation: Sparkles,
@@ -285,77 +287,3 @@ export default function Home() {
 }
 
 // ----- ImpactCard -----
-function ImpactCard({ label, value, suffix, tint }: { label: string; value: number; suffix?: string; tint: 'violet' | 'cyan' | 'emerald' }) {
-  const colors = {
-    violet: { glow: 'rgba(124,58,237,0.15)', text: 'text-violet-200', accent: '#a78bfa' },
-    cyan: { glow: 'rgba(6,182,212,0.15)', text: 'text-cyan-200', accent: '#67e8f9' },
-    emerald: { glow: 'rgba(16,185,129,0.15)', text: 'text-emerald-200', accent: '#6ee7b7' },
-  }
-  const c = colors[tint]
-  return (
-    <div
-      className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-xl"
-    >
-      <div aria-hidden className="absolute inset-0 -z-10" style={{ background: `radial-gradient(circle at top, ${c.glow}, transparent)` }} />
-      <div className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-white">
-        {new Intl.NumberFormat('fr-FR').format(value)}{suffix}
-      </div>
-      <div className={`mt-1 text-xs ${c.text}`}>{label}</div>
-    </div>
-  )
-}
-
-// ----- CinematicIntro (3-5s, skipable) -----
-function CinematicIntro({ onSkip }: { onSkip: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-void)]"
-      role="dialog"
-      aria-label="Cinématique d'introduction"
-    >
-      <motion.button
-        type="button"
-        onClick={onSkip}
-        className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/70 backdrop-blur hover:bg-white/10"
-        whileHover={{ scale: 1.05 }}
-      >
-        Passer
-      </motion.button>
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 1.2, ease: 'easeOut' }}
-        className="text-center"
-      >
-        <motion.div
-          animate={{ rotate: [0, 8, -8, 0] }}
-          transition={{ duration: 3, ease: 'easeInOut', repeat: Infinity }}
-          className="text-7xl sm:text-9xl"
-          aria-hidden
-        >
-          🕉️
-        </motion.div>
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-6 font-[family-name:var(--font-display)] text-4xl font-bold tracking-tight text-white sm:text-6xl"
-        >
-          MUKTI
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
-          className="mt-3 text-sm text-white/60"
-        >
-          मुक्ति · Libération
-        </motion.p>
-      </motion.div>
-    </motion.div>
-  )
-}
