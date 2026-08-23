@@ -38,8 +38,6 @@ export default function ArSoinRoom({ species }: Props) {
   const [showCalibration, setShowCalibration] = useState(false)
   const sessionStartRef = useRef<number | null>(null)
   const timerRef = useRef<number | null>(null)
-
-  // Tick countdown
   useEffect(() => {
     if (phase !== 'in-session' || sessionStartRef.current === null) return
     const tick = () => {
@@ -147,9 +145,6 @@ export default function ArSoinRoom({ species }: Props) {
     setPhase('pick')
   }
 
-  // ===========================
-  // PHASE : pick
-  // ===========================
   if (phase === 'pick') {
     return (
       <div className="flex flex-col gap-6">
@@ -160,7 +155,6 @@ export default function ArSoinRoom({ species }: Props) {
             {SPECIES_RIGS[selectedSpecies].tagline_fr}
           </p>
         </section>
-
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/70">Combien de temps ?</h2>
           <div className="grid grid-cols-3 gap-2">
@@ -181,7 +175,6 @@ export default function ArSoinRoom({ species }: Props) {
             ))}
           </div>
         </section>
-
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 text-xs text-white/60">
           {cam.status === 'granted' && <CameraLine icon="on" text="Caméra active — mode miroir." />}
           {cam.status === 'idle' && <CameraLine icon="off" text="La caméra n'est pas encore activée. Tu peux l'autoriser ou continuer en mode imaginaire." />}
@@ -208,7 +201,6 @@ export default function ArSoinRoom({ species }: Props) {
             )}
           </div>
         </section>
-
         <button
           type="button"
           onClick={handleStart}
@@ -228,9 +220,6 @@ export default function ArSoinRoom({ species }: Props) {
     )
   }
 
-  // ===========================
-  // PHASE : in-session
-  // ===========================
   if (phase === 'in-session') {
     return (
       <div className="flex flex-col gap-4">
@@ -254,7 +243,6 @@ export default function ArSoinRoom({ species }: Props) {
             {formatTime(remaining)}
           </div>
         </div>
-
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -276,15 +264,12 @@ export default function ArSoinRoom({ species }: Props) {
     )
   }
 
-  // ===========================
-  // PHASE : completed
-  // ===========================
   return (
     <div className="flex flex-col items-center gap-6 rounded-3xl border border-white/10 bg-white/[0.02] p-8 text-center">
       <Sparkles className="h-10 w-10 text-[var(--cyan)]" />
       <div>
         <h2 className="text-xl font-semibold text-white">Session terminée</h2>
-        <p className="mt-1 text-sm text-white/60">Merci à toi. Comment te sens-tu ?</p>
+        <p className="text-sm text-white/60">Merci à toi. Comment te sens-tu ?</p>
       </div>
 
       <ArSessionRating
