@@ -4,7 +4,7 @@
 // Flux : pick-beacon → pick-species → in-session (ARCanvas + SpeciesMorph + DistanceBeacon + AuraPet + countdown) → completed.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Camera, CameraOff, Eye, Loader2, Play, Square, Sparkles } from 'lucide-react'
+import { ArrowRight, Loader2, Play, Square, Sparkles } from 'lucide-react'
 import { useCameraPermission } from '@/hooks/useCameraPermission'
 import ARCanvas from '@/components/ar/ARCanvas'
 import SpeciesMorph from '@/components/ar/SpeciesMorph'
@@ -12,31 +12,19 @@ import SpeciesPicker, { type SpeciesPickerSpecies } from '@/components/ar/Specie
 import BeaconPicker from '@/components/ar/BeaconPicker'
 import DistanceBeacon from '@/components/ar/DistanceBeacon'
 import AuraPet, { type AuraIntention } from '@/components/ar/AuraPet'
+import CameraLine from '@/components/ar/CameraLine'
+import ArSessionRating from '@/components/ar/ArSessionRating'
 import type { ArBeacon } from '@/lib/ar'
 import { AR_SESSION_DURATIONS_SEC, type ArSpeciesSlug } from '@/lib/constants'
 import { SPECIES_RIGS } from '@/lib/ar/species-rigs'
+import { BEACON_TYPE_EMOJI, BEACON_TYPE_LABEL } from '@/lib/ar/beacon-constants'
+import { formatTime } from '@/components/ar/ar-helpers'
 
 type Phase = 'pick-beacon' | 'pick-species' | 'in-session' | 'completed'
 
 interface Props {
   beacons: ArBeacon[]
   species: SpeciesPickerSpecies[]
-}
-
-const BEACON_TYPE_EMOJI: Record<string, string> = {
-  refuge_animalier: '🐾',
-  ong_nature: '🌍',
-  personne: '💫',
-  planete: '🌏',
-  element: '🌊',
-}
-
-const BEACON_TYPE_LABEL: Record<string, string> = {
-  refuge_animalier: 'Refuge',
-  ong_nature: 'ONG',
-  personne: 'Personne',
-  planete: 'Planète',
-  element: 'Élément',
 }
 
 export default function ArManifestationRoom({ beacons, species }: Props) {
@@ -356,42 +344,12 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
         )}
       </div>
 
-      {intensity === null && completionStatus !== 'saved' && (
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-xs text-white/50">Comment te sens-tu ?</p>
-          <div role="radiogroup" aria-label="Intensité ressentie" className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => handleSubmitRating(v)}
-                data-testid={`mf-intensity-${v}`}
-                className="h-11 w-11 rounded-full border border-white/10 bg-white/5 text-sm font-medium text-white/80 transition-all hover:scale-110 hover:bg-white/10"
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {completionStatus === 'saving' && (
-        <p className="text-xs text-white/50">
-          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Enregistrement…
-        </p>
-      )}
-      {completionMsg && (
-        <p
-          role={completionStatus === 'error' ? 'alert' : 'status'}
-          className={`rounded-xl border px-3 py-2 text-xs ${
-            completionStatus === 'error'
-              ? 'border-red-500/30 bg-red-500/10 text-red-200'
-              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-          }`}
-        >
-          {completionMsg}
-        </p>
-      )}
+      <ArSessionRating
+        intensity={intensity}
+        completionStatus={completionStatus}
+        completionMsg={completionMsg}
+        onSubmitRating={handleSubmitRating}
+      />
 
       <div className="flex flex-wrap justify-center gap-2">
         <button
@@ -409,21 +367,5 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
         </a>
       </div>
     </div>
-  )
-}
-
-function formatTime(sec: number) {
-  const m = Math.floor(sec / 60).toString().padStart(2, '0')
-  const s = (sec % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
-
-function CameraLine({ icon, text }: { icon: 'on' | 'off' | 'imaginary'; text: string }) {
-  const Icon = icon === 'on' ? Camera : icon === 'imaginary' ? Eye : CameraOff
-  return (
-    <p className="flex items-start gap-2">
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/70" />
-      <span>{text}</span>
-    </p>
   )
 }
