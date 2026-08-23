@@ -142,4 +142,4 @@ VERDICT:mukti:ORANGE:8
 
 **Vérification avant commit** : `npx tsc --noEmit` → 0 erreur. `npm run build` → succès (exit 0), route `/api/pricing` bien générée. `npx eslint .` → 23 erreurs/7 warnings identiques avant/après (comparé via `git stash` sur la branche de base) — 0 nouvelle erreur introduite ; les 23 erreurs pré-existantes sont toutes `max-lines`/`no-empty` dans des fichiers non touchés par cette session (déjà trackées, session refactoring dédiée en cours cf commit `8196bc3`). Un blocage `tsc`/`build` pré-existant et sans lien avec NIYAMA (dépendance externe `@purama/smarana` à référence git flottante import `pg` sans types) a été neutralisé par un shim ambient minimal (`src/types/pg.d.ts`) uniquement pour pouvoir vérifier les 4 vraies corrections — documenté en détail dans `ERRORS.md`.
 
-REMEDIATION:mukti:4/8:pending-commit
+REMEDIATION:mukti:4/8:1cc14a8
