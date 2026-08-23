@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".vercel/**",
+    // Scripts CLI tools need console.log for their output
+    "scripts/**",
   ]),
 ]);
 

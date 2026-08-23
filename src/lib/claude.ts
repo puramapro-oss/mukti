@@ -1,4 +1,6 @@
+import 'server-only'
 import Anthropic from '@anthropic-ai/sdk'
+import { smarana } from '@purama/smarana'
 import type { Plan, Situation } from '@/types'
 
 let _anthropic: Anthropic | null = null
@@ -93,17 +95,25 @@ export async function askMUKTI(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
   plan: Plan = 'free',
   userContext?: string,
+  userId?: string,
 ): Promise<string> {
-  const anthropic = getAnthropic()
-  const response = await anthropic.messages.create({
-    model: resolveModel(plan),
-    max_tokens: TOKEN_LIMITS[plan],
+  // Délégation à smarana (Loi 1 SMARANA-BRIEF.md : aucune app n'appelle l'API directement).
+  // Mapping tier : free → fast, premium → main
+  const tier = plan === 'premium' ? 'main' : 'fast'
+  const lastMsg = messages[messages.length - 1]
+  if (!lastMsg || lastMsg.role !== 'user') return ''
+
+  const recentMessages = messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+  const result = await smarana.ask({
+    appSlug: 'mukti',
+    userId,
     system: getMUKTISystemPrompt(userContext),
-    messages,
+    recentMessages: recentMessages.length > 0 ? recentMessages : undefined,
+    message: lastMsg.content,
+    tier,
+    maxTokens: TOKEN_LIMITS[plan],
   })
-  const block = response.content[0]
-  if (block && block.type === 'text') return block.text
-  return ''
+  return result.text
 }
 
 export async function* streamMUKTI(

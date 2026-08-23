@@ -126,6 +126,7 @@ export default function AudioSFUEngine(props: AudioSFUEngineProps) {
 
     return () => {
       cancelled = true
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       const audioElements = audioElementsRef.current
       audioElements.forEach((el) => {
         el.srcObject = null

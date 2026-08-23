@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Users } from 'lucide-react'
 import { CORE_FORMATS, type CoreFormat } from '@/lib/constants'

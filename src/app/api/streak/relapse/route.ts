@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import Anthropic from '@anthropic-ai/sdk'
+import { smarana } from '@purama/smarana'
 import { recordRelapse } from '@/lib/streaks'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase'
@@ -22,39 +22,29 @@ const BodySchema = z.object({
   context_tags: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
 })
 
-function getHaikuModel(): string {
-  return process.env.ANTHROPIC_MODEL_FAST || 'claude-haiku-4-5-20251001'
-}
-
 async function buildBenevolentInsight(params: {
   type: AddictionId
   trigger_note?: string
   mood_before?: number
   streak_days_lost: number
+  userId: string
 }): Promise<{ insight: string | null; model: string | null }> {
   try {
     if (!process.env.ANTHROPIC_API_KEY) return { insight: null, model: null }
     const meta = getAddictionMeta(params.type)
     const label = meta?.name ?? params.type
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const model = getHaikuModel()
-    const msg = await client.messages.create({
-      model,
-      max_tokens: 400,
+    const result = await smarana.ask({
+      appSlug: 'mukti',
+      userId: params.userId,
       system:
         'Tu es un accompagnant bienveillant pour la libération des addictions. ZÉRO jugement. ZÉRO culpabilité. TUTOIEMENT. FR. Jamais "guérit/traite/soigne". Toujours "libération/apaisement". Réponds en 2 à 4 phrases douces, courtes, qui honorent le fait d\'avoir cliqué. Termine par une micro-action concrète réalisable tout de suite (pas "médite 20min"). AUCUN texte hors du message.',
-      messages: [
-        {
-          role: 'user',
-          content: `Rechute ${label}. ${params.streak_days_lost > 0 ? `Série perdue : ${params.streak_days_lost} jours.` : 'Pas de série en cours.'}${params.trigger_note ? ` Contexte : ${params.trigger_note}.` : ''}${params.mood_before ? ` Humeur avant rechute : ${params.mood_before}/10.` : ''}`,
-        },
-      ],
+      message: `Rechute ${label}. ${params.streak_days_lost > 0 ? `Série perdue : ${params.streak_days_lost} jours.` : 'Pas de série en cours.'}${params.trigger_note ? ` Contexte : ${params.trigger_note}.` : ''}${params.mood_before ? ` Humeur avant rechute : ${params.mood_before}/10.` : ''}`,
+      tier: 'fast',
+      maxTokens: 400,
     })
 
-    const block = msg.content.find(b => b.type === 'text')
-    if (!block || block.type !== 'text') return { insight: null, model }
-    return { insight: block.text.trim(), model }
+    return { insight: result.text.trim(), model: result.model }
   } catch {
     return { insight: null, model: null }
   }
@@ -105,6 +95,7 @@ export async function POST(req: Request) {
     trigger_note: parsed.data.trigger_note,
     mood_before: parsed.data.mood_before,
     streak_days_lost: result.relapse.streak_reset_from_days,
+    userId: user.id,
   })
 
   if (insight && model) {

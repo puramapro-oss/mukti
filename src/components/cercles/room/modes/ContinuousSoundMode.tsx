@@ -44,8 +44,8 @@ export default function ContinuousSoundMode({ category, accentColor = '#7C3AED' 
       gain.gain.cancelScheduledValues(now)
       gain.gain.linearRampToValueAtTime(0, now + 0.8)
       setTimeout(() => {
-        try { osc.stop() } catch {}
-        try { ctx.close() } catch {}
+        try { osc.stop() } catch { /* already stopped */ }
+        try { ctx.close() } catch { /* already closed */ }
       }, 900)
     }
     ctxRef.current = null

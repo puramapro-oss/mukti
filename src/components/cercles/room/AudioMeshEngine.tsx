@@ -121,7 +121,9 @@ export default function AudioMeshEngine(props: AudioMeshEngineProps) {
       }
       localStreamRef.current?.getTracks().forEach((t) => t.stop())
       localStreamRef.current = null
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       const audioElements = audioElementsRef.current
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       const remoteStreams = remoteStreamsRef.current
       audioElements.forEach((el) => {
         el.srcObject = null

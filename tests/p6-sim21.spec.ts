@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test'
+import { test, expect, type APIRequestContext, type BrowserContext } from '@playwright/test'
 import { mkdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
 
@@ -123,20 +123,6 @@ async function loginViaCookies(playwrightFx: any, browserContext: BrowserContext
   await req.dispose()
   const cookies = buildAuthCookies(session)
   await browserContext.addCookies(cookies)
-}
-
-// Removed unused gotoAuthed function
-async function _gotoAuthed(page: Page, path: string) {
-  await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 20000 })
-  // Wait until either an authed page rendered (any data-testid ending in -page)
-  // OR we got bounced back to /login (which means something is wrong).
-  await page.waitForFunction(
-    () => {
-      if (location.pathname === '/login' || location.pathname.startsWith('/login/')) return true
-      return document.querySelector('[data-testid$="-page"]') !== null
-    },
-    { timeout: 20000 },
-  )
 }
 
 test.describe.serial('P6 — SIM 21 (live e2e)', () => {

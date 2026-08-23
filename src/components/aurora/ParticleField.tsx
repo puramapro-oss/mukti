@@ -14,17 +14,6 @@ const PARTICLE_COUNT = 500
 const MAX_RADIUS = 3.5
 const MIN_RADIUS = 0.35
 
-interface ParticleState {
-  // Position polaire
-  angle: number
-  radius: number
-  azimuth: number
-  // Vitesse radiale de référence
-  baseSpeed: number
-  // Lifetime pour respawn
-  seed: number
-}
-
 export interface ParticleFieldProps {
   breathPhase: BreathPhase
   phaseProgress: number
