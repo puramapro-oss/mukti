@@ -3,27 +3,12 @@
 // MUKTI G8.6 — Missions client : table + create/edit modal + delete
 
 import { useState, useTransition } from 'react'
-import { Plus, Pencil, Trash2, X, Save, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react'
 import type { MissionRow } from '@/lib/admin-missions'
-import { MISSION_TYPES, type MissionType } from '@/lib/constants'
+import MissionFormModal, { type FormState, TYPE_LABELS } from './MissionFormModal'
 
 interface Props {
   initialMissions: MissionRow[]
-}
-
-interface FormState {
-  id?: string
-  slug: string
-  title_fr: string
-  title_en: string
-  description_fr: string
-  description_en: string
-  type: MissionType
-  category: string
-  reward_points: number
-  reward_amount_cents: number
-  active: boolean
-  sort_order: number
 }
 
 const EMPTY_FORM: FormState = {
@@ -38,15 +23,6 @@ const EMPTY_FORM: FormState = {
   reward_amount_cents: 0,
   active: true,
   sort_order: 0,
-}
-
-const TYPE_LABELS: Record<MissionType, string> = {
-  action: 'Action',
-  share: 'Partage',
-  referral: 'Parrainage',
-  meditation: 'Méditation',
-  community: 'Communauté',
-  other: 'Autre',
 }
 
 export default function MissionsClient({ initialMissions }: Props) {
@@ -83,25 +59,24 @@ export default function MissionsClient({ initialMissions }: Props) {
     setError(null)
   }
 
-  function handleSave() {
-    if (!editing) return
+  function handleSave(form: FormState) {
     setError(null)
-    const isNew = !editing.id
-    const url = isNew ? '/api/admin/missions' : `/api/admin/missions/${editing.id}`
+    const isNew = !form.id
+    const url = isNew ? '/api/admin/missions' : `/api/admin/missions/${form.id}`
     const method = isNew ? 'POST' : 'PUT'
     const body: Record<string, unknown> = {
-      title_fr: editing.title_fr,
-      title_en: editing.title_en,
-      description_fr: editing.description_fr || null,
-      description_en: editing.description_en || null,
-      type: editing.type,
-      category: editing.category || null,
-      reward_points: editing.reward_points,
-      reward_amount_cents: editing.reward_amount_cents,
-      active: editing.active,
-      sort_order: editing.sort_order,
+      title_fr: form.title_fr,
+      title_en: form.title_en,
+      description_fr: form.description_fr || null,
+      description_en: form.description_en || null,
+      type: form.type,
+      category: form.category || null,
+      reward_points: form.reward_points,
+      reward_amount_cents: form.reward_amount_cents,
+      active: form.active,
+      sort_order: form.sort_order,
     }
-    if (isNew) body.slug = editing.slug
+    if (isNew) body.slug = form.slug
 
     startTransition(async () => {
       const res = await fetch(url, {
@@ -220,173 +195,7 @@ export default function MissionsClient({ initialMissions }: Props) {
         </table>
       </div>
 
-      {editing ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="mission-modal-title"
-        >
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0E0E15] p-6 shadow-2xl">
-            <div className="mb-4 flex items-start justify-between">
-              <h2 id="mission-modal-title" className="text-lg font-semibold text-white">
-                {editing.id ? 'Modifier la mission' : 'Nouvelle mission'}
-              </h2>
-              <button
-                type="button"
-                onClick={closeForm}
-                aria-label="Fermer"
-                className="rounded-md p-1 text-white/60 hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-white/70">Slug (immuable)</label>
-                <input
-                  type="text"
-                  value={editing.slug}
-                  disabled={!!editing.id}
-                  onChange={(e) => setEditing({ ...editing, slug: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_') })}
-                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white outline-none focus:border-fuchsia-400/60 disabled:opacity-50"
-                  placeholder="ma_mission_unique"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Titre FR</label>
-                  <input
-                    type="text"
-                    value={editing.title_fr}
-                    onChange={(e) => setEditing({ ...editing, title_fr: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Titre EN</label>
-                  <input
-                    type="text"
-                    value={editing.title_en}
-                    onChange={(e) => setEditing({ ...editing, title_en: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Description FR</label>
-                  <textarea
-                    rows={2}
-                    value={editing.description_fr}
-                    onChange={(e) => setEditing({ ...editing, description_fr: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Description EN</label>
-                  <textarea
-                    rows={2}
-                    value={editing.description_en}
-                    onChange={(e) => setEditing({ ...editing, description_en: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Type</label>
-                  <select
-                    value={editing.type}
-                    onChange={(e) => setEditing({ ...editing, type: e.target.value as MissionType })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  >
-                    {MISSION_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {TYPE_LABELS[t]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Catégorie</label>
-                  <input
-                    type="text"
-                    value={editing.category}
-                    onChange={(e) => setEditing({ ...editing, category: e.target.value })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                    placeholder="onboarding"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Sort order</label>
-                  <input
-                    type="number"
-                    value={editing.sort_order}
-                    onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Récompense points</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editing.reward_points}
-                    onChange={(e) => setEditing({ ...editing, reward_points: Number(e.target.value) })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Récompense cents</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editing.reward_amount_cents}
-                    onChange={(e) => setEditing({ ...editing, reward_amount_cents: Number(e.target.value) })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-fuchsia-400/60"
-                  />
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-white/85">
-                <input
-                  type="checkbox"
-                  checked={editing.active}
-                  onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-                  className="h-4 w-4 rounded border-white/20 bg-black/40 text-fuchsia-500"
-                />
-                Active
-              </label>
-            </div>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={pending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-fuchsia-500 px-3 py-2 text-sm font-medium text-white hover:bg-fuchsia-400 disabled:bg-white/10 disabled:text-white/40"
-              >
-                {pending ? (
-                  'Enregistrement…'
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" aria-hidden="true" />
-                    Enregistrer
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {editing && <MissionFormModal initial={editing} pending={pending} onClose={closeForm} onSave={handleSave} />}
     </div>
   )
 }
