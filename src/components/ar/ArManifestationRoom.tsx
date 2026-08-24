@@ -3,9 +3,10 @@
 // MUKTI — G4.5 Manifestation AR room
 // Flux : pick-beacon → pick-species → in-session (ARCanvas + SpeciesMorph + DistanceBeacon + AuraPet + countdown) → completed.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowRight, Loader2, Play, Square, Sparkles } from 'lucide-react'
 import { useCameraPermission } from '@/hooks/useCameraPermission'
+import { useArSession } from '@/components/ar/hooks/useArSession'
 import ARCanvas from '@/components/ar/ARCanvas'
 import SpeciesMorph from '@/components/ar/SpeciesMorph'
 import SpeciesPicker, { type SpeciesPickerSpecies } from '@/components/ar/SpeciesPicker'
@@ -33,15 +34,9 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
   const [selectedBeacon, setSelectedBeacon] = useState<string | null>(null)
   const [selectedSpecies, setSelectedSpecies] = useState<ArSpeciesSlug>('humain')
   const [durationSec, setDurationSec] = useState<number>(300)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [startingSession, setStartingSession] = useState(false)
-  const [startError, setStartError] = useState<string | null>(null)
-  const [remaining, setRemaining] = useState<number>(0)
   const [intensity, setIntensity] = useState<number | null>(null)
-  const [completionStatus, setCompletionStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [completionMsg, setCompletionMsg] = useState<string | null>(null)
-  const sessionStartRef = useRef<number | null>(null)
-  const timerRef = useRef<number | null>(null)
+
+  const session = useArSession(durationSec)
 
   const beaconData = useMemo(
     () => beacons.find((b) => b.slug === selectedBeacon) ?? null,
@@ -50,112 +45,32 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
 
   const intention = (beaconData?.intention_hint ?? 'paix') as AuraIntention
 
-  useEffect(() => {
-    if (phase !== 'in-session' || sessionStartRef.current === null) return
-    const tick = () => {
-      if (sessionStartRef.current === null) return
-      const elapsed = Math.floor((Date.now() - sessionStartRef.current) / 1000)
-      const left = Math.max(0, durationSec - elapsed)
-      setRemaining(left)
-      if (left <= 0) {
-        handleComplete(durationSec, null)
-      }
-    }
-    tick()
-    timerRef.current = window.setInterval(tick, 500)
-    return () => {
-      if (timerRef.current !== null) window.clearInterval(timerRef.current)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, durationSec])
-
-  const handleStart = useCallback(async () => {
+  const handleStartSession = async () => {
     if (!selectedBeacon) return
-    setStartError(null)
-    setStartingSession(true)
-    try {
-      const res = await fetch('/api/ar/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'manifestation',
-          species_slug: selectedSpecies,
-          beacon_slug: selectedBeacon,
-          fallback_imaginary: cam.status !== 'granted',
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) {
-        setStartError(data.error ?? 'Impossible de démarrer la session.')
-        setStartingSession(false)
-        return
-      }
-      setSessionId(data.session.id)
-      sessionStartRef.current = Date.now()
-      setRemaining(durationSec)
+    const success = await session.handleStart({
+      mode: 'manifestation',
+      species_slug: selectedSpecies,
+      beacon_slug: selectedBeacon,
+      fallback_imaginary: cam.status !== 'granted',
+    })
+    if (success) {
       setPhase('in-session')
-    } catch {
-      setStartError('Erreur réseau. Réessaie.')
-    } finally {
-      setStartingSession(false)
     }
-  }, [selectedBeacon, selectedSpecies, cam.status, durationSec])
+  }
 
-  const handleComplete = useCallback(
-    async (durationUsed: number, intensityVal: number | null) => {
-      if (!sessionId) return
-      if (timerRef.current !== null) {
-        window.clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-      setPhase('completed')
-      setCompletionStatus('saving')
-      setCompletionMsg(null)
-      try {
-        const res = await fetch(`/api/ar/sessions/${sessionId}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            duration_sec: durationUsed,
-            intensity_1_5: intensityVal ?? undefined,
-          }),
-        })
-        const data = await res.json()
-        if (!res.ok || !data.ok) {
-          setCompletionStatus('error')
-          setCompletionMsg(data.error ?? 'Impossible de clôturer la session.')
-          return
-        }
-        setCompletionStatus('saved')
-        setCompletionMsg('Ton envoi est scellé ✨')
-      } catch {
-        setCompletionStatus('error')
-        setCompletionMsg('Erreur réseau. Ta session reste valide localement.')
-      }
-    },
-    [sessionId],
-  )
-
-  const handleStopEarly = () => {
-    if (sessionStartRef.current === null) return
-    const elapsed = Math.floor((Date.now() - sessionStartRef.current) / 1000)
-    handleComplete(elapsed, null)
+  const handleCompleteSession = async (durationUsed: number, intensityVal: number | null) => {
+    await session.handleComplete(durationUsed, intensityVal)
+    setPhase('completed')
   }
 
   const handleSubmitRating = (value: number) => {
     setIntensity(value)
-    if (!sessionId || sessionStartRef.current === null) return
-    const elapsed = Math.min(durationSec, Math.floor((Date.now() - sessionStartRef.current) / 1000))
-    handleComplete(elapsed, value)
+    handleCompleteSession(durationSec, value)
   }
 
-  const handleRetry = () => {
-    setSessionId(null)
-    sessionStartRef.current = null
-    setRemaining(0)
+  const handleRetrySession = () => {
+    session.handleRetry()
     setIntensity(null)
-    setCompletionStatus('idle')
-    setCompletionMsg(null)
     setPhase('pick-beacon')
   }
 
@@ -265,19 +180,19 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
           </button>
           <button
             type="button"
-            onClick={handleStart}
-            disabled={startingSession || (cam.status !== 'granted' && cam.status !== 'imaginary')}
+            onClick={handleStartSession}
+            disabled={session.startingSession || (cam.status !== 'granted' && cam.status !== 'imaginary')}
             data-testid="manifestation-start"
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--cyan)] to-[var(--purple)] px-5 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {startingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {session.startingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             Émettre le rayon
           </button>
         </div>
 
-        {startError && (
+        {session.startError && (
           <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
-            {startError}
+            {session.startError}
           </div>
         )}
       </div>
@@ -308,7 +223,7 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
             )}
           </ARCanvas>
           <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/60 px-4 py-1.5 text-xs font-mono text-white backdrop-blur">
-            {formatTime(remaining)}
+            {formatTime(session.remaining)}
           </div>
           {cam.status !== 'granted' && (
             <div className="pointer-events-none absolute bottom-4 left-1/2 w-[min(88vw,360px)] -translate-x-1/2 rounded-xl border border-white/10 bg-black/55 p-3 text-center text-xs text-white/75 backdrop-blur">
@@ -319,7 +234,7 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
 
         <button
           type="button"
-          onClick={handleStopEarly}
+          onClick={session.handleStopEarly}
           data-testid="manifestation-stop"
           className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/80 transition-colors hover:bg-white/10"
         >
@@ -346,15 +261,15 @@ export default function ArManifestationRoom({ beacons, species }: Props) {
 
       <ArSessionRating
         intensity={intensity}
-        completionStatus={completionStatus}
-        completionMsg={completionMsg}
+        completionStatus={session.completionStatus}
+        completionMsg={session.completionMsg}
         onSubmitRating={handleSubmitRating}
       />
 
       <div className="flex flex-wrap justify-center gap-2">
         <button
           type="button"
-          onClick={handleRetry}
+          onClick={handleRetrySession}
           className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm text-white/85 transition-colors hover:bg-white/10"
         >
           Nouvel envoi
