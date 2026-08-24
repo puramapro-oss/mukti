@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mic, MicOff, LogOut, Loader2, AlertTriangle, Flag } from 'lucide-react'
-import { createClient } from '@/lib/supabase'
-import type { Circle, CircleParticipant, CircleRotation } from '@/lib/circles'
 import { CIRCLE_CATEGORIES, type CircleCategoryId } from '@/lib/constants'
 import { useRotationSync } from '@/hooks/useRotationSync'
+import { useCircleState } from './useCircleState'
+import { useCircleJoin } from './useCircleJoin'
+import { useCircleLeave } from './useCircleLeave'
 import ParticipantTile, { type ParticipantTileData } from './ParticipantTile'
 import AudioMeshEngine from './AudioMeshEngine'
 import AudioSFUEngine from './AudioSFUEngine'
@@ -18,141 +19,31 @@ interface CircleRoomProps {
   myName: string | null
 }
 
-interface ParticipantProfile {
-  id: string
-  full_name: string | null
-}
-
-type FetchResponse = {
-  ok: boolean
-  circle?: Circle
-  participants?: CircleParticipant[]
-  current_rotation?: CircleRotation | null
-  error?: string
-}
-
 export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomProps) {
   const router = useRouter()
-  const [circle, setCircle] = useState<Circle | null>(null)
-  const [participants, setParticipants] = useState<CircleParticipant[]>([])
-  const [profiles, setProfiles] = useState<Map<string, ParticipantProfile>>(new Map())
-  const [currentRotation, setCurrentRotation] = useState<CircleRotation | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [joining, setJoining] = useState(false)
   const [micMuted, setMicMuted] = useState(false)
   const [audioReady, setAudioReady] = useState(false)
   const [speakingIds, setSpeakingIds] = useState<Set<string>>(new Set())
   const [hasJoined, setHasJoined] = useState(false)
   const [reportOpenFor, setReportOpenFor] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<string | null>(null)
 
-  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const { circle, participants, profiles, currentRotation, loading, error: fetchError } = useCircleState(circleId)
 
-  // Initial fetch + polling
-  useEffect(() => {
-    let cancelled = false
+  useCircleJoin({
+    circleId,
+    myUserId,
+    loading,
+    circle,
+    participants,
+    onError: setLocalError,
+    onJoined: () => setHasJoined(true),
+    onMicMuted: setMicMuted,
+  })
 
-    async function fetchState() {
-      try {
-        const res = await fetch(`/api/circles/${circleId}`, { cache: 'no-store' })
-        const data: FetchResponse = await res.json()
-        if (cancelled) return
-        if (!res.ok || !data.ok || !data.circle) {
-          setError(data.error ?? 'Cercle introuvable.')
-          setLoading(false)
-          return
-        }
-        setCircle(data.circle)
-        setParticipants(data.participants ?? [])
-        setCurrentRotation(data.current_rotation ?? null)
-        setError(null)
+  useCircleLeave({ circleId, hasJoined })
 
-        // Fetch profiles pour affichage noms
-        const ids = (data.participants ?? []).map((p) => p.user_id)
-        if (ids.length > 0) {
-          const supabase = createClient()
-          const { data: pr } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', ids)
-          if (!cancelled && pr) {
-            const map = new Map<string, ParticipantProfile>()
-            pr.forEach((p) => map.set(p.id, p as ParticipantProfile))
-            setProfiles(map)
-          }
-        }
-        setLoading(false)
-      } catch {
-        if (!cancelled) {
-          setError('Erreur réseau.')
-          setLoading(false)
-        }
-      }
-    }
-
-    fetchState()
-    refreshTimerRef.current = setInterval(fetchState, 5000)
-
-    return () => {
-      cancelled = true
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current)
-    }
-  }, [circleId])
-
-  // Auto-join on mount if not already participant
-  useEffect(() => {
-    if (loading || !circle) return
-    const me = participants.find((p) => p.user_id === myUserId && !p.left_at)
-    if (me) {
-      queueMicrotask(() => {
-        setHasJoined(true)
-        setMicMuted(me.mic_muted)
-      })
-      return
-    }
-    if (joining) return
-     
-    queueMicrotask(() => setJoining(true))
-    fetch(`/api/circles/${circleId}/join`, { method: 'POST' })
-      .then(async (res) => {
-        const data = await res.json()
-        if (!res.ok) {
-          setError(data.error ?? 'Impossible de rejoindre.')
-          setJoining(false)
-          return
-        }
-        setHasJoined(true)
-        setJoining(false)
-      })
-      .catch(() => {
-        setError('Erreur lors de l\'entrée dans le cercle.')
-        setJoining(false)
-      })
-  }, [loading, circle, participants, myUserId, circleId, joining])
-
-  // Leave on unmount / window close
-  useEffect(() => {
-    async function doLeave() {
-      if (!hasJoined) return
-      try {
-        await fetch(`/api/circles/${circleId}/leave`, {
-          method: 'POST',
-          keepalive: true,
-        })
-      } catch {
-        /* ignore */
-      }
-    }
-    const handleBeforeUnload = () => {
-      // keepalive permet d'envoyer la requête même pendant unload
-      void doLeave()
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      void doLeave()
-    }
-  }, [hasJoined, circleId])
+  const error = fetchError ?? localError
 
   function handleSpeakingChange(userId: string, speaking: boolean) {
     setSpeakingIds((prev) => {
@@ -408,7 +299,7 @@ export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomPro
             micMuted={micMuted}
             onStreamReady={() => setAudioReady(true)}
             onSpeakingChange={handleSpeakingChange}
-            onError={(msg) => setError(msg)}
+            onError={(msg) => setLocalError(msg)}
           />
         ) : (
           <AudioMeshEngine
@@ -417,7 +308,7 @@ export default function CircleRoom({ circleId, myUserId, myName }: CircleRoomPro
             micMuted={micMuted}
             onStreamReady={() => setAudioReady(true)}
             onSpeakingChange={handleSpeakingChange}
-            onError={(msg) => setError(msg)}
+            onError={(msg) => setLocalError(msg)}
           />
         )
       )}
