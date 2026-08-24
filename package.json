@@ -61,14 +61,14 @@
     "@purama/eslint-config": "file:../packages/eslint-config-purama",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.39",
+    "@types/pg": "^8.11.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.184.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@types/pg": "^8.11.0"
+    "typescript": "^5"
   },
   "overrides": {
     "crypto-js": "^4.2.0",
