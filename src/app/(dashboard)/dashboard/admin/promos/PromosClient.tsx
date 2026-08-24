@@ -3,24 +3,12 @@
 // MUKTI G8.6 — Promos client : table + create/edit/delete + audit auto
 
 import { useState, useTransition } from 'react'
-import { Plus, Pencil, Trash2, X, Save, AlertCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react'
 import type { PromoRow } from '@/lib/admin-promos'
+import PromoFormModal, { type FormState } from './PromoFormModal'
 
 interface Props {
   initialPromos: PromoRow[]
-}
-
-interface FormState {
-  id?: string
-  code: string
-  label: string
-  discount_type: 'percent' | 'amount'
-  discount_value: number
-  duration: 'once' | 'forever' | 'repeating'
-  duration_in_months: number | null
-  valid_until: string | null
-  max_redemptions: number | null
-  active: boolean
 }
 
 const EMPTY_FORM: FormState = {
@@ -71,23 +59,22 @@ export default function PromosClient({ initialPromos }: Props) {
     setError(null)
   }
 
-  function handleSave() {
-    if (!editing) return
+  function handleSave(form: FormState) {
     setError(null)
-    const isNew = !editing.id
-    const url = isNew ? '/api/admin/promos' : `/api/admin/promos/${editing.id}`
+    const isNew = !form.id
+    const url = isNew ? '/api/admin/promos' : `/api/admin/promos/${form.id}`
     const method = isNew ? 'POST' : 'PUT'
     const body: Record<string, unknown> = {
-      label: editing.label,
-      discount_type: editing.discount_type,
-      discount_value: editing.discount_value,
-      duration: editing.duration,
-      duration_in_months: editing.duration === 'repeating' ? editing.duration_in_months ?? 1 : null,
-      valid_until: editing.valid_until,
-      max_redemptions: editing.max_redemptions,
-      active: editing.active,
+      label: form.label,
+      discount_type: form.discount_type,
+      discount_value: form.discount_value,
+      duration: form.duration,
+      duration_in_months: form.duration === 'repeating' ? form.duration_in_months ?? 1 : null,
+      valid_until: form.valid_until,
+      max_redemptions: form.max_redemptions,
+      active: form.active,
     }
-    if (isNew) body.code = editing.code
+    if (isNew) body.code = form.code
     startTransition(async () => {
       const res = await fetch(url, {
         method,
@@ -210,164 +197,7 @@ export default function PromosClient({ initialPromos }: Props) {
         </table>
       </div>
 
-      {editing ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="promo-modal-title"
-        >
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0E0E15] p-6 shadow-2xl">
-            <div className="mb-4 flex items-start justify-between">
-              <h2 id="promo-modal-title" className="text-lg font-semibold text-white">
-                {editing.id ? 'Modifier le code' : 'Nouveau code promo'}
-              </h2>
-              <button
-                type="button"
-                onClick={closeForm}
-                aria-label="Fermer"
-                className="rounded-md p-1 text-white/60 hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-white/70">Code</label>
-                <input
-                  type="text"
-                  value={editing.code}
-                  disabled={!!editing.id}
-                  onChange={(e) => setEditing({ ...editing, code: e.target.value.toUpperCase() })}
-                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white outline-none focus:border-amber-400/60 disabled:opacity-50"
-                  placeholder="WELCOME10"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-white/70">Libellé interne</label>
-                <input
-                  type="text"
-                  value={editing.label}
-                  onChange={(e) => setEditing({ ...editing, label: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                  placeholder="Bienvenue 10%"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Type</label>
-                  <select
-                    value={editing.discount_type}
-                    onChange={(e) => setEditing({ ...editing, discount_type: e.target.value as FormState['discount_type'] })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                  >
-                    <option value="percent">Pourcentage</option>
-                    <option value="amount">Montant fixe (cents)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Valeur</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editing.discount_value}
-                    onChange={(e) => setEditing({ ...editing, discount_value: Number(e.target.value) })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Durée</label>
-                  <select
-                    value={editing.duration}
-                    onChange={(e) => setEditing({ ...editing, duration: e.target.value as FormState['duration'] })}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                  >
-                    <option value="once">Une fois</option>
-                    <option value="forever">À vie</option>
-                    <option value="repeating">N mois</option>
-                  </select>
-                </div>
-                {editing.duration === 'repeating' ? (
-                  <div>
-                    <label className="block text-xs font-medium text-white/70">Mois</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={editing.duration_in_months ?? 1}
-                      onChange={(e) => setEditing({ ...editing, duration_in_months: Number(e.target.value) })}
-                      className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                    />
-                  </div>
-                ) : null}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Expiration</label>
-                  <input
-                    type="datetime-local"
-                    value={editing.valid_until ? editing.valid_until.slice(0, 16) : ''}
-                    onChange={(e) =>
-                      setEditing({
-                        ...editing,
-                        valid_until: e.target.value ? new Date(e.target.value).toISOString() : null,
-                      })
-                    }
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/70">Max utilisations</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="∞"
-                    value={editing.max_redemptions ?? ''}
-                    onChange={(e) =>
-                      setEditing({ ...editing, max_redemptions: e.target.value ? Number(e.target.value) : null })
-                    }
-                    className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-amber-400/60"
-                  />
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-white/85">
-                <input
-                  type="checkbox"
-                  checked={editing.active}
-                  onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-                  className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-500"
-                />
-                Actif
-              </label>
-            </div>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={pending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-black hover:bg-amber-400 disabled:bg-white/10 disabled:text-white/40"
-              >
-                {pending ? (
-                  'Enregistrement…'
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" aria-hidden="true" />
-                    Enregistrer
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {editing && <PromoFormModal initial={editing} pending={pending} onClose={closeForm} onSave={handleSave} />}
     </div>
   )
 }
