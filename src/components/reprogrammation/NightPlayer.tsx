@@ -8,9 +8,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Play, Square, Moon } from 'lucide-react'
 import { toast } from 'sonner'
 import { createNatureSoundEngine, type NatureSoundHandle } from '@/lib/nature-sounds'
-import { computeRampVolume } from '@/lib/reprogramming-utils'
-import { REPROG_CATEGORIES, REPROG_NIGHT_VOLUME_RAMP_MIN, type NatureSound, type ReprogCategory } from '@/lib/constants'
+import { REPROG_CATEGORIES, type NatureSound, type ReprogCategory } from '@/lib/constants'
 import NightPlayerSettings from './NightPlayerSettings'
+import { useNightPlayerVolume } from './useNightPlayerVolume'
+import { speakAffirmation } from './nightPlayerHelpers'
+import NightPlayerRampProgress from './NightPlayerRampProgress'
 
 interface AffirmationItem {
   id: string
@@ -22,13 +24,6 @@ interface AffirmationItem {
 export interface NightPlayerProps {
   initialCategory?: ReprogCategory
   initialNatureSound?: NatureSound
-}
-
-function formatTime(sec: number): string {
-  const s = Math.max(0, Math.floor(sec))
-  const m = Math.floor(s / 60)
-  const rest = s % 60
-  return `${String(m).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
 }
 
 // Temps entre 2 affirmations (lent en mode nuit = 12s)
@@ -49,16 +44,21 @@ export default function NightPlayer({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [affirmations, setAffirmations] = useState<AffirmationItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [elapsedSec, setElapsedSec] = useState(0)
-  const [volumePct, setVolumePct] = useState(0.5)
   const [error, setError] = useState<string | null>(null)
 
   const natureRef = useRef<NatureSoundHandle | null>(null)
-  const rafRef = useRef<number | null>(null)
-  const startTsRef = useRef<number>(0)
   const affirmationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const playedIdsRef = useRef<Set<string>>(new Set())
   const stopSessionRef = useRef<() => Promise<void>>(async () => undefined)
+
+  const { volumePct, elapsedSec, rampProgress, rampRemainingSec } = useNightPlayerVolume({
+    running,
+    rampEnabled,
+    onVolumeChange: useCallback((vol: number) => natureRef.current?.setVolume(vol), []),
+    onAutoStop: useCallback(async () => {
+      await stopSessionRef.current()
+    }, []),
+  })
 
   const catMeta = useMemo(() => REPROG_CATEGORIES.find((c) => c.id === category)!, [category])
   const currentAffirmation = affirmations[currentIndex]
@@ -71,40 +71,10 @@ export default function NightPlayer({
   useEffect(() => {
     return () => {
       natureRef.current?.dispose()
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       if (affirmationTimerRef.current !== null) clearInterval(affirmationTimerRef.current)
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
     }
   }, [])
-
-  // --- Loop volume ramp + elapsed ---
-  const tick = useCallback(() => {
-    if (!running) return
-    const elapsed = (performance.now() - startTsRef.current) / 1000
-    setElapsedSec(elapsed)
-
-    // Ramp volume (ou fixe)
-    const vol = rampEnabled ? computeRampVolume(elapsed, 0.55) : 0.45
-    setVolumePct(vol)
-    natureRef.current?.setVolume(vol)
-
-    // Arrêt auto quand ramp arrive à 0 (sécurité douce)
-    if (rampEnabled && elapsed >= REPROG_NIGHT_VOLUME_RAMP_MIN * 60) {
-      void stopSessionRef.current()
-      return
-    }
-
-    rafRef.current = requestAnimationFrame(tick)
-  }, [running, rampEnabled])
-
-  useEffect(() => {
-    if (running) {
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    }
-  }, [running, tick])
 
   // --- Affirmation rotation ---
   useEffect(() => {
@@ -114,26 +84,14 @@ export default function NightPlayer({
         const next = (i + 1) % affirmations.length
         const a = affirmations[next]
         if (a) playedIdsRef.current.add(a.id.replace(/^custom-/, ''))
-        speakIfEnabled(a)
+        speakAffirmation(a, voiceEnabled, VOICE_VOLUME)
         return next
       })
     }, AFFIRMATION_INTERVAL_SEC * 1000)
     affirmationTimerRef.current = interval
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, affirmations])
-
-  function speakIfEnabled(a: AffirmationItem | undefined) {
-    if (!voiceEnabled || !a || typeof window === 'undefined') return
-    if (!window.speechSynthesis) return
-    const u = new SpeechSynthesisUtterance(a.text_fr)
-    u.lang = 'fr-FR'
-    u.rate = 0.75
-    u.pitch = 0.9
-    u.volume = VOICE_VOLUME
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(u)
-  }
+  }, [running, affirmations, voiceEnabled])
 
   // --- Session actions ---
   async function startSession() {
@@ -170,14 +128,13 @@ export default function NightPlayer({
       setCurrentIndex(0)
       playedIdsRef.current = new Set([data.affirmations[0].id.replace(/^custom-/, '')])
       setRunning(true)
-      startTsRef.current = performance.now()
 
       // Démarre son nature
       natureRef.current?.setSound(natureSound)
       natureRef.current?.start()
       natureRef.current?.setVolume(0.55)
 
-      speakIfEnabled(data.affirmations[0])
+      speakAffirmation(data.affirmations[0], voiceEnabled, VOICE_VOLUME)
     } catch {
       setError('Connexion perdue — réessaie.')
     }
@@ -186,7 +143,6 @@ export default function NightPlayer({
   async function stopSession() {
     if (!running) return
     setRunning(false)
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     if (affirmationTimerRef.current !== null) clearInterval(affirmationTimerRef.current)
     if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
     natureRef.current?.stop()
@@ -211,10 +167,6 @@ export default function NightPlayer({
   useEffect(() => {
     stopSessionRef.current = stopSession
   })
-
-  // --- UI ---
-  const rampRemainingSec = Math.max(0, REPROG_NIGHT_VOLUME_RAMP_MIN * 60 - elapsedSec)
-  const rampProgress = Math.min(1, elapsedSec / (REPROG_NIGHT_VOLUME_RAMP_MIN * 60))
 
   return (
     <div
@@ -274,24 +226,12 @@ export default function NightPlayer({
       <div className="z-10 w-full max-w-xl px-6 pb-10">
         {/* Barre progression ramp */}
         {running && rampEnabled && (
-          <div className="mb-5">
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-white/50">
-              <span>Ramp volume</span>
-              <span>
-                {formatTime(rampRemainingSec)} reste · {Math.round(volumePct * 100)}%
-              </span>
-            </div>
-            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/5">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${rampProgress * 100}%`,
-                  background: catMeta.color,
-                  transition: 'width 500ms linear',
-                }}
-              />
-            </div>
-          </div>
+          <NightPlayerRampProgress
+            volumePct={volumePct}
+            rampProgress={rampProgress}
+            rampRemainingSec={rampRemainingSec}
+            catMetaColor={catMeta.color}
+          />
         )}
 
         {/* Settings expandable (avant démarrage OU accessible via chevron) */}
@@ -352,22 +292,6 @@ export default function NightPlayer({
           </p>
         )}
       </div>
-
-      <style jsx>{`
-        @keyframes mukti-night-affirmation-in {
-          0% {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          20% {
-            opacity: 0.55;
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   )
 }

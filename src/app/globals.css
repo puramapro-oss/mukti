@@ -470,3 +470,18 @@ select:focus-visible,
   outline: 3px solid #06b6d4;
   outline-offset: 2px;
 }
+
+/* ─── Night Player Animation ────────────────────────────────────────────────── */
+@keyframes mukti-night-affirmation-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  20% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

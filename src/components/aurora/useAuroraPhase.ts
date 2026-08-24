@@ -135,6 +135,9 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   const phaseStartSessionSecRef = useRef(0) // elapsed de session au début phase
   const phasesCompletedRef = useRef<PhaseCompletionRecord[]>([])
 
+  // Loop ref to break circular dependency
+  const loopRef = useRef<((now: number) => void) | null>(null)
+
   // --------- Helpers ---------
   const computeRollingCoherence = useCallback((): number => {
     const samples = coherenceSamplesRef.current
@@ -159,7 +162,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   const loop = useCallback((now: number): void => {
       if (!runningRef.current) return
       if (pausedRef.current) {
-        rafRef.current = requestAnimationFrame(loop)
+        rafRef.current = requestAnimationFrame(loopRef.current!)
         return
       }
 
@@ -289,8 +292,13 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
         paused: false,
       }))
 
-      rafRef.current = requestAnimationFrame(loop)
+      rafRef.current = requestAnimationFrame(loopRef.current!)
   }, [phases, opts, sessionTotalSec, computeRollingCoherence, recordSubStepCoherence])
+
+  // Update loopRef after loop is defined
+  useEffect(() => {
+    loopRef.current = loop
+  }, [loop])
 
   // --------- Actions ---------
   const start = useCallback(() => {
@@ -312,8 +320,8 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
     opts.onPhaseChange?.(phases[0].name, 0)
     opts.onBreathStep?.('inspire')
 
-    rafRef.current = requestAnimationFrame(loop)
-  }, [loop, opts, phases])
+    rafRef.current = requestAnimationFrame(loopRef.current!)
+  }, [opts, phases])
 
   const pause = useCallback(() => {
     if (!runningRef.current || pausedRef.current) return
