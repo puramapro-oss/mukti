@@ -26,6 +26,13 @@ jobs:
         with:
           node-version: 22
 
+      # Déps git privées (@purama/smarana) : le lockfile résout en git+ssh,
+      # illisible sur un runner sans clé — réécriture vers https + token.
+      - name: Configure git for private npm deps
+        env:
+          GH_PRIVATE_DEPS_TOKEN: ${{ secrets.GH_PRIVATE_DEPS_TOKEN }}
+        run: git config --global url."https://x-access-token:${GH_PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+
       - name: Install deps
         run: npm ci --legacy-peer-deps
 
@@ -116,6 +123,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # Déps git privées (@purama/smarana) : le lockfile résout en git+ssh,
+      # illisible sur un runner sans clé — réécriture vers https + token.
+      - name: Configure git for private npm deps
+        env:
+          GH_PRIVATE_DEPS_TOKEN: ${{ secrets.GH_PRIVATE_DEPS_TOKEN }}
+        run: git config --global url."https://x-access-token:${GH_PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
 
       - name: Install deps
         run: npm ci --legacy-peer-deps
