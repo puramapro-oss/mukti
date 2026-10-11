@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AuroraSessionFull from '../../src/components/aurora/AuroraSessionFull'
+import AuroraCanvasInner from '../../src/components/aurora/AuroraCanvasInner'
 import { mockAnimationClock } from './clock'
 
 const mocks = vi.hoisted(() => ({
@@ -12,8 +13,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/aurora-audio', () => ({ createAuroraAudio: () => mocks.audio }))
 vi.mock('@/lib/aurora-haptic', () => ({ createAuroraHaptic: () => mocks.haptic }))
 vi.mock('sonner', () => ({ toast: mocks.toast }))
-vi.mock('../../src/components/aurora/AuroraCanvas', () => ({ default: () => null }))
-vi.mock('../../src/components/aurora/PulseOfSafety', () => ({ default: () => null }))
+vi.mock('../../src/components/aurora/AuroraCanvas', () => ({
+  default: ({ animationEnabled }: { animationEnabled?: boolean }) => (
+    <div data-testid="visual-playback">{animationEnabled ? 'animated' : 'still'}</div>
+  ),
+}))
+vi.mock('../../src/components/aurora/PulseOfSafety', () => ({ default: () => <div data-testid="breath-pulse" /> }))
+vi.mock('@react-three/fiber', () => ({
+  Canvas: ({ frameloop }: { frameloop?: string }) => <div data-testid="webgl-scene" data-frameloop={frameloop} />,
+}))
+vi.mock('../../src/components/aurora/FractalMesh', () => ({ default: () => null }))
+vi.mock('../../src/components/aurora/EventHorizon', () => ({ default: () => null }))
+vi.mock('../../src/components/aurora/ParticleField', () => ({ default: () => null }))
 vi.mock('../../src/components/aurora/ProgressRing5Phases', () => ({
   default: () => null, phaseLabelShort: (name: string) => name,
 }))
@@ -176,5 +187,88 @@ describe('AURORA session controls and persistence', () => {
     expect(screen.getByRole('alert').textContent).toContain('ne répond pas')
     expect((screen.getByRole('button', { name: 'Démarrer la session' }) as HTMLButtonElement).disabled).toBe(false)
     expect(mocks.audio.start).not.toHaveBeenCalled()
+  })
+
+  it('replaces breathing instructions and the pulse while paused, then restores them on resume', async () => {
+    mockAnimationClock()
+    vi.stubGlobal('fetch', vi.fn(async () => response({ ok: true, session_id: '00000000-0000-4000-8000-000000000001' })))
+    render(<AuroraSessionFull variant="calm" />)
+    expect(screen.getByTestId('visual-playback').textContent).toBe('still')
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Démarrer la session' })))
+    expect(screen.getByText('Inspire')).toBeTruthy()
+    expect(screen.getByTestId('visual-playback').textContent).toBe('animated')
+    fireEvent.click(screen.getByRole('button', { name: 'Mettre en pause' }))
+    expect(screen.getByRole('status').textContent).toBe('En pause')
+    expect(screen.queryByText('Inspire')).toBeNull()
+    expect(screen.queryByTestId('breath-pulse')).toBeNull()
+    expect(screen.getByTestId('visual-playback').textContent).toBe('still')
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Reprendre la session' })))
+    expect(screen.getByText('Inspire')).toBeTruthy()
+    expect(screen.getByTestId('breath-pulse')).toBeTruthy()
+    expect(screen.getByTestId('visual-playback').textContent).toBe('animated')
+  })
+
+  it('distinguishes a stopped session and a pending save from the ready state', async () => {
+    mockAnimationClock()
+    const save = deferredResponse()
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ ok: true, session_id: '00000000-0000-4000-8000-000000000001' }))
+      .mockImplementationOnce(() => save.promise))
+    render(<AuroraSessionFull variant="calm" />)
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Démarrer la session' })))
+    fireEvent.click(screen.getByRole('button', { name: 'Arrêter la session' }))
+    expect(screen.getByRole('status').textContent).toBe('Enregistrement…')
+    expect(screen.getByTestId('visual-playback').textContent).toBe('still')
+    await act(async () => save.resolve(response({ ok: true, level_reached: null, streak_days: 0 })))
+    expect(screen.getByRole('status').textContent).toBe('Session arrêtée')
+    expect(screen.queryByText('Brume')).toBeNull()
+    expect(screen.getByText('Aucun niveau atteint')).toBeTruthy()
+  })
+
+  it('keeps completion and failed recording distinct', async () => {
+    const clock = mockAnimationClock()
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response({ ok: true, session_id: '00000000-0000-4000-8000-000000000001' }))
+      .mockResolvedValueOnce(response({ error: 'Sauvegarde refusée' }, 500)))
+    render(<AuroraSessionFull variant="ignite" />)
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Démarrer la session' })))
+    for (const time of [0, 8000, 28000, 88000, 108000, 128000]) clock.frame(time)
+    await act(async () => {})
+    expect(screen.getByRole('status').textContent).toBe('Session terminée')
+    expect(screen.getByRole('alert').textContent).toContain('enregistrement non confirmé')
+    expect(screen.getByTestId('visual-playback').textContent).toBe('still')
+    expect(mocks.toast.success).not.toHaveBeenCalled()
+  })
+})
+
+describe('AURORA rendering policy', () => {
+  const breathState = { phase: 'inspire' as const, progress: 0.5, elapsedSec: 1, phaseDurationSec: 2 }
+
+  it('stops continuous rendering when animation is paused and restores it on resume', () => {
+    const view = render(<AuroraCanvasInner breathState={breathState} color="#7C3AED" animationEnabled />)
+    expect(screen.getByTestId('webgl-scene').getAttribute('data-frameloop')).toBe('always')
+    view.rerender(<AuroraCanvasInner breathState={breathState} color="#7C3AED" animationEnabled={false} />)
+    expect(screen.getByTestId('webgl-scene').getAttribute('data-frameloop')).toBe('demand')
+    view.rerender(<AuroraCanvasInner breathState={breathState} color="#7C3AED" animationEnabled />)
+    expect(screen.getByTestId('webgl-scene').getAttribute('data-frameloop')).toBe('always')
+  })
+
+  it('uses a static scene when reduced motion is requested and reacts to preference changes', async () => {
+    let matches = true
+    const listeners = new Set<(event: MediaQueryListEvent) => void>()
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      get matches() { return matches },
+      addEventListener: (_type: string, fn: (event: MediaQueryListEvent) => void) => listeners.add(fn),
+      removeEventListener: (_type: string, fn: (event: MediaQueryListEvent) => void) => listeners.delete(fn),
+    })))
+    const view = render(<AuroraCanvasInner breathState={breathState} color="#7C3AED" />)
+    await act(async () => {})
+    expect(screen.queryByTestId('webgl-scene')).toBeNull()
+    act(() => { matches = false; for (const fn of listeners) fn({ matches } as MediaQueryListEvent) })
+    expect(screen.getByTestId('webgl-scene')).toBeTruthy()
+    act(() => { matches = true; for (const fn of listeners) fn({ matches } as MediaQueryListEvent) })
+    expect(screen.queryByTestId('webgl-scene')).toBeNull()
+    view.unmount()
+    expect(listeners.size).toBe(0)
   })
 })

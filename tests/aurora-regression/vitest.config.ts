@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: here('../../src') },
-      ...['react', 'react-dom', 'sonner', 'lucide-react'].map((name) => ({
+      ...['react', 'react-dom', 'sonner', 'lucide-react', '@react-three/fiber'].map((name) => ({
         find: new RegExp(`^${name}(/.*)?$`),
         replacement: `${here(`node_modules/${name}`)}$1`,
       })),

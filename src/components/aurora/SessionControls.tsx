@@ -43,7 +43,7 @@ export default function SessionControls({
   return (
     <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center gap-3 px-5 pb-10">
       {/* Ligne 1 : boutons principaux */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         {!running ? (
           <button
             type="button"
@@ -118,6 +118,7 @@ export default function SessionControls({
             voiceEnabled ? 'border-white/30 bg-white/[0.08] text-white' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05]'
           }`}
           aria-label={voiceEnabled ? 'Désactiver le guidage vocal' : 'Activer le guidage vocal'}
+          aria-pressed={voiceEnabled}
         >
           {voiceEnabled ? (
             <Volume2 className="h-3 w-3" />

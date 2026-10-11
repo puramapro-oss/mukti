@@ -65,3 +65,23 @@ La branche de revue désactive son propre déploiement Vercel via `git.deploymen
 ## Limites PURAMA
 
 Ce lot réutilise MUKTI existant. Il ne crée aucune IA centrale, mémoire ou orchestration concurrente et ne modifie pas les travaux SUTRA/MIDAS. Il ne valide pas VISHVAKARMA, le robot, l'armure, les drones, les véhicules, les nanotechnologies ou les assemblages de matériaux. Ces projets conservent leurs exigences documentaires, analyses de risques, simulations adaptées et essais physiques propres.
+
+## Reprise du 12 octobre 2026 — cohérence visuelle et rendu
+
+Base de cette reprise : `8b675027667a8b5ecec990ab245c2cd6b9e5b302`, même branche et PR brouillon. Les 41 tests existants ont été rejoués avec succès avant modification. Aucun nouveau fichier livré ; les corrections et preuves complètent les fichiers existants.
+
+Corrections :
+
+- La pause remplace la consigne respiratoire affichée par un état explicite et retire le repère animé. La reprise rétablit les consignes.
+- Démarrage, reprise, pause, arrêt, fin de session et enregistrement disposent de libellés distincts. L'état est annoncé par une zone `status`, sans y inclure un compteur mis à jour à chaque image.
+- Un niveau serveur `null` affiche « Aucun niveau atteint » : le client n'invente plus le niveau « Brume ».
+- Le Canvas reçoit `frameloop="demand"` hors session active, au lieu de garder sa boucle continue. Le contrôle ajouté concerne le rendu 3D ; la correction du 11 octobre portait sur la boucle du moteur de phases.
+- La préférence de mouvements réduits sélectionne une scène fixe. Le chargement et le repère d'expiration respectent également cette préférence. Un visuel statique est fourni comme fallback Canvas ; la défaillance WebGL réelle n'a pas été reproduite.
+- Le repère d'expiration n'est plus monté pendant l'inspiration ou la rétention. Sa description ne lui attribue plus d'effet neurologique établi.
+- Les commandes principales peuvent revenir à la ligne ; les boutons de voix et particules exposent leur état sélectionné. Le placement aux différentes tailles d'écran reste à contrôler dans un navigateur réel.
+
+Vérifications exécutées : 46 tests réussis sur 4 fichiers, TypeScript ciblé réussi et `git diff --check` réussi. Cinq scénarios ont été ajoutés : pause/reprise des consignes, arrêt/enregistrement/niveau absent, fin de session avec sauvegarde refusée, bascule rendu continu/à la demande, changement de préférence de mouvements réduits avec nettoyage des abonnements. Le banc a reçu un alias vers sa dépendance r3f déjà verrouillée, sans nouvelle dépendance.
+
+Limites : Canvas/WebGL, audio, vibration et serveur sont remplacés dans le banc. Il n'y a pas de mesure FPS, thermique ou énergétique, de validation visuelle sur téléphone, de build complet, de déploiement ou de test physique. Les blocages de production listés plus haut restent ouverts ; cette reprise ne les clôture pas.
+
+Référence technique consultée le 12 octobre 2026 : documentation officielle React Three Fiber, « Scaling performance », rendu à la demande et invalidation sur changement de propriétés : https://r3f.docs.pmnd.rs/advanced/scaling-performance . Cette documentation justifie le mécanisme choisi, pas un gain mesuré sur les appareils PURAMA.
