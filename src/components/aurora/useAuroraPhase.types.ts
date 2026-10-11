@@ -1,5 +1,5 @@
 // MUKTI — Types pour useAuroraPhase
-import type { AuroraPhaseName, AuroraVariant } from '@/lib/constants'
+import type { AuroraPhaseName, AuroraVariant, AuroraPowerSwitch } from '@/lib/constants'
 import type { BreathPhase } from './types'
 
 export interface AuroraPhaseMeta {
@@ -40,6 +40,7 @@ export interface BreathSubStep {
 
 export interface UseAuroraPhaseOptions {
   variant: AuroraVariant
+  powerSwitch?: AuroraPowerSwitch
   /** Callback appelé quand la phase change (utile pour audio/haptic sync). */
   onPhaseChange?: (phase: AuroraPhaseName, index: number) => void
   /** Callback appelé au début de chaque sub-step inspire/expire/hold. */

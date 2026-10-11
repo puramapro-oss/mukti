@@ -2,7 +2,7 @@
 // 4 variantes AURORA OMEGA (G5)
 // Les phases sont définies à part dans AURORA_PHASES (structure 5 phases/variante)
 export const AURORA_VARIANTS = [
-  { id: 'calm',   name: 'Calm',   duration_min: 7,  description: 'Anti-stress profond',       color: '#06b6d4', glyph: '🌊' },
+  { id: 'calm',   name: 'Calm',   duration_min: 8,  description: 'Anti-stress profond',       color: '#06b6d4', glyph: '🌊' },
   { id: 'focus',  name: 'Focus',  duration_min: 4,  description: 'Avant travail créatif',     color: '#7c3aed', glyph: '🎯' },
   { id: 'sleep',  name: 'Sleep',  duration_min: 10, description: 'Endormissement guidé',      color: '#1e1b4b', glyph: '🌙' },
   { id: 'ignite', name: 'Ignite', duration_min: 2,  description: 'Énergie immédiate',         color: '#F59E0B', glyph: '⚡' },
@@ -10,7 +10,7 @@ export const AURORA_VARIANTS = [
 export type AuroraVariant = typeof AURORA_VARIANTS[number]['id']
 
 // Phases AURORA OMEGA (brief section 5) — durations en secondes
-// Total : calm=428s≈7min / focus=248s≈4min / sleep=612s≈10min / ignite=128s≈2min
+// Total : calm=468s≈8min / focus=248s≈4min / sleep=608s≈10min / ignite=128s≈2min
 export type AuroraPhaseName = 'armement' | 'double_sigh' | 'resonance_core' | 'omega_lock' | 'glide_out'
 export interface AuroraPhase {
   name: AuroraPhaseName

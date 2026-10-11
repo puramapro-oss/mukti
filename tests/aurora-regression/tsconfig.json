@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "types": ["node", "react", "next"],
+    "paths": {
+      "@/*": ["../../src/*"],
+      "react": ["node_modules/@types/react"],
+      "react/*": ["node_modules/@types/react/*"],
+      "react-dom/*": ["node_modules/@types/react-dom/*"],
+      "next/*": ["node_modules/next/*"],
+      "three": ["node_modules/@types/three"],
+      "@react-three/fiber": ["node_modules/@react-three/fiber"],
+      "@react-three/drei": ["node_modules/@react-three/drei"],
+      "sonner": ["node_modules/sonner"],
+      "lucide-react": ["node_modules/lucide-react"]
+    }
+  },
+  "include": [
+    "*.ts", "*.tsx",
+    "../../src/components/aurora/AuroraSessionFull.tsx",
+    "../../src/lib/aurora-audio.ts",
+    "../../src/lib/aurora-session-api.ts"
+  ]
+}

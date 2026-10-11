@@ -5,16 +5,13 @@
 //           + ProgressRing5Phases + SessionControls + persistence API.
 // Remplace AuroraSessionPreview (G5.2). Preview kept for standalone demos.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import AuroraCanvas from './AuroraCanvas'
 import PulseOfSafety from './PulseOfSafety'
 import ProgressRing5Phases, { phaseLabelShort } from './ProgressRing5Phases'
 import SessionControls from './SessionControls'
-import { useAuroraPhase, type StoppedReason } from './useAuroraPhase'
-import { createAuroraAudio, type AuroraAudioHandle } from '@/lib/aurora-audio'
-import { createAuroraHaptic, type AuroraHapticHandle } from '@/lib/aurora-haptic'
-import { AURORA_VARIANTS, type AuroraVariant, type AuroraPowerSwitch } from '@/lib/constants'
-import { toast } from 'sonner'
+import { useAuroraSession } from './useAuroraSession'
+import { AURORA_VARIANTS, type AuroraVariant } from '@/lib/constants'
 
 export interface AuroraSessionFullProps {
   variant: AuroraVariant
@@ -29,15 +26,9 @@ function formatTime(sec: number): string {
 
 export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
   const meta = AURORA_VARIANTS.find((v) => v.id === variant)!
-  const [voiceEnabled, setVoiceEnabled] = useState(false)
-  const [powerSwitch, setPowerSwitch] = useState<AuroraPowerSwitch>('core')
+  const session = useAuroraSession(variant)
+  const { engine, voiceEnabled, setVoiceEnabled, powerSwitch, setPowerSwitch, persistError, completedInfo } = session
   const [particlesOn, setParticlesOn] = useState(true)
-  const [persistError, setPersistError] = useState<string | null>(null)
-  const [completedInfo, setCompletedInfo] = useState<{ level: string | null; streak: number } | null>(null)
-
-  const sessionIdRef = useRef<string | null>(null)
-  const audioRef = useRef<AuroraAudioHandle | null>(null)
-  const hapticRef = useRef<AuroraHapticHandle | null>(null)
 
   // Darkening pour variant sleep (progressif sur la session)
   const darkeningByVariant = useCallback(
@@ -47,170 +38,6 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
     },
     [variant]
   )
-
-  // Lazy init audio + haptic une seule fois
-  const ensureEngines = useCallback(() => {
-    if (!audioRef.current) audioRef.current = createAuroraAudio()
-    if (!hapticRef.current) hapticRef.current = createAuroraHaptic()
-  }, [])
-
-  // --- useAuroraPhase handlers ---
-  const handlePhaseChange = useCallback(
-    (phase: string) => {
-      if (voiceEnabled && audioRef.current) {
-        const cue =
-          phase === 'armement'
-            ? 'Armement. Respire doucement.'
-            : phase === 'double_sigh'
-              ? 'Double soupape. Laisse tomber.'
-              : phase === 'resonance_core'
-                ? 'Résonance. Inspire, expire longuement.'
-                : phase === 'omega_lock'
-                  ? 'Omega Lock. Maîtrise.'
-                  : phase === 'glide_out'
-                    ? 'Glide Out. Tu ralentis.'
-                    : ''
-        if (cue) audioRef.current.speakPhaseCue(cue)
-      }
-    },
-    [voiceEnabled]
-  )
-
-  const handleBreathStep = useCallback((sub: 'inspire' | 'expire' | 'hold' | 'idle') => {
-    audioRef.current?.setPhase(sub)
-    hapticRef.current?.pulse(sub)
-  }, [])
-
-  const handleComplete = useCallback(
-    async (m: { phasesCompleted: typeof engine.meta.phasesCompleted; coherence: number; sessionElapsedSec: number }) => {
-      audioRef.current?.stop()
-      hapticRef.current?.cancel()
-      await persistComplete({
-        stoppedReason: 'glide_out_complete',
-        phases: m.phasesCompleted,
-        coherence: m.coherence,
-        totalSec: m.sessionElapsedSec,
-      })
-      toast.success('Session complète — ta fractale est ancrée. ✨', { duration: 4000 })
-    },
-    // persistComplete défini plus bas (closure stable via sessionIdRef)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
-
-  const handleStop = useCallback(
-    async (
-      reason: StoppedReason,
-      m: { phasesCompleted: typeof engine.meta.phasesCompleted; coherence: number; sessionElapsedSec: number }
-    ) => {
-      audioRef.current?.stop()
-      hapticRef.current?.cancel()
-      await persistComplete({
-        stoppedReason: reason,
-        phases: m.phasesCompleted,
-        coherence: m.coherence,
-        totalSec: m.sessionElapsedSec,
-      })
-      if (reason === 'dizzy') {
-        toast.info('Arrêt sécurité. Repasse en SOFT la prochaine fois. 💙', { duration: 5000 })
-      } else {
-        toast.info('Session arrêtée. Ce que tu as fait compte.', { duration: 3500 })
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
-
-  const engine = useAuroraPhase({
-    variant,
-    onPhaseChange: handlePhaseChange,
-    onBreathStep: handleBreathStep,
-    onComplete: (m) => void handleComplete({ phasesCompleted: m.phasesCompleted, coherence: m.coherence, sessionElapsedSec: m.sessionElapsedSec }),
-    onStop: (reason, m) => void handleStop(reason, { phasesCompleted: m.phasesCompleted, coherence: m.coherence, sessionElapsedSec: m.sessionElapsedSec }),
-  })
-
-  // Toggle voix pendant la session
-  useEffect(() => {
-    audioRef.current?.setVoiceGuidance(voiceEnabled)
-  }, [voiceEnabled])
-
-  // Cleanup à l'unmount (dispose audio, cancel haptic)
-  useEffect(() => {
-    return () => {
-      audioRef.current?.dispose()
-      hapticRef.current?.cancel()
-    }
-  }, [])
-
-  // --- persistence helpers ---
-  async function persistStart(): Promise<boolean> {
-    try {
-      const resp = await fetch('/api/aurora/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variant, voice_guidance: voiceEnabled, power_switch: powerSwitch }),
-      })
-      if (!resp.ok) {
-        const { error } = await resp.json().catch(() => ({ error: null }))
-        setPersistError(error ?? 'Impossible de démarrer la session. Réessaie.')
-        return false
-      }
-      const data = (await resp.json()) as { ok: boolean; session_id: string }
-      sessionIdRef.current = data.session_id
-      setPersistError(null)
-      return true
-    } catch {
-      setPersistError('Connexion perdue — ta session ne sera pas sauvée.')
-      return false
-    }
-  }
-
-  async function persistComplete(input: {
-    stoppedReason: StoppedReason
-    phases: Array<{ phase: string; duration_sec: number; breaths_counted: number; coherence: number | null }>
-    coherence: number
-    totalSec: number
-  }) {
-    const id = sessionIdRef.current
-    if (!id) return
-    try {
-      const resp = await fetch(`/api/aurora/session/${id}/complete`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phases_completed: input.phases,
-          coherence_score: input.coherence,
-          stopped_reason: input.stoppedReason,
-          total_duration_sec: input.totalSec,
-        }),
-      })
-      if (resp.ok) {
-        const data = (await resp.json()) as { ok: boolean; level_reached: string | null; streak_days: number }
-        setCompletedInfo({ level: data.level_reached, streak: data.streak_days })
-      }
-    } catch {
-      /* silencieux — l'utilisateur a déjà vécu la session */
-    }
-  }
-
-  // --- actions ---
-  const onStart = useCallback(async () => {
-    ensureEngines()
-    audioRef.current?.setVoiceGuidance(voiceEnabled)
-    audioRef.current?.start()
-    const ok = await persistStart()
-    if (!ok) return // reste en idle
-    engine.actions.start()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine.actions, ensureEngines, voiceEnabled])
-
-  const onStop = useCallback(() => {
-    engine.actions.stop('user_stop')
-  }, [engine.actions])
-
-  const onDizzy = useCallback(() => {
-    engine.actions.markDizzy()
-  }, [engine.actions])
 
   // --- UI ---
   const elapsedPct = engine.meta.sessionTotalSec > 0 ? engine.meta.sessionElapsedSec / engine.meta.sessionTotalSec : 0
@@ -284,7 +111,7 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
             </div>
           </div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
-            Cohérence {coherenceDisplay} · {engine.meta.breathsCounted} souffle{engine.meta.breathsCounted > 1 ? 's' : ''}
+            Régularité du guidage {coherenceDisplay} · {engine.meta.breathsCounted} cycle{engine.meta.breathsCounted > 1 ? 's' : ''} guidé{engine.meta.breathsCounted > 1 ? 's' : ''}
           </div>
         </div>
       )}
@@ -306,7 +133,7 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
 
       {/* Persist error banner */}
       {persistError && (
-        <div className="absolute top-24 left-1/2 z-30 -translate-x-1/2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-200 backdrop-blur">
+        <div role="alert" className="absolute top-24 left-1/2 z-30 -translate-x-1/2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-200 backdrop-blur">
           {persistError}
         </div>
       )}
@@ -329,11 +156,13 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
         onVoiceToggle={setVoiceEnabled}
         powerSwitch={powerSwitch}
         onPowerSwitchChange={setPowerSwitch}
-        onStart={onStart}
-        onPause={engine.actions.pause}
-        onResume={engine.actions.resume}
-        onStop={onStop}
-        onDizzy={onDizzy}
+        onStart={() => void session.start()}
+        starting={session.starting}
+        disabled={session.starting || session.saving}
+        onPause={session.pause}
+        onResume={() => void session.resume()}
+        onStop={() => session.stop()}
+        onDizzy={() => session.stop('dizzy')}
       />
     </div>
   )

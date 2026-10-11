@@ -21,6 +21,7 @@ export interface SessionControlsProps {
   onStop: () => void
   onDizzy: () => void
   disabled?: boolean
+  starting?: boolean
 }
 
 export default function SessionControls({
@@ -37,6 +38,7 @@ export default function SessionControls({
   onStop,
   onDizzy,
   disabled,
+  starting = false,
 }: SessionControlsProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center gap-3 px-5 pb-10">
@@ -55,12 +57,13 @@ export default function SessionControls({
             aria-label="Démarrer la session"
           >
             <Play className="h-4 w-4" />
-            <span>Démarrer</span>
+            <span>{starting ? 'Démarrage…' : 'Démarrer'}</span>
           </button>
         ) : paused ? (
           <button
             type="button"
             onClick={onResume}
+            disabled={disabled}
             className="flex items-center gap-2.5 rounded-full border border-white/20 bg-white/[0.08] px-5 py-3 text-sm font-medium text-white backdrop-blur-xl transition-all hover:bg-white/[0.16] active:scale-95"
             aria-label="Reprendre la session"
           >
@@ -79,7 +82,7 @@ export default function SessionControls({
           </button>
         )}
 
-        {running && (
+        {(running || starting) && (
           <button
             type="button"
             onClick={onStop}
@@ -133,6 +136,8 @@ export default function SessionControls({
                 key={ps.id}
                 type="button"
                 onClick={() => onPowerSwitchChange(ps.id)}
+                disabled={running || disabled}
+                aria-pressed={selected}
                 className={`px-3 py-1.5 transition-colors ${
                   selected ? 'bg-white/[0.12] text-white' : 'text-white/60 hover:bg-white/[0.05]'
                 }`}
