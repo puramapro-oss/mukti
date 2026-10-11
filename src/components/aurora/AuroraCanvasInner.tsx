@@ -23,6 +23,8 @@ export interface AuroraCanvasInnerProps {
   darkening?: number
   /** Désactive ParticleField sur appareils faibles (param UI). */
   particlesEnabled?: boolean
+  /** Active le rendu continu uniquement pendant une session en cours. */
+  animationEnabled?: boolean
   /** Classe CSS extra sur wrapper. */
   className?: string
 }
@@ -33,16 +35,31 @@ export default function AuroraCanvasInner({
   accentColor,
   darkening = 0,
   particlesEnabled = true,
+  animationEnabled = true,
   className,
 }: AuroraCanvasInnerProps) {
   const halo = accentColor ?? color
   const dark = Math.max(0, Math.min(0.85, darkening))
   const reducedMotion = useReducedMotion()
   const particlesActive = particlesEnabled && !reducedMotion
+  const staticScene = (
+    <div aria-hidden className="flex h-full w-full items-center justify-center bg-[#05050a]">
+      <div
+        className="h-48 w-48 rounded-full border"
+        style={{
+          borderColor: color,
+          background: `radial-gradient(circle, ${color}55, ${halo}15 65%, transparent)`,
+          boxShadow: `0 0 60px ${halo}30`,
+        }}
+      />
+    </div>
+  )
   // Overlay sombre : appliqué via un black sprite plane fullscreen à l'extérieur du Canvas pour perf.
   return (
     <div className={`relative h-full w-full ${className ?? ''}`}>
-      <Canvas
+      {reducedMotion ? staticScene : <Canvas
+        frameloop={animationEnabled ? 'always' : 'demand'}
+        fallback={staticScene}
         camera={{ position: [0, 0, 5.5], fov: 50 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
@@ -69,7 +86,7 @@ export default function AuroraCanvasInner({
             color={halo}
           />
         )}
-      </Canvas>
+      </Canvas>}
 
       {/* Overlay darkening (hors Canvas → rendu DOM plus économique que shader fullscreen) */}
       {dark > 0 && (

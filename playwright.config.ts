@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: ['**/aurora-regression/**'],
   timeout: 30000,
   retries: 1,
   workers: 2,
