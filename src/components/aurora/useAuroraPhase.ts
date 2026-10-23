@@ -91,7 +91,8 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   const subIndexRef = useRef(0) // index dans cycle en cours
   const cycleRef = useRef<BreathSubStep[]>([])
   const subStartTsRef = useRef(0)
-  const pauseAccumRef = useRef(0) // ms cumulés pendant pauses
+  const pauseAccumRef = useRef(0) // pauses cumulées dans la phase
+  const subPauseAccumRef = useRef(0) // pauses cumulées dans la sous-étape
   const pauseStartRef = useRef<number | null>(null)
 
   // Cohérence : ratios actuel/planifié par sub-step, rolling window
@@ -158,7 +159,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
       const subIdx = subIndexRef.current
       const currentSub = cycle[subIdx]
       const subElapsedMs =
-        now - subStartTsRef.current - pauseAccumRef.current
+        now - subStartTsRef.current - subPauseAccumRef.current
       const subElapsedSec = subElapsedMs / 1000
       const subProgress = Math.min(1, subElapsedSec / currentSub.plannedSec)
 
@@ -179,7 +180,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
           subIndexRef.current = nextSubIdx
         }
         subStartTsRef.current = now
-        pauseAccumRef.current = 0 // reset pause accum pour le nouveau sub
+        subPauseAccumRef.current = 0 // ne pas réinitialiser les pauses de la phase
         const newSub = cycleRef.current[subIndexRef.current]
         opts.onBreathStep?.(newSub.sub)
       }
@@ -226,6 +227,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
         phaseStartSessionSecRef.current += currentPhase.duration_sec
         phaseStartTsRef.current = now
         pauseAccumRef.current = 0
+        subPauseAccumRef.current = 0
         phaseBreathsRef.current = 0
         cycleRef.current = [] // reset cycle plan
         opts.onPhaseChange?.(phases[nextIdx].name, nextIdx)
@@ -278,6 +280,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
     cycleRef.current = []
     subStartTsRef.current = performance.now()
     pauseAccumRef.current = 0
+    subPauseAccumRef.current = 0
     pauseStartRef.current = null
     phaseBreathsRef.current = 0
     phaseStartSessionSecRef.current = 0
@@ -301,7 +304,9 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
     if (!runningRef.current || !pausedRef.current) return
     pausedRef.current = false
     if (pauseStartRef.current !== null) {
-      pauseAccumRef.current += performance.now() - pauseStartRef.current
+      const pausedMs = performance.now() - pauseStartRef.current
+      pauseAccumRef.current += pausedMs
+      subPauseAccumRef.current += pausedMs
       pauseStartRef.current = null
     }
     setMeta((p) => ({ ...p, paused: false }))
@@ -314,6 +319,14 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
       pausedRef.current = false
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       rafRef.current = null
+
+      // Une pause en cours ne compte jamais comme temps actif.
+      if (pauseStartRef.current !== null) {
+        const pausedMs = performance.now() - pauseStartRef.current
+        pauseAccumRef.current += pausedMs
+        subPauseAccumRef.current += pausedMs
+        pauseStartRef.current = null
+      }
 
       // Enregistre la phase courante comme partielle
       const idx = phaseIndexRef.current
