@@ -62,4 +62,53 @@ jobs:
       - name: Audit application lock (not an application build)
         run: npm audit --package-lock-only --omit=dev --audit-level=high
 
+  next-test-patch-evaluation:
+    if: github.ref == 'refs/heads/audit/mukti-hardware-compat-20261023'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Resolve only the isolated test Next patch candidate
+        working-directory: tests/aurora-regression
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-exact next@16.4.2
+      - name: Verify locked candidate without installation scripts
+        working-directory: tests/aurora-regression
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+          node --test runtime-regression.cjs
+          npm run typecheck
+          npm audit --package-lock-only --audit-level=high
+      - name: Show candidate manifest changes
+        run: git diff --stat && git diff -- tests/aurora-regression/package.json
+      - name: Store tested manifest blobs for connector review (no branch update)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, pathlib, urllib.request
+          assert os.environ['GITHUB_REPOSITORY'] == 'puramapro-oss/mukti'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/audit/mukti-hardware-compat-20261023'
+          root = pathlib.Path('tests/aurora-regression')
+          manifest = json.loads((root / 'package.json').read_text())
+          assert manifest['devDependencies']['next'] == '16.4.2'
+          for name in ['package.json', 'package-lock.json']:
+              content = (root / name).read_bytes()
+              payload = json.dumps({'content': base64.b64encode(content).decode(), 'encoding': 'base64'}).encode()
+              request = urllib.request.Request(
+                  'https://api.github.com/repos/puramapro-oss/mukti/git/blobs', data=payload, method='POST',
+                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'})
+              with urllib.request.urlopen(request) as result:
+                  blob = json.load(result)
+              print(json.dumps({'path': str(root / name), 'sha': blob['sha'], 'size': len(content)}))
+          PY
+
 # No deployment, no production APIs, no physical output and no project secrets.
+# The maintenance job can create reviewed manifest blobs only; it never moves refs.
