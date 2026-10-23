@@ -27,15 +27,19 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
       - name: Install isolated locked test dependencies (no install scripts)
         working-directory: tests/aurora-regression
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Run regression suite
+      - name: Run React regression suite and phase stress cases
         working-directory: tests/aurora-regression
         run: npm test -- --reporter=verbose
+      - name: Run transport and audio fault-injection tests
+        working-directory: tests/aurora-regression
+        run: node --test runtime-regression.cjs
       - name: Typecheck tested production modules
         working-directory: tests/aurora-regression
         run: npm run typecheck
@@ -44,5 +48,18 @@ jobs:
       - name: Audit isolated test dependency lock
         working-directory: tests/aurora-regression
         run: npm audit --package-lock-only --audit-level=high
+
+  production-dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Audit application lock (not an application build)
+        run: npm audit --package-lock-only --omit=dev --audit-level=high
 
 # No deployment, no production APIs, no physical output and no project secrets.

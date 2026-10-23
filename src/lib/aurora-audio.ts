@@ -38,7 +38,10 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
 
   const Ctx = (window.AudioContext ||
     (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
-  if (!Ctx) return noopHandle()
+  if (!Ctx) {
+    const unavailable = async () => { throw new Error('Audio indisponible dans ce navigateur.') }
+    return { ...noopHandle(), prepare: unavailable, start: unavailable }
+  }
 
   const ctx = new Ctx()
   const master = ctx.createGain()
@@ -130,8 +133,17 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   let currentPhase: BreathPhase = 'idle'
   let ramps: StopFn[] = []
 
+  // Cleanup must continue even if an optional browser API fails.
+  function cleanup(action: () => void) {
+    try { action() } catch { /* best effort cleanup; never skip other outputs */ }
+  }
+
+  function cancelVoice() {
+    cleanup(() => window.speechSynthesis?.cancel())
+  }
+
   function cancelRamps() {
-    ramps.forEach((r) => r())
+    ramps.forEach((r) => cleanup(r))
     ramps = []
   }
 
@@ -207,19 +219,24 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
     generation += 1
     if (disposed) return
     cancelRamps()
-    master.gain.cancelScheduledValues(ctx.currentTime)
-    master.gain.setValueAtTime(0, ctx.currentTime)
+    // Reset every layer: a subsequent start must not replay a previous envelope.
+    for (const node of [master, nappeGain, subGain, noiseGain]) {
+      cleanup(() => {
+        node.gain.cancelScheduledValues(ctx.currentTime)
+        node.gain.setValueAtTime(0, ctx.currentTime)
+      })
+    }
     started = false
     currentPhase = 'idle'
     for (const node of transients) {
-      node.oscillator.stop()
-      node.oscillator.disconnect()
-      node.gain.disconnect()
+      cleanup(() => node.oscillator.stop())
+      cleanup(() => node.oscillator.disconnect())
+      cleanup(() => node.gain.disconnect())
     }
     transients.clear()
-    window.speechSynthesis?.cancel()
+    cancelVoice()
     // Le master est déjà muet, même si le navigateur refuse la suspension.
-    void ctx.suspend().catch(() => undefined)
+    cleanup(() => { void ctx.suspend().catch(() => undefined) })
   }
 
   function setEnabled(next: boolean) {
@@ -232,7 +249,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
       rampGain(noiseGain.gain, 0, 0.3)
       master.gain.cancelScheduledValues(ctx.currentTime)
       master.gain.setValueAtTime(0, ctx.currentTime)
-      window.speechSynthesis?.cancel()
+      cancelVoice()
     } else if (started) {
       rampGain(master.gain, targetMasterGain, 0.3)
       setPhase(currentPhase)
@@ -242,35 +259,38 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   function setVoiceGuidance(v: boolean) {
     if (disposed) return
     voiceGuidance = v
-    if (!v) window.speechSynthesis?.cancel()
+    if (!v) cancelVoice()
   }
 
   function speakPhaseCue(cue: string) {
     if (!voiceGuidance || !started || !enabled || disposed) return
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-    const utter = new SpeechSynthesisUtterance(cue)
-    utter.lang = 'fr-FR'
-    utter.rate = 0.9
-    utter.pitch = 0.95
-    utter.volume = 0.7
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utter)
+    if (!window.speechSynthesis || typeof SpeechSynthesisUtterance !== 'function') return
+    // Optional voice failures must not interrupt the phase clock or its stop path.
+    try {
+      const utter = new SpeechSynthesisUtterance(cue)
+      utter.lang = 'fr-FR'
+      utter.rate = 0.9
+      utter.pitch = 0.95
+      utter.volume = 0.7
+      window.speechSynthesis.cancel()
+      window.speechSynthesis.speak(utter)
+    } catch { /* Voice is optional; visual guidance remains available. */ }
   }
 
   function dispose() {
     if (disposed) return
     stop()
     disposed = true
-    try {
-      cancelRamps()
-      nappeOsc.stop()
-      subOsc.stop()
-      noiseSource.stop()
-      window.speechSynthesis?.cancel()
-      void ctx.close().catch(() => undefined)
-    } catch {
-      /* noop */
+    cancelRamps()
+    for (const source of [nappeOsc, subOsc, noiseSource]) {
+      cleanup(() => source.stop())
+      cleanup(() => source.disconnect())
     }
+    for (const node of [nappeFilter, noiseFilter, nappeGain, subGain, noiseGain, master]) {
+      cleanup(() => node.disconnect())
+    }
+    cancelVoice()
+    cleanup(() => { void ctx.close().catch(() => undefined) })
   }
 
   return {
