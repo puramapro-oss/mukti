@@ -1,0 +1,65 @@
+name: MUKTI full application readiness
+
+on:
+  push:
+    branches: ['audit/mukti-hardware-compat-20261023']
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.*'
+      - 'tsconfig.json'
+      - '.github/workflows/mukti-full-check.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mukti-full-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      GIT_TERMINAL_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Inspect local-package prerequisites and locked Git references
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          for (const [name, spec] of Object.entries({...manifest.dependencies,...manifest.devDependencies})) {
+            if (spec.startsWith('file:')) console.log(JSON.stringify({package:name,source:spec,present:fs.existsSync(path.resolve(spec.slice(5),'package.json'))}));
+            if (spec.startsWith('github:')) console.log(JSON.stringify({package:name,source:spec,locked:lock.packages?.['node_modules/'+name]?.resolved ?? null}));
+          }
+          JS
+      - name: Install exact application dependencies without lifecycle scripts or private tokens
+        id: install
+        run: |
+          # Public HTTPS transport only. No private repository token is provided.
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Typecheck entire application
+        if: ${{ success() && steps.install.outcome == 'success' }}
+        run: ./node_modules/.bin/tsc --noEmit --pretty false
+      - name: Lint entire application
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint
+      - name: Build application without deployment or project credentials
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build
+
+# This is a separate release gate: the isolated AURORA tests do not imply that
+# the complete application installs, builds, or works with production services.
+# No deployment, production migration, hardware control, or project secret.
