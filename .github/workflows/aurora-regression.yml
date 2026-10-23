@@ -1,0 +1,48 @@
+name: AURORA isolated regression
+
+on:
+  push:
+    branches: ['audit/mukti-hardware-compat-20261023']
+    paths:
+      - 'src/components/aurora/**'
+      - 'src/lib/aurora*'
+      - 'src/lib/constants/aurora.ts'
+      - 'src/hooks/useReducedMotion.ts'
+      - 'tests/aurora-regression/**'
+      - '.github/workflows/aurora-regression.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurora-isolated-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Install isolated locked test dependencies (no install scripts)
+        working-directory: tests/aurora-regression
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run regression suite
+        working-directory: tests/aurora-regression
+        run: npm test -- --reporter=verbose
+      - name: Typecheck tested production modules
+        working-directory: tests/aurora-regression
+        run: npm run typecheck
+      - name: Check patch whitespace
+        run: git diff --check HEAD^ HEAD
+      - name: Audit isolated test dependency lock
+        working-directory: tests/aurora-regression
+        run: npm audit --package-lock-only --audit-level=high
+
+# No deployment, no production APIs, no physical output and no project secrets.

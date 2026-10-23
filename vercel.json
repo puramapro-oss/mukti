@@ -1,5 +1,11 @@
 {
   "framework": "nextjs",
+  "git": {
+    "deploymentEnabled": {
+      "codex/mukti-aurora-lifecycle-20261011": false,
+      "audit/mukti-hardware-compat-20261023": false
+    }
+  },
   "buildCommand": "npm run build",
   "functions": {
     "src/app/api/**/*.ts": {
@@ -7,78 +13,24 @@
     }
   },
   "crons": [
-    {
-      "path": "/api/cron/contest-weekly",
-      "schedule": "59 23 * * 0"
-    },
-    {
-      "path": "/api/cron/milestones-unlock",
-      "schedule": "15 3 * * *"
-    },
-    {
-      "path": "/api/cron/trust-recompute",
-      "schedule": "45 3 * * *"
-    },
-    {
-      "path": "/api/cron/circles-auto-finish",
-      "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/cron/circles-replays-purge",
-      "schedule": "30 3 * * *"
-    },
-    {
-      "path": "/api/cron/ar-ceremony-auto-start",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/ar-ceremony-auto-finish",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/reprogramming-notify-day",
-      "schedule": "0 9,11,13,15,17,19 * * *"
-    },
-    {
-      "path": "/api/cron/core-world-radar",
-      "schedule": "5,20,35,50 * * * *"
-    },
-    {
-      "path": "/api/cron/core-phase-tick",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/mental-journal-relapse-scan",
-      "schedule": "10 * * * *"
-    },
-    {
-      "path": "/api/cron/contest-karma-weekly-close",
-      "schedule": "59 23 * * 0"
-    },
-    {
-      "path": "/api/cron/contest-karma-monthly-draw",
-      "schedule": "55 23 28-31 * *"
-    },
-    {
-      "path": "/api/cron/contest-karma-annual-schedule",
-      "schedule": "0 2 1 1 *"
-    },
-    {
-      "path": "/api/cron/fiscal-detect-profile",
-      "schedule": "0 3 1 * *"
-    },
-    {
-      "path": "/api/cron/fiscal-annual-pdf",
-      "schedule": "0 2 1 1 *"
-    },
-    {
-      "path": "/api/cron/rituel-hebdo-rotate",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/account-deletion",
-      "schedule": "0 3 * * *"
-    }
+    { "path": "/api/cron/contest-weekly", "schedule": "59 23 * * 0" },
+    { "path": "/api/cron/milestones-unlock", "schedule": "15 3 * * *" },
+    { "path": "/api/cron/trust-recompute", "schedule": "45 3 * * *" },
+    { "path": "/api/cron/circles-auto-finish", "schedule": "*/10 * * * *" },
+    { "path": "/api/cron/circles-replays-purge", "schedule": "30 3 * * *" },
+    { "path": "/api/cron/ar-ceremony-auto-start", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/ar-ceremony-auto-finish", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/reprogramming-notify-day", "schedule": "0 9,11,13,15,17,19 * * *" },
+    { "path": "/api/cron/core-world-radar", "schedule": "5,20,35,50 * * * *" },
+    { "path": "/api/cron/core-phase-tick", "schedule": "* * * * *" },
+    { "path": "/api/cron/mental-journal-relapse-scan", "schedule": "10 * * * *" },
+    { "path": "/api/cron/contest-karma-weekly-close", "schedule": "59 23 * * 0" },
+    { "path": "/api/cron/contest-karma-monthly-draw", "schedule": "55 23 28-31 * *" },
+    { "path": "/api/cron/contest-karma-annual-schedule", "schedule": "0 2 1 1 *" },
+    { "path": "/api/cron/fiscal-detect-profile", "schedule": "0 3 1 * *" },
+    { "path": "/api/cron/fiscal-annual-pdf", "schedule": "0 2 1 1 *" },
+    { "path": "/api/cron/rituel-hebdo-rotate", "schedule": "0 6 * * 1" },
+    { "path": "/api/cron/account-deletion", "schedule": "0 3 * * *" }
   ],
   "installCommand": "git config --global url.\"https://${SMARANA_GIT_TOKEN}@github.com/\".insteadOf \"ssh://git@github.com/\" && npm install"
 }

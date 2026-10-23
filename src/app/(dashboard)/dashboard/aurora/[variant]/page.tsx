@@ -57,7 +57,7 @@ export default async function AuroraVariantPage({ params }: PageProps) {
       </header>
 
       {/* Engine complet 5 phases + audio + haptic + persistence */}
-      <AuroraSessionFull variant={variant} />
+      <AuroraSessionFull key={variant} variant={variant} />
 
       {/* Disclaimer permanent (sécurité — brief section 5) */}
       <footer className="absolute bottom-0 left-0 right-0 z-30 pb-6 text-center">
