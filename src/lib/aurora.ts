@@ -14,6 +14,7 @@ import {
 } from './constants'
 import { createServerSupabaseClient } from './supabase-server'
 import { createServiceClient } from './supabase'
+import { completeAuroraSession, type AuroraCompletionInput, type AuroraCompletionResult } from './aurora-completion'
 
 export interface AuroraSession {
   id: string
@@ -253,126 +254,12 @@ export async function dbCreateSession(input: {
 }
 
 /**
- * Complète une aurora_session (UPDATE completed_at + phases + coherence + level)
- * ET met à jour aurora_streaks via nextStreakState().
+ * Session et progression sauvegardées atomiquement par une unique transaction SQL.
+ * Requiert 20261023_aurora_atomic_completion.sql; aucun fallback à deux écritures.
  */
-export async function dbCompleteSession(input: {
-  session_id: string
-  user_id: string
-  phases_completed: Array<{
-    phase: string
-    duration_sec: number
-    breaths_counted: number
-    coherence: number | null
-  }>
-  coherence_score: number
-  stopped_reason: 'user_stop' | 'dizzy' | 'glide_out_complete' | 'timeout' | 'error'
-  total_duration_sec: number
-}): Promise<{
-  ok: boolean
-  error: string | null
-  level_reached: AuroraLevel | null
-  streak_days: number
-}> {
-  const sb = createServiceClient()
-
-  // Vérifie ownership + pas déjà complété
-  const { data: existing, error: readError } = await sb
-    .schema('mukti')
-    .from('aurora_sessions')
-    .select('id, user_id, completed_at, variant')
-    .eq('id', input.session_id)
-    .eq('user_id', input.user_id)
-    .maybeSingle()
-  if (readError || !existing) {
-    return { ok: false, error: 'Session introuvable.', level_reached: null, streak_days: 0 }
-  }
-  const existingRow = existing as { completed_at: string | null; variant: AuroraVariant }
-  if (existingRow.completed_at) {
-    return { ok: false, error: 'Session déjà complétée.', level_reached: null, streak_days: 0 }
-  }
-
-  // Lit streak courante (trigger auto-create garantit la présence)
-  const { data: streakRow } = await sb
-    .schema('mukti')
-    .from('aurora_streaks')
-    .select('current_days, best_days, last_session_date, total_minutes, total_sessions, current_level')
-    .eq('user_id', input.user_id)
-    .maybeSingle()
-  const prev = (streakRow as {
-    current_days: number
-    best_days: number
-    last_session_date: string | null
-    total_minutes: number
-    total_sessions: number
-  } | null) ?? {
-    current_days: 0,
-    best_days: 0,
-    last_session_date: null,
-    total_minutes: 0,
-    total_sessions: 0,
-  }
-
-  const next = nextStreakState(
-    {
-      current_days: prev.current_days,
-      best_days: prev.best_days,
-      last_session_date: prev.last_session_date,
-      total_minutes: prev.total_minutes,
-      total_sessions: prev.total_sessions,
-    },
-    new Date().toISOString(),
-    input.total_duration_sec
+export async function dbCompleteSession(input: AuroraCompletionInput): Promise<AuroraCompletionResult> {
+  return completeAuroraSession(
+    (name, parameters) => createServiceClient().schema('mukti').rpc(name, parameters),
+    input,
   )
-
-  // Update session row
-  const { error: updError } = await sb
-    .schema('mukti')
-    .from('aurora_sessions')
-    .update({
-      completed_at: new Date().toISOString(),
-      duration_sec: Math.max(0, Math.min(1800, Math.round(input.total_duration_sec))),
-      phases_completed: input.phases_completed,
-      coherence_score: Math.max(0, Math.min(1, input.coherence_score)),
-      level_reached: next.current_level,
-      stopped_reason: input.stopped_reason,
-    })
-    .eq('id', input.session_id)
-    .eq('user_id', input.user_id)
-  if (updError) {
-    return { ok: false, error: 'Impossible de compléter la session.', level_reached: null, streak_days: 0 }
-  }
-
-  // Upsert streak
-  const { error: streakError } = await sb
-    .schema('mukti')
-    .from('aurora_streaks')
-    .upsert(
-      {
-        user_id: input.user_id,
-        current_days: next.current_days,
-        best_days: next.best_days,
-        last_session_date: next.last_session_date,
-        total_minutes: next.total_minutes,
-        total_sessions: next.total_sessions,
-        current_level: next.current_level,
-      },
-      { onConflict: 'user_id' }
-    )
-  if (streakError) {
-    // Session OK mais streak KO — renvoie warning non-bloquant
-    return {
-      ok: true,
-      error: null,
-      level_reached: next.current_level,
-      streak_days: next.current_days,
-    }
-  }
-
-  return {
-    ok: true,
-    error: null,
-    level_reached: next.current_level,
-    streak_days: next.current_days,
-  }
 }

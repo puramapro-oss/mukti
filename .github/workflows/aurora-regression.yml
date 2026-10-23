@@ -9,6 +9,7 @@ on:
       - 'src/lib/constants/aurora.ts'
       - 'src/hooks/useReducedMotion.ts'
       - 'tests/aurora-regression/**'
+      - 'migrations/20261023_aurora_atomic_completion.sql'
       - '.github/workflows/aurora-regression.yml'
   workflow_dispatch: {}
 
@@ -34,12 +35,12 @@ jobs:
       - name: Install isolated locked test dependencies (no install scripts)
         working-directory: tests/aurora-regression
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Run React regression suite and phase stress cases
+      - name: Run React regression suite and completion validation
         working-directory: tests/aurora-regression
         run: npm test -- --reporter=verbose
-      - name: Run transport and audio fault-injection tests
+      - name: Run transport, audio and server-wiring fault injection
         working-directory: tests/aurora-regression
-        run: node --test runtime-regression.cjs
+        run: node --test runtime-regression.cjs completion-wiring.cjs
       - name: Typecheck tested production modules
         working-directory: tests/aurora-regression
         run: npm run typecheck
@@ -62,53 +63,35 @@ jobs:
       - name: Audit application lock (not an application build)
         run: npm audit --package-lock-only --omit=dev --audit-level=high
 
-  next-test-patch-evaluation:
-    if: github.ref == 'refs/heads/audit/mukti-hardware-compat-20261023'
+  database-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: mukti-regression-only
+          POSTGRES_DB: mukti_regression
+        ports:
+          - '127.0.0.1:54329:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '24'
-      - name: Resolve only the isolated test Next patch candidate
-        working-directory: tests/aurora-regression
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-exact next@16.4.2
-      - name: Verify locked candidate without installation scripts
-        working-directory: tests/aurora-regression
-        run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          npm test
-          node --test runtime-regression.cjs
-          npm run typecheck
-          npm audit --package-lock-only --audit-level=high
-      - name: Show candidate manifest changes
-        run: git diff --stat && git diff -- tests/aurora-regression/package.json
-      - name: Store tested manifest blobs for connector review (no branch update)
+      - name: Verify atomic completion on disposable PostgreSQL only
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 - <<'PY'
-          import base64, json, os, pathlib, urllib.request
-          assert os.environ['GITHUB_REPOSITORY'] == 'puramapro-oss/mukti'
-          assert os.environ['GITHUB_REF'] == 'refs/heads/audit/mukti-hardware-compat-20261023'
-          root = pathlib.Path('tests/aurora-regression')
-          manifest = json.loads((root / 'package.json').read_text())
-          assert manifest['devDependencies']['next'] == '16.4.2'
-          for name in ['package.json', 'package-lock.json']:
-              content = (root / name).read_bytes()
-              payload = json.dumps({'content': base64.b64encode(content).decode(), 'encoding': 'base64'}).encode()
-              request = urllib.request.Request(
-                  'https://api.github.com/repos/puramapro-oss/mukti/git/blobs', data=payload, method='POST',
-                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'})
-              with urllib.request.urlopen(request) as result:
-                  blob = json.load(result)
-              print(json.dumps({'path': str(root / name), 'sha': blob['sha'], 'size': len(content)}))
-          PY
+          PGHOST: '127.0.0.1'
+          PGPORT: '54329'
+          PGUSER: postgres
+          PGPASSWORD: mukti-regression-only
+          PGDATABASE: mukti_regression
+        run: python3 tests/aurora-regression/database_regression.py
 
 # No deployment, no production APIs, no physical output and no project secrets.
-# The maintenance job can create reviewed manifest blobs only; it never moves refs.
+# PostgreSQL contains generated test identities only and is destroyed with the job.
