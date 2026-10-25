@@ -62,4 +62,3 @@ export function audioFixture({ support = true, voiceThrows = false, utterance = 
   const { createAuroraAudio } = load('aurora-audio', globals)
   return { create: createAuroraAudio, context: () => contexts.at(-1), speech }
 }
-

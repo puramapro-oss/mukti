@@ -79,4 +79,3 @@ test('request: malformed JSON rejects and clears timeout', async () => {
   await assert.rejects(request('/api/aurora/session', {}, new AbortController()))
   assert.equal(timer.pending.size, 0)
 })
-
