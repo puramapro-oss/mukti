@@ -9,6 +9,7 @@ on:
       - 'src/components/exorcisme/hooks/**'
       - 'src/lib/ar/mediapipe-loader.ts'
       - 'src/lib/nature-sounds.ts'
+      - 'src/lib/nature-sound-builders.ts'
       - 'package.json'
       - 'package-lock.json'
       - 'src/lib/aurora*'

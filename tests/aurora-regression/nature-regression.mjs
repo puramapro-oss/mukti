@@ -20,7 +20,7 @@ function fixture() {
   const timeouts = new Map(), intervals = new Map()
   const all = [], sources = [], gains = []
   const pendingResumes = []
-  let context
+  const contexts = []
   class Param {
     constructor(value = 0) { this.value = value; this.events = [] }
     cancelScheduledValues() { if (this.failCancel) throw new Error('cancel failed') }
@@ -36,7 +36,7 @@ function fixture() {
     stop(time) { this.stops.push(time); if (this.failStop) throw new Error('stop failed') }
   }
   class Context {
-    constructor() { context = this; this.sampleRate = 48000; this.currentTime = 0; this.state = 'suspended'; this.destination = {}; this.closes = 0; this.deferResume = false }
+    constructor() { contexts.push(this); this.sampleRate = 48000; this.currentTime = 0; this.state = 'suspended'; this.destination = {}; this.closes = 0; this.deferResume = false }
     createGain() { const node = new Node(); gains.push(node); return node }
     createOscillator() { return new Node(true) }
     createBufferSource() { return new Node(true) }
@@ -47,17 +47,29 @@ function fixture() {
   }
   const exports = {}, fixedMath = Object.create(Math)
   fixedMath.random = () => 0.25
-  vm.runInNewContext(js, {
-    exports, Math: fixedMath, Number, Set, Promise,
+  const globals = {
+    Math: fixedMath, Number, Set, Promise,
     window: { AudioContext: Context },
     setTimeout: (callback) => { const id = next++; timeouts.set(id, callback); return id },
     clearTimeout: (id) => timeouts.delete(id),
     setInterval: (callback) => { const id = next++; intervals.set(id, callback); return id },
     clearInterval: (id) => intervals.delete(id),
-  })
+  }
+  // Load the real extracted generator in the same controlled environment.
+  const requireSource = (specifier) => {
+    assert.equal(specifier, './nature-sound-builders')
+    const file = path.join(path.dirname(sourcePath), 'nature-sound-builders.ts')
+    const module = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText
+    const exports = {}
+    vm.runInNewContext(module, { ...globals, exports })
+    return exports
+  }
+  vm.runInNewContext(js, { ...globals, exports, require: requireSource })
   const engine = exports.createNatureSoundEngine()
   return {
-    engine, all, sources, gains, context, timeouts, intervals, pendingResumes,
+    engine, all, sources, gains, context: contexts.at(-1), timeouts, intervals, pendingResumes,
     time: () => { for (const [id, callback] of [...timeouts]) { timeouts.delete(id); callback() } },
     tick: () => { for (const callback of [...intervals.values()]) callback() },
   }
