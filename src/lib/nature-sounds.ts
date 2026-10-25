@@ -1,6 +1,6 @@
 // MUKTI — G5.4 Nature Sounds procéduraux (Web Audio natif, client-only)
 // 5 ambiances synthétisées : forêt, rivière, vent, pluie, océan + silence.
-// Zéro fichier externe, zéro bundle cost, loop infini naturel via modulation stochastique.
+// Synthèse locale. Le niveau acoustique dépend du casque et du matériel utilisé.
 
 import type { NatureSound } from './constants'
 
@@ -14,7 +14,7 @@ export interface NatureSoundHandle {
 
 /**
  * Crée un moteur de son nature. Client-only (AudioContext).
- * Fade in/out 1.5s inter-changements.
+ * Transitions progressives ; arrêt explicite immédiat et annulation des tâches différées.
  */
 export function createNatureSoundEngine(): NatureSoundHandle {
   if (typeof window === 'undefined') return noopHandle()
@@ -33,6 +33,55 @@ export function createNatureSoundEngine(): NatureSoundHandle {
   let nodes: AudioNode[] = []
   let intervalIds: ReturnType<typeof setInterval>[] = []
   let started = false
+  let disposed = false
+  let generation = 0
+  let graphGeneration = 0
+  let switchGeneration = 0
+  let switchTimer: ReturnType<typeof setTimeout> | null = null
+  type Transient = { source: OscillatorNode; gain: GainNode }
+  const transients = new Set<Transient>()
+
+  function cleanup(action: () => void) {
+    try { action() } catch { /* One failed cleanup must not leave other outputs active. */ }
+  }
+
+  function cancelSwitch() {
+    switchGeneration += 1
+    if (switchTimer !== null) clearTimeout(switchTimer)
+    switchTimer = null
+  }
+
+  function silenceMaster() {
+    cleanup(() => master.gain.cancelScheduledValues(ctx.currentTime))
+    try {
+      master.gain.setValueAtTime(0, ctx.currentTime)
+    } catch {
+      // Fail closed if a broken context refuses to zero its output.
+      cleanup(() => master.disconnect())
+    }
+  }
+
+  function releaseTransient(transient: Transient, stopSource: boolean) {
+    if (!transients.delete(transient)) return
+    transient.source.onended = null
+    if (stopSource) cleanup(() => transient.source.stop())
+    cleanup(() => transient.source.disconnect())
+    cleanup(() => transient.gain.disconnect())
+  }
+
+  function trackTransient(source: OscillatorNode, gain: GainNode) {
+    const transient = { source, gain }
+    transients.add(transient)
+    source.onended = () => releaseTransient(transient, false)
+  }
+
+  function scheduleEffect(effect: () => void, delay: number) {
+    const graph = graphGeneration
+    intervalIds.push(setInterval(() => {
+      if (disposed || !started || graph !== graphGeneration) return
+      effect()
+    }, delay))
+  }
 
   // --- Bruit coloré (white / pink / brown) via buffer 2s loopé ---
   function createNoiseBuffer(color: 'white' | 'pink' | 'brown'): AudioBuffer {
@@ -68,19 +117,18 @@ export function createNatureSoundEngine(): NatureSoundHandle {
   }
 
   function disposeCurrent() {
+    graphGeneration += 1
     intervalIds.forEach((id) => clearInterval(id))
     intervalIds = []
-    nodes.forEach((n) => {
-      try {
-        if ('stop' in n && typeof (n as AudioBufferSourceNode).stop === 'function') {
-          ;(n as AudioBufferSourceNode).stop()
-        }
-        n.disconnect()
-      } catch {
-        /* noop */
-      }
-    })
+    for (const transient of [...transients]) releaseTransient(transient, true)
+    const previous = nodes
     nodes = []
+    for (const node of previous) {
+      if ('stop' in node && typeof (node as AudioBufferSourceNode).stop === 'function') {
+        cleanup(() => (node as AudioBufferSourceNode).stop())
+      }
+      cleanup(() => node.disconnect())
+    }
   }
 
   // ----------------- Constructors par ambiance -----------------
@@ -111,16 +159,16 @@ export function createNatureSoundEngine(): NatureSoundHandle {
     nodes.push(noise, bp, g, lfo, lfoGain)
 
     // Chants d'oiseaux : tirer 1 burst toutes les 8-20s
-    const birdInterval = setInterval(
+    scheduleEffect(
       () => {
         if (Math.random() < 0.5) spawnBirdCall()
       },
       6000 + Math.random() * 12000
     )
-    intervalIds.push(birdInterval)
   }
 
   function spawnBirdCall() {
+    if (!started || disposed) return
     const now = ctx.currentTime
     const o = ctx.createOscillator()
     o.type = 'sine'
@@ -134,6 +182,7 @@ export function createNatureSoundEngine(): NatureSoundHandle {
     g.gain.linearRampToValueAtTime(0.0001, now + 0.45)
     o.connect(g)
     g.connect(master)
+    trackTransient(o, g)
     o.start(now)
     o.stop(now + 0.5)
   }
@@ -211,13 +260,13 @@ export function createNatureSoundEngine(): NatureSoundHandle {
     nodes.push(noise, hp, g)
 
     // Gouttes isolées plus grasses — intervalle 60-200ms
-    const dropInterval = setInterval(() => {
+    scheduleEffect(() => {
       spawnDrop()
     }, 80 + Math.random() * 120)
-    intervalIds.push(dropInterval)
   }
 
   function spawnDrop() {
+    if (!started || disposed) return
     const now = ctx.currentTime
     const o = ctx.createOscillator()
     o.type = 'sine'
@@ -230,6 +279,7 @@ export function createNatureSoundEngine(): NatureSoundHandle {
     g.gain.exponentialRampToValueAtTime(0.0001, now + 0.1)
     o.connect(g)
     g.connect(master)
+    trackTransient(o, g)
     o.start(now)
     o.stop(now + 0.12)
   }
@@ -272,48 +322,70 @@ export function createNatureSoundEngine(): NatureSoundHandle {
   }
 
   function start() {
-    if (started) return
+    if (started || disposed) return
+    cancelSwitch()
+    const ticket = ++generation
     started = true
-    if (ctx.state === 'suspended') void ctx.resume()
-    rebuildForSound(currentSound)
-    fadeGain(master.gain, targetVolume, 1.5)
+    try {
+      if (ctx.state === 'suspended') {
+        void ctx.resume().catch(() => {
+          if (!disposed && ticket === generation) stop()
+        })
+      }
+      rebuildForSound(currentSound)
+      fadeGain(master.gain, targetVolume, 1.5)
+    } catch (error) {
+      stop()
+      throw error
+    }
   }
 
   function stop() {
-    if (!started) return
-    fadeGain(master.gain, 0, 1.5)
-    setTimeout(() => {
-      disposeCurrent()
-      started = false
-    }, 1600)
+    if (disposed) return
+    generation += 1
+    started = false
+    cancelSwitch()
+    silenceMaster()
+    disposeCurrent()
   }
 
   function setVolume(vol: number) {
-    targetVolume = Math.max(0, Math.min(1, vol))
-    if (started) fadeGain(master.gain, targetVolume, 0.5)
+    if (disposed) return
+    targetVolume = Number.isFinite(vol) ? Math.max(0, Math.min(1, vol)) : 0
+    if (started) {
+      if (!Number.isFinite(vol)) silenceMaster()
+      else fadeGain(master.gain, targetVolume, 0.5)
+    }
   }
 
   function setSound(sound: NatureSound) {
-    if (sound === currentSound) return
-    const wasStarted = started
+    if (disposed || sound === currentSound) return
+    if (!['foret', 'riviere', 'vent', 'pluie', 'ocean', 'silence'].includes(sound)) return
     currentSound = sound
-    if (wasStarted) {
-      // fade out, swap, fade in
-      fadeGain(master.gain, 0, 0.8)
-      setTimeout(() => {
-        rebuildForSound(sound)
+    cancelSwitch()
+    if (!started) return
+    const ticket = generation
+    const change = switchGeneration
+    // A later change or stop invalidates even an already queued callback.
+    fadeGain(master.gain, 0, 0.8)
+    switchTimer = setTimeout(() => {
+      if (disposed || !started || ticket !== generation || change !== switchGeneration) return
+      switchTimer = null
+      try {
+        rebuildForSound(currentSound)
         fadeGain(master.gain, targetVolume, 1.0)
-      }, 850)
-    }
+      } catch {
+        stop()
+      }
+    }, 850)
   }
 
   function dispose() {
-    try {
-      disposeCurrent()
-      void ctx.close()
-    } catch {
-      /* noop */
-    }
+    if (disposed) return
+    stop()
+    disposed = true
+    cleanup(() => master.disconnect())
+    cleanup(() => { void ctx.close().catch(() => undefined) })
   }
 
   function fadeGain(param: AudioParam, target: number, seconds: number) {

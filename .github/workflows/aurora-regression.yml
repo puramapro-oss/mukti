@@ -8,6 +8,7 @@ on:
       - 'src/components/reprogrammation/**'
       - 'src/components/exorcisme/hooks/**'
       - 'src/lib/ar/mediapipe-loader.ts'
+      - 'src/lib/nature-sounds.ts'
       - 'package.json'
       - 'package-lock.json'
       - 'src/lib/aurora*'
@@ -46,7 +47,7 @@ jobs:
         run: npm test -- --reporter=verbose
       - name: Run transport, audio and server-wiring fault injection
         working-directory: tests/aurora-regression
-        run: node --test transport-regression.mjs audio-regression.mjs completion-wiring.mjs mediapipe-regression.mjs
+        run: node --test transport-regression.mjs audio-regression.mjs completion-wiring.mjs mediapipe-regression.mjs nature-regression.mjs
       - name: Typecheck tested production modules and the independent test workspace
         working-directory: tests/aurora-regression
         run: npm run typecheck
