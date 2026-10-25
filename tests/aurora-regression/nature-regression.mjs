@@ -59,11 +59,11 @@ function fixture() {
   const requireSource = (specifier) => {
     assert.equal(specifier, './nature-sound-builders')
     const file = path.join(path.dirname(sourcePath), 'nature-sound-builders.ts')
-    const module = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+    const helperCode = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
     }).outputText
     const exports = {}
-    vm.runInNewContext(module, { ...globals, exports })
+    vm.runInNewContext(helperCode, { ...globals, exports })
     return exports
   }
   vm.runInNewContext(js, { ...globals, exports, require: requireSource })

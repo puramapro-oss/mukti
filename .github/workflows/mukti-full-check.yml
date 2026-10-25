@@ -5,6 +5,7 @@ on:
     branches: ['audit/mukti-hardware-compat-20261023']
     paths:
       - 'src/**'
+      - 'tests/aurora-regression/**'
       - 'package.json'
       - 'package-lock.json'
       - 'next.config.*'
