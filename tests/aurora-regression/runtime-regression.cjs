@@ -108,7 +108,7 @@ test('request: malformed JSON rejects and clears timeout', async () => {
 
 class Param {
   constructor(value = 0) { this.value = value; this.events = [] }
-  cancelScheduledValues(t) { this.events.push(['cancel', t]) }
+  cancelScheduledValues(t) { this.events.push(['cancel', t]); if (this.throwOnCancel) throw new Error('cancel failed') }
   setValueAtTime(v, t) { if (!Number.isFinite(v)) throw new Error('non-finite parameter'); this.value = v; this.events.push(['set', v, t]) }
   linearRampToValueAtTime(v, t) { if (!Number.isFinite(v)) throw new Error('non-finite parameter'); this.value = v; this.events.push(['linear', v, t]) }
   exponentialRampToValueAtTime(v, t) { if (!Number.isFinite(v) || v <= 0) throw new Error('invalid exponential value'); this.value = v; this.events.push(['exp', v, t]) }
@@ -116,7 +116,7 @@ class Param {
 class AudioNode {
   constructor() { this.gain = new Param(); this.frequency = new Param(); this.Q = new Param(); this.stops = 0; this.disconnections = 0 }
   connect() {}
-  disconnect() { this.disconnections++ }
+  disconnect() { this.disconnections++; if (this.throwOnDisconnect) throw new Error('disconnect failed') }
   start() {}
   stop() { this.stops++; if (this.throwOnStop) throw new Error('stop failed') }
 }
@@ -237,4 +237,161 @@ test('audio: 1000 deterministic lifecycle actions preserve silence after stop/di
     if (disabled || stopped) assert.equal(f.context().gains[0].gain.value, 0)
   }
   audio.dispose()
+})
+
+
+// Regression cases for silence and resource release. No physical outputs.
+test('audio: zero or clamped-negative master gain never queues voice guidance', async () => {
+  for (const gain of [0, -1]) {
+    const f = audioFixture(); const audio = f.create({ masterGain: gain })
+    try {
+      await audio.start(); audio.setVoiceGuidance(true); audio.speakPhaseCue('Exemple')
+      assert.equal(f.speech.cues.length, 0)
+    } finally { audio.dispose() }
+  }
+})
+
+test('audio: voice remains opt-in and still works when explicitly enabled at a nonzero gain', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.speakPhaseCue('Muet')
+    assert.equal(f.speech.cues.length, 0)
+    audio.setVoiceGuidance(true); audio.speakPhaseCue('Exemple')
+    assert.equal(f.speech.cues.length, 1)
+    audio.setVoiceGuidance(false); audio.speakPhaseCue('Muet')
+    assert.equal(f.speech.cues.length, 1)
+  } finally { audio.dispose() }
+})
+
+test('audio: muting stops and releases every pending transient before unmuting', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('hold')
+    const transient = f.context().sources.at(-1), gain = f.context().gains.at(-1)
+    assert.equal(transient.stops, 1) // scheduled natural end, not cancellation
+    audio.setEnabled(false)
+    assert.equal(transient.stops, 2)
+    assert.ok(transient.disconnections >= 1)
+    assert.ok(gain.disconnections >= 1)
+    assert.equal(gain.gain.value, 0)
+    assert.equal(transient.onended, null)
+    audio.setPhase('idle'); audio.setEnabled(true)
+    assert.equal(f.context().sources.length, 4)
+  } finally { audio.dispose() }
+})
+
+test('audio: transient cleanup continues when stop or disconnect throws', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('hold')
+    const transient = f.context().sources.at(-1), gain = f.context().gains.at(-1)
+    transient.throwOnStop = true; transient.throwOnDisconnect = true
+    assert.doesNotThrow(() => audio.setEnabled(false))
+    assert.ok(transient.disconnections >= 1)
+    assert.ok(gain.disconnections >= 1)
+    assert.equal(gain.gain.value, 0)
+    assert.equal(f.context().gains[0].gain.value, 0)
+  } finally { audio.dispose() }
+})
+
+test('audio: naturally ended transient releases its gain despite a failed source disconnect', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('hold')
+    const transient = f.context().sources.at(-1), gain = f.context().gains.at(-1)
+    transient.throwOnDisconnect = true
+    const ended = transient.onended
+    assert.doesNotThrow(() => ended())
+    assert.equal(gain.disconnections, 1)
+    assert.equal(transient.onended, null)
+  } finally { audio.dispose() }
+})
+
+test('audio: repeated enable command does not generate additional hold tones', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('hold')
+    const count = f.context().sources.length
+    audio.setEnabled(true); audio.setEnabled(true)
+    assert.equal(f.context().sources.length, count)
+  } finally { audio.dispose() }
+})
+
+test('audio: mute still silences master and voice when a layer cannot cancel automation', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('expire'); audio.setVoiceGuidance(true)
+    audio.speakPhaseCue('Exemple')
+    const cancelled = f.speech.cancellations
+    f.context().gains[1].gain.throwOnCancel = true
+    assert.doesNotThrow(() => audio.setEnabled(false))
+    assert.equal(f.context().gains[0].gain.value, 0)
+    for (const g of f.context().gains.slice(1,4)) assert.equal(g.gain.value, 0)
+    assert.ok(f.speech.cancellations > cancelled)
+  } finally { audio.dispose() }
+})
+
+test('audio: stop resets a gain even if cancelScheduledValues fails on that gain', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('expire')
+    for (const g of f.context().gains.slice(0,4)) g.gain.throwOnCancel = true
+    assert.doesNotThrow(() => audio.stop())
+    for (const g of f.context().gains.slice(0,4)) assert.equal(g.gain.value, 0)
+  } finally { audio.dispose() }
+})
+
+test('audio: idle phase cancels a pending hold transient', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start(); audio.setPhase('hold')
+    const transient = f.context().sources.at(-1)
+    audio.setPhase('idle')
+    assert.ok(transient.stops >= 2)
+    assert.ok(transient.disconnections >= 1)
+  } finally { audio.dispose() }
+})
+
+test('audio: zero master gain does not allocate silent hold transients', async () => {
+  const f = audioFixture(); const audio = f.create({ masterGain: 0 })
+  try {
+    await audio.start(); audio.setPhase('hold')
+    assert.equal(f.context().sources.length, 3)
+  } finally { audio.dispose() }
+})
+
+test('audio: phase updates before an explicit start cannot raise channel levels', () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    for (const phase of ['inspire','expire','hold','idle']) audio.setPhase(phase)
+    for (const g of f.context().gains) assert.equal(g.gain.value, 0)
+    assert.equal(f.context().sources.length, 3)
+  } finally { audio.dispose() }
+})
+
+test('audio: pending asynchronous start cannot undo a later stop', async () => {
+  const f = audioFixture(); const audio = f.create()
+  let resolve
+  f.context().resume = () => new Promise(r => { resolve = r })
+  try {
+    const pending = audio.start(); audio.stop(); resolve(); await pending
+    audio.setPhase('inspire')
+    for (const g of f.context().gains) assert.equal(g.gain.value, 0)
+  } finally { audio.dispose() }
+})
+
+test('audio: 100 mute/unmute cycles release their transient resources', async () => {
+  const f = audioFixture(); const audio = f.create()
+  try {
+    await audio.start()
+    for (let i=0;i<100;i++) {
+      audio.setPhase('hold')
+      const source = f.context().sources.at(-1), gain = f.context().gains.at(-1)
+      audio.setEnabled(false)
+      assert.ok(source.stops >= 2)
+      assert.ok(source.disconnections >= 1)
+      assert.ok(gain.disconnections >= 1)
+      audio.setPhase('idle'); audio.setEnabled(true)
+    }
+  } finally { audio.dispose() }
 })

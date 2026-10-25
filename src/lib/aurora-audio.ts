@@ -8,6 +8,7 @@
 import type { BreathPhase } from '@/components/aurora/types'
 
 type StopFn = () => void
+type TransientTone = { oscillator: OscillatorNode; gain: GainNode }
 
 export interface AuroraAudioHandle {
   /** Déverrouille le contexte pendant le geste utilisateur, sans émettre de son. */
@@ -52,7 +53,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
     ? Math.max(0, Math.min(1, config.masterGain!)) : 0.35
   const frequency = (value: number | undefined, fallback: number) =>
     typeof value === 'number' && Number.isFinite(value) && value > 0 && value < ctx.sampleRate / 2 ? value : fallback
-  const transients = new Set<{ oscillator: OscillatorNode; gain: GainNode }>()
+  const transients = new Set<TransientTone>()
 
   // --- Nappe (inspire) : triangle + lowpass, glide montant léger ---
   const nappeOsc = ctx.createOscillator()
@@ -107,7 +108,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
 
   // --- Clic cristallin (pause / hold) : burst court aigu enveloppé ---
   function clickCristallin() {
-    if (!started) return
+    if (!started || !enabled || disposed || targetMasterGain === 0) return
     const o = ctx.createOscillator()
     o.type = 'sine'
     o.frequency.setValueAtTime(1800, ctx.currentTime)
@@ -120,7 +121,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
     g.connect(master)
     const transient = { oscillator: o, gain: g }
     transients.add(transient)
-    o.onended = () => { o.disconnect(); g.disconnect(); transients.delete(transient) }
+    o.onended = () => releaseTransient(transient)
     o.start()
     o.stop(ctx.currentTime + 0.32)
   }
@@ -136,6 +137,29 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   // Cleanup must continue even if an optional browser API fails.
   function cleanup(action: () => void) {
     try { action() } catch { /* best effort cleanup; never skip other outputs */ }
+  }
+
+  // Keep cancellation and zeroing independent: a failed optional operation
+  // must not skip the remaining mute/stop actions.
+  function silenceGain(node: GainNode) {
+    cleanup(() => node.gain.cancelScheduledValues(ctx.currentTime))
+    cleanup(() => node.gain.setValueAtTime(0, ctx.currentTime))
+  }
+
+  function releaseTransient(node: TransientTone, stop = false) {
+    node.oscillator.onended = null
+    if (stop) {
+      silenceGain(node.gain)
+      cleanup(() => node.oscillator.stop())
+    }
+    cleanup(() => node.oscillator.disconnect())
+    cleanup(() => node.gain.disconnect())
+    transients.delete(node)
+  }
+
+  function cancelTransients() {
+    for (const node of transients) releaseTransient(node, true)
+    transients.clear()
   }
 
   function cancelVoice() {
@@ -185,7 +209,8 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
       ramps.push(rampGain(noiseGain.gain, 0.0, 0.5))
       clickCristallin()
     } else {
-      // idle : tout à zéro doux
+      // idle : tout à zéro doux, sans conserver un clic de la phase précédente.
+      cancelTransients()
       ramps.push(rampGain(nappeGain.gain, 0, 1))
       ramps.push(rampGain(subGain.gain, 0, 1))
       ramps.push(rampGain(noiseGain.gain, 0, 1))
@@ -220,36 +245,25 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
     if (disposed) return
     cancelRamps()
     // Reset every layer: a subsequent start must not replay a previous envelope.
-    for (const node of [master, nappeGain, subGain, noiseGain]) {
-      cleanup(() => {
-        node.gain.cancelScheduledValues(ctx.currentTime)
-        node.gain.setValueAtTime(0, ctx.currentTime)
-      })
-    }
+    for (const node of [master, nappeGain, subGain, noiseGain]) silenceGain(node)
     started = false
     currentPhase = 'idle'
-    for (const node of transients) {
-      cleanup(() => node.oscillator.stop())
-      cleanup(() => node.oscillator.disconnect())
-      cleanup(() => node.gain.disconnect())
-    }
-    transients.clear()
+    cancelTransients()
     cancelVoice()
     // Le master est déjà muet, même si le navigateur refuse la suspension.
     cleanup(() => { void ctx.suspend().catch(() => undefined) })
   }
 
   function setEnabled(next: boolean) {
-    if (disposed) return
+    if (disposed || next === enabled) return
     enabled = next
     if (!enabled) {
-      cancelRamps()
-      rampGain(nappeGain.gain, 0, 0.3)
-      rampGain(subGain.gain, 0, 0.3)
-      rampGain(noiseGain.gain, 0, 0.3)
-      master.gain.cancelScheduledValues(ctx.currentTime)
-      master.gain.setValueAtTime(0, ctx.currentTime)
+      // Mute first; pending transients must not reappear on a fast unmute.
+      silenceGain(master)
       cancelVoice()
+      cancelRamps()
+      for (const node of [nappeGain, subGain, noiseGain]) silenceGain(node)
+      cancelTransients()
     } else if (started) {
       rampGain(master.gain, targetMasterGain, 0.3)
       setPhase(currentPhase)
@@ -263,7 +277,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   }
 
   function speakPhaseCue(cue: string) {
-    if (!voiceGuidance || !started || !enabled || disposed) return
+    if (!voiceGuidance || !started || !enabled || disposed || targetMasterGain === 0) return
     if (!window.speechSynthesis || typeof SpeechSynthesisUtterance !== 'function') return
     // Optional voice failures must not interrupt the phase clock or its stop path.
     try {
