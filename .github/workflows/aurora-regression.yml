@@ -9,6 +9,7 @@ on:
       - 'src/lib/constants/aurora.ts'
       - 'src/hooks/useReducedMotion.ts'
       - 'tests/aurora-regression/**'
+      - 'tsconfig.json'
       - 'migrations/20261023_aurora_atomic_completion.sql'
       - '.github/workflows/aurora-regression.yml'
   workflow_dispatch: {}
@@ -41,7 +42,7 @@ jobs:
       - name: Run transport, audio and server-wiring fault injection
         working-directory: tests/aurora-regression
         run: node --test runtime-regression.cjs completion-wiring.cjs
-      - name: Typecheck tested production modules
+      - name: Typecheck tested production modules and the independent test workspace
         working-directory: tests/aurora-regression
         run: npm run typecheck
       - name: Check patch whitespace
@@ -95,3 +96,5 @@ jobs:
 
 # No deployment, no production APIs, no physical output and no project secrets.
 # PostgreSQL contains generated test identities only and is destroyed with the job.
+# The test workspace has its own lock and tsconfig, and remains typechecked here
+# when the application tsconfig changes; it is not part of the Next.js build.
