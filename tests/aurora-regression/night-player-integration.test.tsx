@@ -13,7 +13,10 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('@/lib/nature-sounds', () => ({ createNatureSoundEngine: () => mocks.nature }))
 vi.mock('sonner', () => ({ toast: mocks.toast }))
-vi.mock('../../src/components/reprogrammation/nightPlayerHelpers', () => ({ speakAffirmation: mocks.speak }))
+vi.mock('../../src/components/reprogrammation/nightPlayerHelpers', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../src/components/reprogrammation/nightPlayerHelpers')>(),
+  speakAffirmation: mocks.speak,
+}))
 vi.mock('../../src/components/reprogrammation/NightPlayerSettings', () => ({
   default: ({ setRampEnabled }: { setRampEnabled: (enabled: boolean) => void }) => (
     <button type="button" onClick={() => setRampEnabled(false)}>Volume fixe de test</button>
