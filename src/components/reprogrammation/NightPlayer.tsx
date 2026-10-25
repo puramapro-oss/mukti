@@ -4,32 +4,18 @@
 // Mode Nuit : affirmations lentes + son nature synthétisé + volume ramp 30min linéaire
 // + user-controlled début/fin. SpeechSynthesis opt-in OFF par défaut.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Play, Square, Moon } from 'lucide-react'
-import { toast } from 'sonner'
-import { createNatureSoundEngine, type NatureSoundHandle } from '@/lib/nature-sounds'
 import { REPROG_CATEGORIES, type NatureSound, type ReprogCategory } from '@/lib/constants'
 import NightPlayerSettings from './NightPlayerSettings'
 import { useNightPlayerVolume } from './useNightPlayerVolume'
-import { speakAffirmation } from './nightPlayerHelpers'
+import { useNightPlayerSession } from './useNightPlayerSession'
 import NightPlayerRampProgress from './NightPlayerRampProgress'
-
-interface AffirmationItem {
-  id: string
-  text_fr: string
-  text_en: string | null
-  source: 'purama' | 'user' | 'community'
-}
 
 export interface NightPlayerProps {
   initialCategory?: ReprogCategory
   initialNatureSound?: NatureSound
 }
-
-// Temps entre 2 affirmations (lent en mode nuit = 12s)
-const AFFIRMATION_INTERVAL_SEC = 12
-// Volume audio affirmations vocales (si voice_guidance ON)
-const VOICE_VOLUME = 0.6
 
 export default function NightPlayer({
   initialCategory = 'sommeil-reparateur',
@@ -40,139 +26,15 @@ export default function NightPlayer({
   const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [rampEnabled, setRampEnabled] = useState(true)
 
-  const [running, setRunning] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [affirmations, setAffirmations] = useState<AffirmationItem[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [playedCount, setPlayedCount] = useState(0)
-  const currentIndexRef = useRef(0)
-  const [error, setError] = useState<string | null>(null)
-
-  const natureRef = useRef<NatureSoundHandle | null>(null)
-  const affirmationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const playedIdsRef = useRef<Set<string>>(new Set())
-  const stopSessionRef = useRef<() => Promise<void>>(async () => undefined)
-
-  const { volumePct, rampProgress, rampRemainingSec } = useNightPlayerVolume({
-    running,
-    rampEnabled,
-    onVolumeChange: useCallback((vol: number) => natureRef.current?.setVolume(vol), []),
-    onAutoStop: useCallback(async () => {
-      await stopSessionRef.current()
-    }, []),
+  const { status, running, affirmations, currentIndex, playedCount, error,
+    startSession, stopSession, cancelStart, setVolume } = useNightPlayerSession({
+    category, natureSound, voiceEnabled, rampEnabled,
   })
-
+  const { volumePct, rampProgress, rampRemainingSec } = useNightPlayerVolume({
+    running, rampEnabled, onVolumeChange: setVolume, onAutoStop: stopSession,
+  })
   const catMeta = useMemo(() => REPROG_CATEGORIES.find((c) => c.id === category)!, [category])
   const currentAffirmation = affirmations[currentIndex]
-
-  // --- Lifecycle nature engine ---
-  const ensureNature = useCallback(() => {
-    if (!natureRef.current) natureRef.current = createNatureSoundEngine()
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      natureRef.current?.dispose()
-      if (affirmationTimerRef.current !== null) clearInterval(affirmationTimerRef.current)
-      if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
-    }
-  }, [])
-
-  // --- Affirmation rotation ---
-  useEffect(() => {
-    if (!running || affirmations.length === 0) return
-    const interval = setInterval(() => {
-      // Keep effects outside React's replayable state updater.
-      const next = (currentIndexRef.current + 1) % affirmations.length
-      currentIndexRef.current = next
-      setCurrentIndex(next)
-      const a = affirmations[next]
-      if (a) {
-        playedIdsRef.current.add(a.id.replace(/^custom-/, ''))
-        setPlayedCount(playedIdsRef.current.size)
-      }
-      speakAffirmation(a, voiceEnabled, VOICE_VOLUME)
-    }, AFFIRMATION_INTERVAL_SEC * 1000)
-    affirmationTimerRef.current = interval
-    return () => clearInterval(interval)
-  }, [running, affirmations, voiceEnabled])
-
-  // --- Session actions ---
-  async function startSession() {
-    setError(null)
-    ensureNature()
-    try {
-      const resp = await fetch('/api/reprogramming/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'night',
-          category,
-          nature_sound: natureSound,
-          volume_profile: rampEnabled ? 'adaptive' : 'fixed',
-          voice_guidance: voiceEnabled,
-        }),
-      })
-      if (!resp.ok) {
-        const { error } = await resp.json().catch(() => ({ error: null }))
-        setError(error ?? 'Impossible de démarrer la session.')
-        return
-      }
-      const data = (await resp.json()) as {
-        ok: boolean
-        session_id: string
-        affirmations: AffirmationItem[]
-      }
-      if (!data.affirmations?.length) {
-        setError('Aucune affirmation disponible — réessaie plus tard.')
-        return
-      }
-      setSessionId(data.session_id)
-      setAffirmations(data.affirmations)
-      currentIndexRef.current = 0
-      setCurrentIndex(0)
-      playedIdsRef.current = new Set([data.affirmations[0].id.replace(/^custom-/, '')])
-      setPlayedCount(playedIdsRef.current.size)
-      setRunning(true)
-
-      // Démarre son nature
-      natureRef.current?.setSound(natureSound)
-      natureRef.current?.start()
-      natureRef.current?.setVolume(0.55)
-
-      speakAffirmation(data.affirmations[0], voiceEnabled, VOICE_VOLUME)
-    } catch {
-      setError('Connexion perdue — réessaie.')
-    }
-  }
-
-  async function stopSession() {
-    if (!running) return
-    setRunning(false)
-    if (affirmationTimerRef.current !== null) clearInterval(affirmationTimerRef.current)
-    if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
-    natureRef.current?.stop()
-
-    if (!sessionId) return
-    try {
-      await fetch('/api/reprogramming/end', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          affirmations_played: Array.from(playedIdsRef.current),
-        }),
-      })
-      toast.success('Bonne nuit. Ce que tu as posé prend racine. 🌙', { duration: 4000 })
-    } catch {
-      /* session locale déjà vécue, pas de message erreur alarmiste */
-    }
-  }
-
-  // Expose stopSession à tick() via ref (évite stale closure RAF loop)
-  useEffect(() => {
-    stopSessionRef.current = stopSession
-  })
 
   return (
     <div
@@ -240,8 +102,8 @@ export default function NightPlayer({
           />
         )}
 
-        {/* Settings expandable (avant démarrage OU accessible via chevron) */}
-        {!running && (
+        {/* Settings remain stable while preparing, playing or saving. */}
+        {status === 'idle' && (
           <NightPlayerSettings
             category={category}
             setCategory={setCategory}
@@ -269,6 +131,7 @@ export default function NightPlayer({
             <button
               type="button"
               onClick={startSession}
+              disabled={status !== 'idle'}
               className="group flex items-center gap-2.5 rounded-full px-6 py-3.5 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 active:scale-95"
               style={{
                 background: `linear-gradient(135deg, ${catMeta.color}, ${catMeta.color}bb)`,
@@ -277,7 +140,7 @@ export default function NightPlayer({
               aria-label="Démarrer la session nuit"
             >
               <Play className="h-4 w-4" />
-              <span>Démarrer</span>
+              <span>{status === 'starting' ? 'Préparation…' : status === 'saving' ? 'Enregistrement…' : 'Démarrer'}</span>
             </button>
           ) : (
             <button
@@ -292,6 +155,17 @@ export default function NightPlayer({
           )}
         </div>
 
+        {status === 'starting' && (
+          <button type="button" onClick={cancelStart} aria-label="Annuler le démarrage"
+            className="mt-4 rounded-full border border-white/20 px-5 py-3 text-sm text-white">
+            Annuler le démarrage
+          </button>
+        )}
+        {status === 'saving' && (
+          <p role="status" className="mt-4 text-center text-sm text-white/70">
+            Séance arrêtée. Enregistrement en cours…
+          </p>
+        )}
         {running && (
           <p className="mt-4 text-center text-[10px] uppercase tracking-[0.25em] text-white/40">
             Appuie sur Terminer quand tu veux. Tu choisis le moment.
