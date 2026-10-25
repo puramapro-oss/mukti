@@ -115,26 +115,8 @@ jobs:
               p.write_text(text.replace(old,new))
           path='src/components/reprogrammation/NightPlayer.tsx'
           replace(path,'  const [currentIndex, setCurrentIndex] = useState(0)','  const [currentIndex, setCurrentIndex] = useState(0)\n  const [playedCount, setPlayedCount] = useState(0)\n  const currentIndexRef = useRef(0)')
-          old="""      setCurrentIndex((i) => {
-                  const next = (i + 1) % affirmations.length
-                  const a = affirmations[next]
-                  if (a) playedIdsRef.current.add(a.id.replace(/^custom-/, ''))
-                  speakAffirmation(a, voiceEnabled, VOICE_VOLUME)
-                  return next
-                })"""
-          # Normalize only indentation in this literal, not in the source.
-          old=old.replace('\n            ','\n')
-          new="""      // Effects belong to the timer callback, never to a replayable state updater.
-                const next = (currentIndexRef.current + 1) % affirmations.length
-                currentIndexRef.current = next
-                setCurrentIndex(next)
-                const a = affirmations[next]
-                if (a) {
-                  playedIdsRef.current.add(a.id.replace(/^custom-/, ''))
-                  setPlayedCount(playedIdsRef.current.size)
-                }
-                speakAffirmation(a, voiceEnabled, VOICE_VOLUME)"""
-          new=new.replace('\n          ','\n')
+          old="      setCurrentIndex((i) => {\n        const next = (i + 1) % affirmations.length\n        const a = affirmations[next]\n        if (a) playedIdsRef.current.add(a.id.replace(/^custom-/, ''))\n        speakAffirmation(a, voiceEnabled, VOICE_VOLUME)\n        return next\n      })"
+          new="      // Keep effects outside React's replayable state updater.\n      const next = (currentIndexRef.current + 1) % affirmations.length\n      currentIndexRef.current = next\n      setCurrentIndex(next)\n      const a = affirmations[next]\n      if (a) {\n        playedIdsRef.current.add(a.id.replace(/^custom-/, ''))\n        setPlayedCount(playedIdsRef.current.size)\n      }\n      speakAffirmation(a, voiceEnabled, VOICE_VOLUME)"
           replace(path,old,new)
           replace(path,'      setCurrentIndex(0)','      currentIndexRef.current = 0\n      setCurrentIndex(0)')
           replace(path,"      playedIdsRef.current = new Set([data.affirmations[0].id.replace(/^custom-/, '')])","      playedIdsRef.current = new Set([data.affirmations[0].id.replace(/^custom-/, '')])\n      setPlayedCount(playedIdsRef.current.size)")
@@ -181,7 +163,11 @@ jobs:
           npm audit --package-lock-only --omit=dev --audit-level=high --json > "$RUNNER_TEMP/mukti-evidence/dependency-audit.json"
           status=$?
           set -e
-          cat "$RUNNER_TEMP/mukti-evidence/dependency-audit.json"
+          node - <<'JS'
+          const fs=require('node:fs');
+          const report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/mukti-evidence/dependency-audit.json','utf8'));
+          console.log(JSON.stringify({error:report.error,metadata:report.metadata,remaining:Object.entries(report.vulnerabilities || {}).map(([name,v])=>({name,severity:v.severity,fixAvailable:v.fixAvailable}))},null,2));
+          JS
           exit "$status"
       - name: Preserve only public candidate sources and verification metadata
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
