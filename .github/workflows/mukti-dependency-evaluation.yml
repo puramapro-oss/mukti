@@ -1,0 +1,158 @@
+name: MUKTI dependency candidate evaluation
+
+on:
+  push:
+    branches: ['audit/mukti-hardware-compat-20261023']
+    paths: ['.github/workflows/mukti-dependency-evaluation.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mukti-dependency-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    if: github.repository == 'puramapro-oss/mukti' && github.ref == 'refs/heads/audit/mukti-hardware-compat-20261023'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      GIT_TERMINAL_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Prepare candidate with unchanged authentic lint rules
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          const assert = require('node:assert/strict');
+          const p = JSON.parse(fs.readFileSync('package.json','utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+          assert.equal(p.devDependencies['@purama/eslint-config'], 'file:../packages/eslint-config-purama');
+          assert.equal(crypto.createHash('sha256').update(fs.readFileSync('config/eslint/purama.mjs')).digest('hex'), '987fcb95af879ce9c793bd9a865363dd229d64d9004c756be3d2a98046f4d9d6');
+          const config = fs.readFileSync('eslint.config.mjs','utf8');
+          const before = 'import puramaConfig from "@purama/eslint-config";';
+          assert.equal(config.split(before).length, 2);
+          fs.writeFileSync(eslintPath='eslint.config.mjs',config.replace(before,'import puramaConfig from "./config/eslint/purama.mjs";'));
+          delete p.devDependencies['@purama/eslint-config'];
+          fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/mukti-candidate-baseline.json',JSON.stringify({manifest:p,lock}));
+          JS
+      - name: Resolve and install compatible candidate without lifecycle scripts
+        id: install
+        env:
+          GH_PRIVATE_DEPS_TOKEN: ${{ secrets.GH_PRIVATE_DEPS_TOKEN }}
+        run: |
+          set -eu
+          set +x
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0='url.https://github.com/.insteadOf'
+          export GIT_CONFIG_VALUE_0='ssh://git@github.com/'
+          if [ -z "${GH_PRIVATE_DEPS_TOKEN:-}" ]; then
+            echo '::error::The existing private dependency credential is unavailable.'
+            exit 1
+          fi
+          askpass="$(mktemp "$RUNNER_TEMP/mukti-askpass.XXXXXX")"
+          trap 'rm -f "$askpass"' EXIT
+          cat > "$askpass" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            "Username for 'https://github.com':"*|"Username for 'https://github.com/"*) printf '%s\n' 'x-access-token' ;;
+            "Password for 'https://x-access-token@github.com':"*|"Password for 'https://x-access-token@github.com/"*) printf '%s\n' "$GH_PRIVATE_DEPS_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$askpass"
+          export GIT_ASKPASS="$askpass"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          set +e
+          npm audit fix --package-lock-only --ignore-scripts --no-fund --json > "$RUNNER_TEMP/mukti-audit-fix.json"
+          fix_status=$?
+          set -e
+          node - "$fix_status" <<'JS'
+          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/mukti-audit-fix.json','utf8'));
+          if (report.error || ![0,1].includes(Number(process.argv[2]))) throw new Error('Compatible dependency resolution failed: '+(report.error?.code || process.argv[2]));
+          const before=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/mukti-candidate-baseline.json','utf8'));
+          const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+          assert.deepEqual(p,before.manifest,'No dependency ranges may be changed by this candidate');
+          assert.equal(lock.packages['node_modules/@purama/smarana'].resolved,before.lock.packages['node_modules/@purama/smarana'].resolved,'Private dependency must retain the reviewed commit');
+          const changes=[];
+          for (const [path,pkg] of Object.entries(lock.packages)) {
+            if (before.lock.packages[path]?.version!==pkg.version) changes.push({path,before:before.lock.packages[path]?.version ?? null,after:pkg.version ?? null});
+          }
+          console.log(JSON.stringify({resolutionExit:Number(process.argv[2]),changedVersions:changes},null,2));
+          JS
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Typecheck candidate application
+        id: typecheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: ./node_modules/.bin/tsc --noEmit --pretty false
+      - name: Build candidate application without production credentials
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build
+      - name: Evaluate authentic lint rules without weakening them
+        id: lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          set +e
+          ./node_modules/.bin/eslint --format json --output-file "$RUNNER_TEMP/mukti-lint.json"
+          lint_status=$?
+          set -e
+          node - "$lint_status" <<'JS'
+          const fs=require('node:fs'),path=require('node:path');
+          const report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/mukti-lint.json','utf8'));
+          const failures=report.flatMap(f=>f.messages.map(m=>({file:path.relative(process.cwd(),f.filePath),line:m.line,rule:m.ruleId,severity:m.severity,message:m.message})));
+          const counts={}; for (const f of failures) counts[f.rule || 'fatal']=(counts[f.rule || 'fatal']||0)+1;
+          console.log(JSON.stringify({exitCode:Number(process.argv[2]),errors:report.reduce((n,f)=>n+f.errorCount,0),warnings:report.reduce((n,f)=>n+f.warningCount,0),rules:counts,firstFailures:failures.slice(0,50)},null,2));
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/mukti-lint-summary.json',JSON.stringify({exitCode:Number(process.argv[2]),failures},null,2));
+          JS
+          exit "$lint_status"
+      - name: Audit candidate production dependencies
+        id: audit
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          set +e
+          npm audit --package-lock-only --omit=dev --audit-level=high --json > "$RUNNER_TEMP/mukti-candidate-audit.json"
+          status=$?
+          set -e
+          node <<'JS'
+          const fs=require('node:fs');
+          const a=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/mukti-candidate-audit.json','utf8'));
+          console.log(JSON.stringify({error:a.error,metadata:a.metadata,remaining:Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,fixAvailable:v.fixAvailable,range:v.range}))},null,2));
+          JS
+          exit "$status"
+      - name: Store exact tested public candidates for review without moving any branch
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.typecheck.outcome == 'success' && steps.build.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import base64,json,os,pathlib,urllib.request
+          assert os.environ['GITHUB_REPOSITORY']=='puramapro-oss/mukti'
+          assert os.environ['GITHUB_REF']=='refs/heads/audit/mukti-hardware-compat-20261023'
+          paths=['package.json','package-lock.json','eslint.config.mjs']
+          for name in ['mukti-lint-summary.json','mukti-candidate-audit.json']:
+              paths.append(str(pathlib.Path(os.environ['RUNNER_TEMP'])/name))
+          for name in paths:
+              content=pathlib.Path(name).read_bytes()
+              assert os.environ['GH_TOKEN'].encode() not in content
+              payload=json.dumps({'content':base64.b64encode(content).decode(),'encoding':'base64'}).encode()
+              request=urllib.request.Request('https://api.github.com/repos/puramapro-oss/mukti/git/blobs',data=payload,method='POST',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+              with urllib.request.urlopen(request) as response: result=json.load(response)
+              print(json.dumps({'path':pathlib.Path(name).name,'sha':result['sha'],'bytes':len(content)}))
+          PY
+
+# Evaluation only: no ref updates, release, database mutation or hardware output.
+# Every remaining lint/audit failure stays visible. Remove this temporary write job after review.
