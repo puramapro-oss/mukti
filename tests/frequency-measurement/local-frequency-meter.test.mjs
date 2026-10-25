@@ -141,6 +141,68 @@ test('enabled audio processing is visible', async t => {
   assert.equal(env.meter.getState().processing, 'active')
 })
 
+test('live processing changes refresh the indicator and reset stability in both directions', async t => {
+  const settings = { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+  const env = environment(t, { settings }); await env.meter.start()
+  t.mock.timers.tick(1000); t.mock.timers.tick(300); t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().stable, true)
+  settings.autoGainControl = true
+  t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().processing, 'active')
+  assert.equal(env.meter.getState().stable, false)
+  assert.equal(env.meter.getState().reading.status, 'near_target')
+  t.mock.timers.tick(300); t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().stable, true)
+  settings.autoGainControl = false
+  t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().processing, 'reported-off')
+  assert.equal(env.meter.getState().stable, false)
+})
+
+test('processing becomes unknown when a live setting is no longer reported', async t => {
+  const settings = { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+  const env = environment(t, { settings }); await env.meter.start()
+  t.mock.timers.tick(1000); t.mock.timers.tick(300); t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().stable, true)
+  delete settings.noiseSuppression
+  t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().processing, 'unknown')
+  assert.equal(env.meter.getState().stable, false)
+})
+
+test('settings read failure clears the old processing claim without ending a live capture', async t => {
+  const env = environment(t); await env.meter.start()
+  t.mock.timers.tick(1000); t.mock.timers.tick(300); t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().stable, true)
+  env.streams[0].value.getSettings = () => { throw new Error('settings temporarily unavailable') }
+  t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().processing, 'unknown')
+  assert.equal(env.meter.getState().stable, false)
+  assert.equal(env.meter.getState().status, 'listening')
+  assert.equal(env.streams[0].value.readyState, 'live')
+})
+
+test('missing getSettings leaves the processing status unknown from startup', async t => {
+  const value = track(); value.getSettings = undefined
+  const env = environment(t, { request: () => Promise.resolve(media(value)) })
+  await env.meter.start(); t.mock.timers.tick(1000)
+  assert.equal(env.meter.getState().status, 'listening')
+  assert.equal(env.meter.getState().processing, 'unknown')
+  assert.equal(env.meter.getState().reading.status, 'near_target')
+})
+
+test('echo cancellation modes are active and mode changes reset an established stability', async t => {
+  const settings = { echoCancellation: 'all', noiseSuppression: false, autoGainControl: false }
+  const env = environment(t, { settings }); await env.meter.start()
+  assert.equal(env.meter.getState().processing, 'active')
+  t.mock.timers.tick(1000); t.mock.timers.tick(300); t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().stable, true)
+  settings.echoCancellation = 'remote-only'
+  t.mock.timers.tick(300)
+  assert.equal(env.meter.getState().processing, 'active')
+  assert.equal(env.meter.getState().stable, false)
+})
+
 test('page visibility stops capture and clears previous measured value', async t => {
   const env = environment(t); await env.meter.start(); t.mock.timers.tick(1800)
   env.document.visibilityState = 'hidden'; env.document.dispatchEvent(new Event('visibilitychange'))

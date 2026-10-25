@@ -7,6 +7,19 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   ...puramaConfig,
+  // These Node harnesses load production TypeScript in a CommonJS VM context.
+  {
+    files: [
+      "tests/aurora-regression/completion-wiring.cjs",
+      "tests/aurora-regression/runtime-regression.cjs",
+    ],
+    languageOptions: { sourceType: "commonjs" },
+    rules: {
+      "@typescript-eslint/no-require-imports": ["error", {
+        allow: ["^node:(?:test|assert/strict|fs|path|vm|events)$", "^typescript$"],
+      }],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

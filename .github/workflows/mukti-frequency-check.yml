@@ -1,0 +1,53 @@
+name: MUKTI frequency measurement checks
+
+on:
+  push:
+    branches: ['codex/mukti-432hz-measurement-20261025', 'main']
+    paths:
+      - 'src/lib/audio/**'
+      - 'src/lib/aurora-audio.ts'
+      - 'src/components/audio/**'
+      - 'src/app/(dashboard)/dashboard/settings/page.tsx'
+      - 'tests/frequency-measurement/**'
+      - '.github/workflows/mukti-frequency-check.yml'
+  pull_request:
+    paths:
+      - 'src/lib/audio/**'
+      - 'src/lib/aurora-audio.ts'
+      - 'src/components/audio/**'
+      - 'src/app/(dashboard)/dashboard/settings/page.tsx'
+      - 'tests/frequency-measurement/**'
+      - '.github/workflows/mukti-frequency-check.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mukti-frequency-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frequency-measurement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tests/frequency-measurement
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Install locked measurement test dependencies
+        id: install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run frequency measurement Node tests
+        run: npm test
+      - name: Typecheck measurement modules and component in strict mode
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run typecheck
+
+# This isolated gate does not replace full-application or browser validation.

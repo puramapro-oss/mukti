@@ -121,9 +121,9 @@ class AudioNode {
   stop() { this.stops++; if (this.throwOnStop) throw new Error('stop failed') }
 }
 function audioFixture({ support = true, voiceThrows = false, utterance = true, rejectResume = false } = {}) {
-  let context
+  const state = { context: undefined }
   class Context {
-    constructor() { context = this; this.currentTime = 0; this.sampleRate = 48000; this.destination = {}; this.gains = []; this.sources = []; this.filters = []; this.closed = 0; this.state = 'suspended' }
+    constructor() { state.context = this; this.currentTime = 0; this.sampleRate = 48000; this.destination = {}; this.gains = []; this.sources = []; this.filters = []; this.closed = 0; this.state = 'suspended' }
     createGain() { const n = new AudioNode(); this.gains.push(n); return n }
     createOscillator() { const n = new AudioNode(); this.sources.push(n); return n }
     createBiquadFilter() { const n = new AudioNode(); this.filters.push(n); return n }
@@ -138,7 +138,7 @@ function audioFixture({ support = true, voiceThrows = false, utterance = true, r
   const globals = { window }
   if (utterance) globals.SpeechSynthesisUtterance = class { constructor(text) { this.text = text } }
   const { createAuroraAudio } = load('aurora-audio', globals)
-  return { create: createAuroraAudio, context: () => context, speech }
+  return { create: createAuroraAudio, context: () => state.context, speech }
 }
 
 test('audio: silent preparation, then normal explicit playback', async () => {

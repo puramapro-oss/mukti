@@ -56,8 +56,8 @@ export async function loadMediaPipe(): Promise<MediaPipeEngine> {
       pose,
       hand,
       dispose: () => {
-        try { pose.close() } catch {}
-        try { hand.close() } catch {}
+        try { pose.close() } catch { /* déjà libéré — ignorer */ }
+        try { hand.close() } catch { /* déjà libéré — ignorer */ }
       },
     }
   })().catch((err) => {
@@ -72,8 +72,8 @@ export async function loadMediaPipe(): Promise<MediaPipeEngine> {
 export function resetMediaPipe(): void {
   if (pending) {
     void pending.then((engine) => {
-      try { engine.dispose() } catch {}
-    }).catch(() => {})
+      try { engine.dispose() } catch { /* déjà libéré — ignorer */ }
+    }).catch(() => { /* init échouée : rien à libérer */ })
     pending = null
   }
 }

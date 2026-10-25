@@ -5,6 +5,10 @@
  *
  * Run from any directory with Node 24 after `npm ci` in this test directory:
  *   node /absolute/path/to/tests/frequency-measurement/browser-smoke.mjs
+ * Use --bundle-only to verify dependency isolation without launching Chromium.
+ * All React/ReactDOM imports, including JSX runtime subpaths in production source,
+ * resolve through this test directory. This prevents duplicate React instances
+ * when the application also has its own node_modules installation.
  * Playwright is resolved locally, then CODEX_PRIMARY_RUNTIME_NODE_MODULES,
  * then NODE_PATH. Install Chromium with the chosen Playwright package, or set
  * PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH (or CHROMIUM_EXECUTABLE_PATH) to an
@@ -36,7 +40,6 @@ function loadPlaywright() {
   }
   throw new Error('Playwright is unavailable. Install playwright locally, or set CODEX_PRIMARY_RUNTIME_NODE_MODULES/NODE_PATH to its node_modules directory.');
 }
-const { chromium } = loadPlaywright();
 
 function createToneWav(hz) {
   const sampleRate = 48000;
@@ -74,21 +77,50 @@ createRoot(document.getElementById('root')).render(<FrequencyMeter />);`,
     sourcefile: 'frequency-smoke-entry.tsx',
   },
   nodePaths: [join(testDirectory, 'node_modules')],
+  plugins: [{
+    name: 'react-from-smoke-harness',
+    setup(bundler) {
+      bundler.onResolve({ filter: /^(react|react-dom)(\/.*)?$/ }, ({ path }) => ({
+        // Unlike nodePaths (a fallback), this applies to imports from src too.
+        // createRequire(import.meta.url) anchors every entry point to the bench.
+        path: require.resolve(path),
+      }));
+    },
+  }],
   bundle: true,
   platform: 'browser',
   format: 'iife',
   jsx: 'automatic',
   define: { 'process.env.NODE_ENV': '"production"' },
   write: false,
+  metafile: true,
   logLevel: 'silent',
 });
+const dependencyRoots = { react: new Set(), 'react-dom': new Set() };
+for (const input of Object.keys(bundle.metafile.inputs)) {
+  const absolute = resolve(repositoryRoot, input).replaceAll('\\', '/');
+  const match = absolute.match(/^(.*\/node_modules\/(react|react-dom))\//);
+  if (match) dependencyRoots[match[2]].add(match[1]);
+}
+for (const name of ['react', 'react-dom']) {
+  const expectedRoot = dirname(require.resolve(`${name}/package.json`)).replaceAll('\\', '/');
+  assert.deepEqual([...dependencyRoots[name]], [expectedRoot], `The smoke bundle must contain only the harness installation of ${name}.`);
+}
+const bundleChecks = {
+  reactInstances: dependencyRoots.react.size,
+  reactDomInstances: dependencyRoots['react-dom'].size,
+  reactVersion: require('react/package.json').version,
+  reactDomVersion: require('react-dom/package.json').version,
+};
+const bundleOnly = process.argv.includes('--bundle-only');
+const { chromium } = bundleOnly ? { chromium: null } : loadPlaywright();
 const javascript = bundle.outputFiles[0].text;
 const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Frequency meter smoke</title>
 <style>body{font:16px system-ui;margin:16px;max-width:900px}button,input{font:inherit}button{min-height:44px;margin:8px}output{display:block;font-size:28px}</style>
 </head><body><main id="root"></main><script src="/bundle.js"></script></body></html>`;
 
 const origin = 'https://mukti-frequency.test';
-const fixturesDirectory = await mkdtemp(join(tmpdir(), 'mukti-frequency-smoke-'));
+const fixturesDirectory = bundleOnly ? null : await mkdtemp(join(tmpdir(), 'mukti-frequency-smoke-'));
 
 async function runScenario({ hz, name, viewport, isMobile }) {
   const started = performance.now();
@@ -212,13 +244,17 @@ async function runScenario({ hz, name, viewport, isMobile }) {
 }
 
 try {
-  const scenarios = [];
-  scenarios.push(await runScenario({ name: 'desktop-432-stable', hz: 432, viewport: { width: 1280, height: 900 }, isMobile: false }));
-  scenarios.push(await runScenario({ name: 'mobile-440-off-target', hz: 440, viewport: { width: 390, height: 844 }, isMobile: true }));
-  console.log(JSON.stringify({
-    status: 'passed', scenarios,
-    scope: 'Current isolated React component with native Chromium capture/Web Audio and independent synthetic WAV inputs. No physical microphone, full Next app, iOS or Android OS tested.',
-  }, null, 2));
+  if (bundleOnly) {
+    process.stdout.write(JSON.stringify({ status: 'passed', mode: 'bundle-only', bundleChecks }, null, 2) + '\n');
+  } else {
+    const scenarios = [];
+    scenarios.push(await runScenario({ name: 'desktop-432-stable', hz: 432, viewport: { width: 1280, height: 900 }, isMobile: false }));
+    scenarios.push(await runScenario({ name: 'mobile-440-off-target', hz: 440, viewport: { width: 390, height: 844 }, isMobile: true }));
+    process.stdout.write(JSON.stringify({
+      status: 'passed', bundleChecks, scenarios,
+      scope: 'Current isolated React component with native Chromium capture/Web Audio and independent synthetic WAV inputs. No physical microphone, full Next app, iOS or Android OS tested.',
+    }, null, 2) + '\n');
+  }
 } finally {
-  await rm(fixturesDirectory, { recursive: true, force: true });
+  if (fixturesDirectory) await rm(fixturesDirectory, { recursive: true, force: true });
 }

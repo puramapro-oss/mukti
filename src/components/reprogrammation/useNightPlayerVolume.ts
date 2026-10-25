@@ -1,7 +1,7 @@
 // MUKTI — G5.4 useNightPlayerVolume
 // Hook gérant le ramp volume du NightPlayer : RAF loop + calcul volume adaptif.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { computeRampVolume } from '@/lib/reprogramming-utils'
 import { REPROG_NIGHT_VOLUME_RAMP_MIN } from '@/lib/constants'
 
@@ -37,36 +37,34 @@ export function useNightPlayerVolume({
     onAutoStopRef.current = onAutoStop
   })
 
-  const tick = useCallback(() => {
+  useEffect(() => {
     if (!running) return
-    const elapsed = (performance.now() - startTsRef.current) / 1000
-    setElapsedSec(elapsed)
+    startTsRef.current = performance.now()
 
-    // Ramp volume ou fixe
-    const vol = rampEnabled ? computeRampVolume(elapsed, 0.55) : 0.45
-    setVolumePct(vol)
-    onVolumeChange(vol)
+    const tick = () => {
+      const elapsed = (performance.now() - startTsRef.current) / 1000
+      setElapsedSec(elapsed)
 
-    // Arrêt auto quand ramp arrive à 0 (sécurité douce)
-    if (rampEnabled && elapsed >= REPROG_NIGHT_VOLUME_RAMP_MIN * 60) {
-      onAutoStopRef.current()
-      return
+      // Ramp volume ou fixe
+      const vol = rampEnabled ? computeRampVolume(elapsed, 0.55) : 0.45
+      setVolumePct(vol)
+      onVolumeChange(vol)
+
+      // Arrêt auto quand ramp arrive à 0 (sécurité douce)
+      if (rampEnabled && elapsed >= REPROG_NIGHT_VOLUME_RAMP_MIN * 60) {
+        onAutoStopRef.current()
+        return
+      }
+
+      rafRef.current = requestAnimationFrame(tick)
     }
 
     rafRef.current = requestAnimationFrame(tick)
-  }, [running, rampEnabled, onVolumeChange])
-
-  useEffect(() => {
-    if (running) {
-      startTsRef.current = performance.now()
-      rafRef.current = requestAnimationFrame(tick)
-    } else {
-      setElapsedSec(0)
-    }
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      setElapsedSec(0)
     }
-  }, [running, tick])
+  }, [running, rampEnabled, onVolumeChange])
 
   const rampRemainingSec = Math.max(0, REPROG_NIGHT_VOLUME_RAMP_MIN * 60 - elapsedSec)
   const rampProgress = Math.min(1, elapsedSec / (REPROG_NIGHT_VOLUME_RAMP_MIN * 60))

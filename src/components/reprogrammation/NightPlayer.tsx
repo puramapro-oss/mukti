@@ -49,9 +49,11 @@ export default function NightPlayer({
   const natureRef = useRef<NatureSoundHandle | null>(null)
   const affirmationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const playedIdsRef = useRef<Set<string>>(new Set())
+  const indexRef = useRef(0)
+  const [playedCount, setPlayedCount] = useState(0)
   const stopSessionRef = useRef<() => Promise<void>>(async () => undefined)
 
-  const { volumePct, elapsedSec, rampProgress, rampRemainingSec } = useNightPlayerVolume({
+  const { volumePct, rampProgress, rampRemainingSec } = useNightPlayerVolume({
     running,
     rampEnabled,
     onVolumeChange: useCallback((vol: number) => natureRef.current?.setVolume(vol), []),
@@ -80,17 +82,18 @@ export default function NightPlayer({
   useEffect(() => {
     if (!running || affirmations.length === 0) return
     const interval = setInterval(() => {
-      setCurrentIndex((i) => {
-        const next = (i + 1) % affirmations.length
-        const a = affirmations[next]
-        if (a) playedIdsRef.current.add(a.id.replace(/^custom-/, ''))
-        speakAffirmation(a, voiceEnabled, VOICE_VOLUME)
-        return next
-      })
+      const next = (indexRef.current + 1) % affirmations.length
+      indexRef.current = next
+      const a = affirmations[next]
+      if (a) {
+        playedIdsRef.current.add(a.id.replace(/^custom-/, ''))
+        setPlayedCount(playedIdsRef.current.size)
+      }
+      speakAffirmation(a, voiceEnabled, VOICE_VOLUME)
+      setCurrentIndex(next)
     }, AFFIRMATION_INTERVAL_SEC * 1000)
     affirmationTimerRef.current = interval
     return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, affirmations, voiceEnabled])
 
   // --- Session actions ---
@@ -126,7 +129,9 @@ export default function NightPlayer({
       setSessionId(data.session_id)
       setAffirmations(data.affirmations)
       setCurrentIndex(0)
+      indexRef.current = 0
       playedIdsRef.current = new Set([data.affirmations[0].id.replace(/^custom-/, '')])
+      setPlayedCount(1)
       setRunning(true)
 
       // Démarre son nature
@@ -217,7 +222,7 @@ export default function NightPlayer({
           <div className="mt-6 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white/40">
             <span>Affirmation {currentIndex + 1} / {affirmations.length}</span>
             <span className="h-1 w-1 rounded-full bg-white/30" aria-hidden />
-            <span>{playedIdsRef.current.size} lue{playedIdsRef.current.size > 1 ? 's' : ''}</span>
+            <span>{playedCount} lue{playedCount > 1 ? 's' : ''}</span>
           </div>
         )}
       </div>

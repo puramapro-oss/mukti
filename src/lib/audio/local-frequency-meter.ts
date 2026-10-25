@@ -17,6 +17,25 @@ export const INITIAL_FREQUENCY_STATE: FrequencyMeterState = {
   processing: 'unknown',
 }
 
+function readInputProcessing(track: MediaStreamTrack): {
+  status: FrequencyMeterState['processing']
+  signature: string
+} {
+  let settings: MediaTrackSettings | undefined
+  try {
+    if (typeof track.getSettings === 'function') settings = track.getSettings()
+  } catch { /* Missing settings must not preserve a previous "reported-off" claim. */ }
+  const flags: unknown[] = [settings?.echoCancellation, settings?.noiseSuppression, settings?.autoGainControl]
+  const modes = flags.map((value, index) => value === false ? 'off' : value === true ? 'on'
+    : index === 0 && (value === 'all' || value === 'remote-only') ? value : 'unknown')
+  return {
+    status: modes.some((value) => value === 'on' || value === 'all' || value === 'remote-only') ? 'active'
+      : modes.every((value) => value === 'off') ? 'reported-off' : 'unknown',
+    // Preserve individual modes so a change between active modes resets stability too.
+    signature: modes.join('|'),
+  }
+}
+
 /** A local microphone meter. No recording, peer connection, upload or audio output. */
 export function createLocalFrequencyMeter(onChange: (state: FrequencyMeterState) => void) {
   let generation = 0
@@ -148,10 +167,7 @@ export function createLocalFrequencyMeter(onChange: (state: FrequencyMeterState)
         fail('Le microphone ne fournit pas de signal actif. Réessaie après avoir vérifié ses réglages.')
         return
       }
-      const settings = track.getSettings()
-      const flags = [settings.echoCancellation, settings.noiseSuppression, settings.autoGainControl]
-      const processing = flags.some((value) => value === true) ? 'active'
-        : flags.every((value) => value === false) ? 'reported-off' : 'unknown'
+      let processing = readInputProcessing(track)
       const meter = ctx.createAnalyser()
       meter.fftSize = 32768
       meter.smoothingTimeConstant = 0
@@ -162,7 +178,7 @@ export function createLocalFrequencyMeter(onChange: (state: FrequencyMeterState)
       const samples = new Float32Array(meter.fftSize)
       let consecutive = 0
       let lastHz: number | null = null
-      emit({ ...INITIAL_FREQUENCY_STATE, status: 'listening', message: 'Écoute locale en cours. Préparation de la première mesure…', processing })
+      emit({ ...INITIAL_FREQUENCY_STATE, status: 'listening', message: 'Écoute locale en cours. Préparation de la première mesure…', processing: processing.status })
 
       listen(track, 'ended', interrupt)
       listen(track, 'mute', interrupt)
@@ -172,6 +188,12 @@ export function createLocalFrequencyMeter(onChange: (state: FrequencyMeterState)
         if (!isCurrent()) return
         if (track.readyState !== 'live' || track.muted || ctx.state !== 'running') { interrupt(); return }
         try {
+          const currentProcessing = readInputProcessing(track)
+          if (currentProcessing.signature !== processing.signature) {
+            consecutive = 0
+            lastHz = null
+          }
+          processing = currentProcessing
           meter.getFloatTimeDomainData(samples)
           // Buffers use the AudioContext sample rate, including any input resampling.
           const reading = analyzeFrequency(samples, ctx.sampleRate, 432)
@@ -180,7 +202,7 @@ export function createLocalFrequencyMeter(onChange: (state: FrequencyMeterState)
             consecutive = lastHz !== null && Math.abs(hz - lastHz) <= 1 ? consecutive + 1 : 1
             lastHz = hz
           } else { consecutive = 0; lastHz = null }
-          emit({ status: 'listening', message: 'Fréquence estimée à partir du microphone.', reading, stable: consecutive >= 3, processing })
+          emit({ status: 'listening', message: 'Fréquence estimée à partir du microphone.', reading, stable: consecutive >= 3, processing: processing.status })
         } catch {
           fail('Le signal n’a pas pu être analysé. Le microphone a été arrêté.')
         }
