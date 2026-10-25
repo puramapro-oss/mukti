@@ -1,7 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import puramaConfig from "@purama/eslint-config";
+import puramaConfig from "./config/eslint/purama.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,

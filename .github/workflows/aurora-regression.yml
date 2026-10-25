@@ -5,6 +5,11 @@ on:
     branches: ['audit/mukti-hardware-compat-20261023']
     paths:
       - 'src/components/aurora/**'
+      - 'src/components/reprogrammation/**'
+      - 'src/components/exorcisme/hooks/**'
+      - 'src/lib/ar/mediapipe-loader.ts'
+      - 'package.json'
+      - 'package-lock.json'
       - 'src/lib/aurora*'
       - 'src/lib/constants/aurora.ts'
       - 'src/hooks/useReducedMotion.ts'
@@ -41,7 +46,7 @@ jobs:
         run: npm test -- --reporter=verbose
       - name: Run transport, audio and server-wiring fault injection
         working-directory: tests/aurora-regression
-        run: node --test runtime-regression.cjs completion-wiring.cjs
+        run: node --test transport-regression.mjs audio-regression.mjs completion-wiring.mjs mediapipe-regression.mjs
       - name: Typecheck tested production modules and the independent test workspace
         working-directory: tests/aurora-regression
         run: npm run typecheck

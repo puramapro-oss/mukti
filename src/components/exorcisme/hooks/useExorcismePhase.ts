@@ -8,16 +8,20 @@ export interface UseExorcismePhaseReturn {
   phaseMsRef: React.MutableRefObject<PhaseMs>
   startTsRef: React.MutableRefObject<number>
   goToPhase: (next: ExorcismePhaseName) => void
+  snapshotPhaseDurations: (now?: number) => PhaseMs
 }
 
 export function useExorcismePhase(): UseExorcismePhaseReturn {
   const [phase, setPhase] = useState<ExorcismePhaseName>('invocation')
-  const startTsRef = useRef<number>(0)
-  const phaseStartRef = useRef<number>(0)
+  const phaseRef = useRef<ExorcismePhaseName>('invocation')
+  const initializedRef = useRef(false)
+  const startTsRef = useRef(0)
+  const phaseStartRef = useRef(0)
   const phaseMsRef = useRef<PhaseMs>({})
 
   useEffect(() => {
-    if (startTsRef.current === 0) {
+    if (!initializedRef.current) {
+      initializedRef.current = true
       const now = performance.now()
       startTsRef.current = now
       phaseStartRef.current = now
@@ -25,38 +29,35 @@ export function useExorcismePhase(): UseExorcismePhaseReturn {
   }, [])
 
   const goToPhase = useCallback((next: ExorcismePhaseName) => {
+    const previous = phaseRef.current
+    if (next === previous) return
     const now = performance.now()
-    setPhase(prev => {
-      phaseMsRef.current[prev] = Math.max(
-        0,
-        Math.round(now - phaseStartRef.current)
-      )
-      phaseStartRef.current = now
-      return next
-    })
+    phaseMsRef.current[previous] = (phaseMsRef.current[previous] ?? 0) +
+      Math.max(0, Math.round(now - phaseStartRef.current))
+    phaseStartRef.current = now
+    phaseRef.current = next
+    // State updater functions remain pure, including in React StrictMode.
+    setPhase(next)
   }, [])
 
-  // Phase 1 : INVOCATION — auto-advance après 10s
+  const snapshotPhaseDurations = useCallback((now = performance.now()): PhaseMs => {
+    if (!initializedRef.current) return {}
+    const current = phaseRef.current
+    return {
+      ...phaseMsRef.current,
+      [current]: (phaseMsRef.current[current] ?? 0) +
+        Math.max(0, Math.round(now - phaseStartRef.current)),
+    }
+  }, [])
+
   useEffect(() => {
-    if (phase !== 'invocation') return
-    const phaseDur = EXORCISME_PHASES.find(p => p.name === 'invocation')?.duration_ms ?? 10000
-    const timer = setTimeout(() => goToPhase('revelation'), phaseDur)
+    if (phase !== 'invocation' && phase !== 'reprogrammation') return
+    const duration = EXORCISME_PHASES.find(p => p.name === phase)?.duration_ms
+    if (duration === null || duration === undefined) return
+    const next = phase === 'invocation' ? 'revelation' : 'scellement'
+    const timer = setTimeout(() => goToPhase(next), duration)
     return () => clearTimeout(timer)
   }, [phase, goToPhase])
 
-  // Phase 4 : REPROGRAMMATION — auto-advance après duration
-  useEffect(() => {
-    if (phase !== 'reprogrammation') return
-    const phaseDur =
-      EXORCISME_PHASES.find(p => p.name === 'reprogrammation')?.duration_ms ?? 18000
-    const timer = setTimeout(() => goToPhase('scellement'), phaseDur)
-    return () => clearTimeout(timer)
-  }, [phase, goToPhase])
-
-  return {
-    phase,
-    phaseMsRef,
-    startTsRef,
-    goToPhase,
-  }
+  return { phase, phaseMsRef, startTsRef, goToPhase, snapshotPhaseDurations }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { safeVibrate } from '@/lib/accessibility'
 import { EXORCISME_SHATTER_TAPS } from '@/lib/exorcisme-utils'
 import type { UseExorcismePhaseReturn } from './useExorcismePhase'

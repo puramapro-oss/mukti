@@ -2,15 +2,13 @@ import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { safeVibrate } from '@/lib/accessibility'
-import { sanitizePossessionText, type ExorcismePhaseName } from '@/lib/exorcisme-utils'
+import { sanitizePossessionText } from '@/lib/exorcisme-utils'
 import type { UseExorcismePhaseReturn } from './useExorcismePhase'
 
 interface SessionState {
   id: string
   possessionText: string
 }
-
-type PhaseMs = Partial<Record<ExorcismePhaseName, number>>
 
 export interface UseExorcismeSessionReturn {
   session: SessionState | null
@@ -41,17 +39,16 @@ export function useExorcismeSession(
   const sessionRef = useRef<SessionState | null>(null)
   const completedRef = useRef(false)
 
+  const { snapshotPhaseDurations, startTsRef } = phaseData
+
   const sendComplete = useCallback(
     async (outcome: 'completed' | 'interrupted', sealed: boolean) => {
       const s = sessionRef.current
       if (!s) return
       const now = performance.now()
-      // Close current phase
-      phaseData.phaseMsRef.current[phaseData.phase] = Math.max(
-        0,
-        Math.round(now - phaseData.startTsRef.current)
-      )
-      const durationSec = (now - phaseData.startTsRef.current) / 1000
+      // Read a snapshot; do not overwrite the current phase with total session time.
+      const phasesMs = snapshotPhaseDurations(now)
+      const durationSec = (now - startTsRef.current) / 1000
 
       try {
         await fetch('/api/exorcisme/complete', {
@@ -62,7 +59,7 @@ export function useExorcismeSession(
             outcome,
             duration_sec: Math.min(15 * 60, Math.max(0, Math.round(durationSec))),
             taps_destruction: tapsRef.current,
-            phases_ms: phaseData.phaseMsRef.current,
+            phases_ms: phasesMs,
             sealed,
             ...(affirmationFrRef.current ? { affirmation_used: affirmationFrRef.current } : {}),
           }),
@@ -71,7 +68,7 @@ export function useExorcismeSession(
         // silencieux — l'UX ne doit pas tomber là-dessus
       }
     },
-    [phaseData.phase, phaseData.phaseMsRef, phaseData.startTsRef, tapsRef, affirmationFrRef]
+    [snapshotPhaseDurations, startTsRef, tapsRef, affirmationFrRef]
   )
 
   const exitSession = useCallback(

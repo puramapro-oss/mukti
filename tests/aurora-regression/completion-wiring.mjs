@@ -1,11 +1,12 @@
 /** Actual server helper executed with a fake service client; no database connection. */
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
-const vm = require('node:vm')
-const ts = require('typescript')
-const sourceDir = process.env.MUKTI_SOURCE_DIR || path.resolve(__dirname, '../../src/lib')
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import vm from 'node:vm'
+import ts from 'typescript'
+import { fileURLToPath } from 'node:url'
+const sourceDir = process.env.MUKTI_SOURCE_DIR || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../src/lib')
 const levels = [{ id: 'brume' }, { id: 'onde' }, { id: 'aura' }, { id: 'polaris' }]
 function load(file, require) {
   const code = ts.transpileModule(fs.readFileSync(path.join(sourceDir, file + '.ts'), 'utf8'), {

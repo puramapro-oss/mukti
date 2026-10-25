@@ -1,7 +1,5 @@
-// MUKTI — G5.4 useNightPlayerVolume
-// Hook gérant le ramp volume du NightPlayer : RAF loop + calcul volume adaptif.
-
-import { useCallback, useEffect, useRef, useState } from 'react'
+// MUKTI — NightPlayer active clock. Callback changes must not restart the session.
+import { useEffect, useRef, useState } from 'react'
 import { computeRampVolume } from '@/lib/reprogramming-utils'
 import { REPROG_NIGHT_VOLUME_RAMP_MIN } from '@/lib/constants'
 
@@ -20,61 +18,57 @@ interface UseNightPlayerVolumeReturn {
 }
 
 export function useNightPlayerVolume({
-  running,
-  rampEnabled,
-  onVolumeChange,
-  onAutoStop,
+  running, rampEnabled, onVolumeChange, onAutoStop,
 }: UseNightPlayerVolumeParams): UseNightPlayerVolumeReturn {
   const [elapsedSec, setElapsedSec] = useState(0)
   const [volumePct, setVolumePct] = useState(0.5)
+  const latest = useRef({ rampEnabled, onVolumeChange, onAutoStop })
 
-  const rafRef = useRef<number | null>(null)
-  const startTsRef = useRef<number>(0)
-  const onAutoStopRef = useRef(onAutoStop)
-
-  // MAJ ref pour éviter stale closure
   useEffect(() => {
-    onAutoStopRef.current = onAutoStop
-  })
+    latest.current = { rampEnabled, onVolumeChange, onAutoStop }
+  }, [rampEnabled, onVolumeChange, onAutoStop])
 
-  const tick = useCallback(() => {
-    if (!running) return
-    const elapsed = (performance.now() - startTsRef.current) / 1000
-    setElapsedSec(elapsed)
-
-    // Ramp volume ou fixe
-    const vol = rampEnabled ? computeRampVolume(elapsed, 0.55) : 0.45
-    setVolumePct(vol)
-    onVolumeChange(vol)
-
-    // Arrêt auto quand ramp arrive à 0 (sécurité douce)
-    if (rampEnabled && elapsed >= REPROG_NIGHT_VOLUME_RAMP_MIN * 60) {
-      onAutoStopRef.current()
+  useEffect(() => {
+    if (!running) {
+      setElapsedSec(0)
       return
     }
+    const startedAt = performance.now()
+    let active = true
+    let frame: number | null = null
 
-    rafRef.current = requestAnimationFrame(tick)
-  }, [running, rampEnabled, onVolumeChange])
-
-  useEffect(() => {
-    if (running) {
-      startTsRef.current = performance.now()
-      rafRef.current = requestAnimationFrame(tick)
-    } else {
-      setElapsedSec(0)
+    function tick() {
+      frame = null
+      if (!active) return
+      const elapsed = Math.max(0, (performance.now() - startedAt) / 1000)
+      const current = latest.current
+      const finished = current.rampEnabled && elapsed >= REPROG_NIGHT_VOLUME_RAMP_MIN * 60
+      const volume = current.rampEnabled ? computeRampVolume(elapsed, 0.55) : 0.45
+      setElapsedSec(elapsed)
+      setVolumePct(volume)
+      // Finish before calling external callbacks: a re-entrant callback cannot
+      // schedule another frame or trigger completion twice.
+      if (finished) active = false
+      try {
+        current.onVolumeChange(volume)
+      } finally {
+        if (finished) current.onAutoStop()
+      }
+      if (active) frame = requestAnimationFrame(tick)
     }
+
+    frame = requestAnimationFrame(tick)
     return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      active = false
+      if (frame !== null) cancelAnimationFrame(frame)
     }
-  }, [running, tick])
+  }, [running])
 
-  const rampRemainingSec = Math.max(0, REPROG_NIGHT_VOLUME_RAMP_MIN * 60 - elapsedSec)
-  const rampProgress = Math.min(1, elapsedSec / (REPROG_NIGHT_VOLUME_RAMP_MIN * 60))
-
+  const limit = REPROG_NIGHT_VOLUME_RAMP_MIN * 60
   return {
     volumePct,
     elapsedSec,
-    rampProgress,
-    rampRemainingSec,
+    rampProgress: Math.min(1, elapsedSec / limit),
+    rampRemainingSec: Math.max(0, limit - elapsedSec),
   }
 }
