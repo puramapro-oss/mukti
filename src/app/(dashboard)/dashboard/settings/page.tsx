@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import FrequencyMeter from '@/components/audio/FrequencyMeter'
 
 export default function SettingsPage() {
   const { profile, signOut } = useAuth()
@@ -38,6 +39,8 @@ export default function SettingsPage() {
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-bold text-[var(--text-primary)]">Paramètres</h1>
       </header>
 
+      <FrequencyMeter />
+
       <Card className="p-6">
         <h2 className="mb-3 text-lg font-semibold text-[var(--text-primary)]">IBAN</h2>
         <p className="mb-3 text-xs text-[var(--text-muted)]">Pour recevoir tes retraits sur ton compte bancaire.</p>
@@ -65,3 +68,4 @@ export default function SettingsPage() {
     </div>
   )
 }
+

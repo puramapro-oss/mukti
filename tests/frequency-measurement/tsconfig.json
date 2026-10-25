@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "strict": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["react", "react-dom"],
+    "baseUrl": ".",
+    "paths": { "react": ["node_modules/@types/react"], "react/*": ["node_modules/@types/react/*"] }
+  },
+  "include": ["../../src/lib/audio/frequency-analysis.ts", "../../src/lib/audio/local-frequency-meter.ts", "../../src/components/audio/FrequencyMeter.tsx"]
+}

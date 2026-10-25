@@ -1,0 +1,17 @@
+{
+  "name": "mukti-frequency-measurement-checks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-isolation=none frequency-analysis.test.mjs local-frequency-meter.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.25.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "~5.9.3"
+  }
+}
