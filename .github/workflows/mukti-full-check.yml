@@ -4,10 +4,12 @@ on:
   push:
     branches: ['audit/mukti-hardware-compat-20261023']
     paths:
+      - 'src/**'
       - 'package.json'
       - 'package-lock.json'
       - 'next.config.*'
       - 'tsconfig.json'
+      - 'eslint.config.*'
       - '.github/workflows/mukti-full-check.yml'
   workflow_dispatch: {}
 
@@ -44,11 +46,36 @@ jobs:
             if (spec.startsWith('github:')) console.log(JSON.stringify({package:name,source:spec,locked:lock.packages?.['node_modules/'+name]?.resolved ?? null}));
           }
           JS
-      - name: Install exact application dependencies without lifecycle scripts or private tokens
+      - name: Install exact dependencies with optional existing private-repository access
         id: install
+        env:
+          GH_PRIVATE_DEPS_TOKEN: ${{ secrets.GH_PRIVATE_DEPS_TOKEN }}
         run: |
-          # Public HTTPS transport only. No private repository token is provided.
-          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          set -eu
+          set +x
+          # Process-scoped HTTPS rewrite: do not write a credential into a URL or git config.
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0='url.https://github.com/.insteadOf'
+          export GIT_CONFIG_VALUE_0='ssh://git@github.com/'
+          if [ -n "${GH_PRIVATE_DEPS_TOKEN:-}" ]; then
+            askpass="$(mktemp "$RUNNER_TEMP/mukti-askpass.XXXXXX")"
+            trap 'rm -f "$askpass"' EXIT
+            cat > "$askpass" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            "Username for 'https://github.com':"*|"Username for 'https://github.com/"*)
+              printf '%s\n' 'x-access-token' ;;
+            "Password for 'https://x-access-token@github.com':"*|"Password for 'https://x-access-token@github.com/"*)
+              printf '%s\n' "$GH_PRIVATE_DEPS_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+            chmod 700 "$askpass"
+            export GIT_ASKPASS="$askpass"
+            echo 'Existing private-dependency credential enabled for installation only.'
+          else
+            echo '::notice::GH_PRIVATE_DEPS_TOKEN is absent; private dependencies may block installation.'
+          fi
           npm ci --ignore-scripts --no-audit --no-fund
       - name: Typecheck entire application
         if: ${{ success() && steps.install.outcome == 'success' }}
@@ -62,4 +89,6 @@ jobs:
 
 # This is a separate release gate: the isolated AURORA tests do not imply that
 # the complete application installs, builds, or works with production services.
-# No deployment, production migration, hardware control, or project secret.
+# No deployment, production migration, physical output or production API keys.
+# The existing download-only credential is available solely during npm ci;
+# lifecycle scripts are disabled and the temporary askpass file is removed.
