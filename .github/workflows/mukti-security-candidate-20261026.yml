@@ -43,7 +43,7 @@ jobs:
             'src/lib/opentimestamps.ts':'76348bd7a4ac71ad67e39b79e699786e0548f756',
             'src/lib/opentimestamps-network.ts':'21013fef9996ecfb58ddd72df926b0222e304124',
             'tests/security-regression/opentimestamps-regression.mjs':'170450d67cef5515a5b22ae0c56e3053060ee995',
-            'scripts/build-reviewed-opentimestamps.cjs':'86eadf98752ccad6792ec1c9098e355599287845',
+            'scripts/build-reviewed-opentimestamps.cjs':'fc9acb07dd130499e6cd7a49f850a1c0adda9087',
           }
           for name,sha in sources.items():
               req=urllib.request.Request('https://api.github.com/repos/puramapro-oss/mukti/git/blobs/'+sha,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
