@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write # Only immutable, reviewed public candidate blobs; never refs.
+      contents: write # Only immutable reviewed public blobs; never refs.
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       GIT_TERMINAL_PROMPT: '0'
@@ -43,6 +43,7 @@ jobs:
             'src/lib/opentimestamps.ts':'76348bd7a4ac71ad67e39b79e699786e0548f756',
             'src/lib/opentimestamps-network.ts':'21013fef9996ecfb58ddd72df926b0222e304124',
             'tests/security-regression/opentimestamps-regression.mjs':'170450d67cef5515a5b22ae0c56e3053060ee995',
+            'scripts/build-reviewed-opentimestamps.cjs':'86eadf98752ccad6792ec1c9098e355599287845',
           }
           for name,sha in sources.items():
               req=urllib.request.Request('https://api.github.com/repos/puramapro-oss/mukti/git/blobs/'+sha,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
@@ -52,7 +53,7 @@ jobs:
               p=pathlib.Path(name); p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(data)
           manifest=json.loads(pathlib.Path('package.json').read_text())
           assert manifest['dependencies'].pop('javascript-opentimestamps')=='^0.4.5'
-          manifest['dependencies']['@opentimestamps/typescript-opentimestamps']='0.1.0'
+          manifest['dependencies']['@opentimestamps/typescript-opentimestamps']='file:vendor/typescript-opentimestamps-upstream-12ba7b2.tgz'
           manifest['dependencies']['@anthropic-ai/sdk']='0.91.1'
           pathlib.Path('package.json').write_text(json.dumps(manifest,indent=2)+'\n')
           pathlib.Path('src/types/javascript-opentimestamps.d.ts').unlink()
@@ -60,6 +61,8 @@ jobs:
           evidence=pathlib.Path(os.environ['RUNNER_TEMP'])/'mukti-security-evidence'
           (evidence/'private-reference-before.json').write_text(json.dumps(lock['packages']['node_modules/@purama/smarana']['resolved']))
           PY
+      - name: Build and retain exact upstream source and license without lifecycle scripts
+        run: node scripts/build-reviewed-opentimestamps.cjs
       - name: Resolve candidate lock and install without lifecycle scripts
         id: install
         env:
@@ -131,13 +134,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 - <<'PY'
-          import hashlib,json,os,pathlib,urllib.request
-          paths=['package.json','package-lock.json','src/lib/opentimestamps.ts','src/lib/opentimestamps-network.ts','tests/security-regression/opentimestamps-regression.mjs']
+          import base64,hashlib,json,os,pathlib,urllib.request
+          paths=['package.json','package-lock.json','src/lib/opentimestamps.ts','src/lib/opentimestamps-network.ts','tests/security-regression/opentimestamps-regression.mjs','scripts/build-reviewed-opentimestamps.cjs','vendor/typescript-opentimestamps-upstream-12ba7b2.tgz','vendor/typescript-opentimestamps-provenance.json']
           results={}
           for name in paths:
               data=pathlib.Path(name).read_bytes()
               expected=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
-              payload=json.dumps({'content':data.decode('utf-8'),'encoding':'utf-8'}).encode()
+              payload=json.dumps({'content':base64.b64encode(data).decode(),'encoding':'base64'}).encode()
               req=urllib.request.Request('https://api.github.com/repos/puramapro-oss/mukti/git/blobs',data=payload,method='POST',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','Content-Type':'application/json'})
               with urllib.request.urlopen(req,timeout=30) as response: result=json.load(response)
               assert result['sha']==expected
@@ -153,11 +156,11 @@ jobs:
           import os,pathlib,zipfile
           evidence=pathlib.Path(os.environ['RUNNER_TEMP'])/'mukti-security-evidence'
           with zipfile.ZipFile(evidence/'candidate-source.zip','w',zipfile.ZIP_DEFLATED) as archive:
-              for name in ['package.json','package-lock.json','src/lib/opentimestamps.ts','src/lib/opentimestamps-network.ts','tests/security-regression/opentimestamps-regression.mjs']:
+              for name in ['package.json','package-lock.json','src/lib/opentimestamps.ts','src/lib/opentimestamps-network.ts','tests/security-regression/opentimestamps-regression.mjs','scripts/build-reviewed-opentimestamps.cjs','vendor/typescript-opentimestamps-upstream-12ba7b2.tgz','vendor/typescript-opentimestamps-provenance.json']:
                   archive.write(name,name)
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() }}
         with:
           name: mukti-security-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/mukti-security-evidence/
