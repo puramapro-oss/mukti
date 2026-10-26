@@ -1,0 +1,28 @@
+{
+  "upstream": "https://github.com/opentimestamps/typescript-opentimestamps",
+  "commit": "12ba7b2c4f4cd1b8ce52d2c17be5efedca3bceab",
+  "license": "LGPL-3.0-or-later",
+  "compiler": "typescript@5.8.3",
+  "sources": {
+    "src/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/index.ts": "c825d9df588465b1d620fafe9a93ff6fdd75c033c81bcead66407523a34448d9",
+    "src/info.ts": "e2f5e65ce6348e37a89c0146fbd2c9da1ff43a0928f790aa291cb21aa768fe8f",
+    "src/internals.ts": "2545db033f6ae50fff0b9da925142e488b9602fd8956fc9b968e869702bb2573",
+    "src/predicates.ts": "c640ab4af33e9abff67e073965130c1ab0ca88b1dea4da16a629ad8451403f78",
+    "src/read.ts": "4ae10f96b126e3788031e28070de19cffbc574bf22132557d9a94171ad1520de",
+    "src/shrink.ts": "fb596ae7ff1d825694602acca22605f354079284c13260d1ef4d5336b2b58b60",
+    "src/submit.ts": "31b48d591789a99108220305b4f105e64b7a34e416e0240f4fedcf773c2b0b6b",
+    "src/types.ts": "5e00a08382bbdcaafa2661e5997b500a2d090097f12690ac248214ae1a3ef4f6",
+    "src/upgrade.ts": "7c1731360449ac559e9c9c37384c639c105cccc49d9b7c4784c8d712e3b608f2",
+    "src/utils.ts": "82bfca6ead13a010cc6531a9fcaee1e053f402927159a56f5d8ff398e4b5e61c",
+    "src/validation.ts": "54b5f1b5ce425a8752e12ef2892b532a0eb8d6bc26a29e7d050cbdf2d65d38c1",
+    "src/verifiers/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/verifiers/blockchain.info.ts": "60fad60b787f635714b7440fe0c1a5dee648d1951b6b5188bc8833087ab1d3ed",
+    "src/verifiers/blockstream.ts": "d28fe14bd0a3616da32deb3d234c4212a6aa9440ffced469426dde4da5a257db",
+    "src/verifiers/index.ts": "17ec7d3296c15c1d3d118f715da3c0d0913c3822dd647c6f50d35827d5e98d9b",
+    "src/verify.ts": "5fc01ebc1f70e66abb7eaa4abc3cb6cbbbced72e152105ae4604ef8b14ff87ac",
+    "src/write.ts": "d428cfbe4eb10304ff58748f9872f3388d9a7f7c95c91858ef484bf6338ba009"
+  },
+  "change": "Packaging only; emitted relative ESM imports receive extensions. All original TypeScript sources are included.",
+  "archiveSha256": "cbedebecadb716f90806131a212ed7fb64e8700140c380054a4fcdb870089f26"
+}

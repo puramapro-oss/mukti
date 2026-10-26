@@ -10,7 +10,7 @@
     "test:aurora": "npm --prefix tests/aurora-regression test"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.82.0",
+    "@anthropic-ai/sdk": "0.91.1",
     "@capacitor/android": "^7.6.2",
     "@capacitor/app": "^7.1.2",
     "@capacitor/cli": "^7.6.2",
@@ -35,7 +35,6 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
-    "javascript-opentimestamps": "^0.4.5",
     "livekit-client": "^2.18.5",
     "livekit-server-sdk": "^2.15.1",
     "lucide-react": "^1.7.0",
@@ -55,7 +54,8 @@
     "stripe": "^22.0.0",
     "tailwind-merge": "^3.5.0",
     "three": "^0.184.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@opentimestamps/typescript-opentimestamps": "file:vendor/typescript-opentimestamps-upstream-12ba7b2.tgz"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

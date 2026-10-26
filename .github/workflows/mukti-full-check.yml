@@ -6,6 +6,9 @@ on:
     paths:
       - 'src/**'
       - 'tests/aurora-regression/**'
+      - 'tests/security-regression/**'
+      - 'vendor/**'
+      - 'scripts/build-reviewed-opentimestamps.cjs'
       - 'package.json'
       - 'package-lock.json'
       - 'next.config.*'
@@ -44,10 +47,33 @@ jobs:
           const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
           for (const [name, spec] of Object.entries({...manifest.dependencies,...manifest.devDependencies})) {
-            if (spec.startsWith('file:')) console.log(JSON.stringify({package:name,source:spec,present:fs.existsSync(path.resolve(spec.slice(5),'package.json'))}));
+            if (spec.startsWith('file:')) {
+              const local=path.resolve(spec.slice(5));
+              const present=fs.existsSync(local) && (fs.statSync(local).isFile() || fs.existsSync(path.join(local,'package.json')));
+              console.log(JSON.stringify({package:name,source:spec,present}));
+              if (!present) throw new Error('Missing local dependency: '+name);
+            }
             if (spec.startsWith('github:')) console.log(JSON.stringify({package:name,source:spec,locked:lock.packages?.['node_modules/'+name]?.resolved ?? null}));
           }
           JS
+      - name: Verify pinned upstream archive and every retained source hash
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,tarfile
+          provenance=json.loads(pathlib.Path('vendor/typescript-opentimestamps-provenance.json').read_text())
+          archive=pathlib.Path('vendor/typescript-opentimestamps-upstream-12ba7b2.tgz')
+          assert provenance['commit']=='12ba7b2c4f4cd1b8ce52d2c17be5efedca3bceab'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()==provenance['archiveSha256']
+          with tarfile.open(archive) as bundle:
+              for name,digest in provenance['sources'].items():
+                  assert not pathlib.PurePosixPath(name).is_absolute() and '..' not in pathlib.PurePosixPath(name).parts
+                  assert hashlib.sha256(bundle.extractfile('package/'+name).read()).hexdigest()==digest
+              manifest=json.load(bundle.extractfile('package/package.json'))
+              assert manifest['license']=='LGPL-3.0-or-later' and not manifest.get('scripts')
+              assert bundle.extractfile('package/LICENSE').read()
+          print('Pinned archive, original sources and retained license verified; no install scripts.')
+          PY
+          node --check scripts/build-reviewed-opentimestamps.cjs
       - name: Install exact dependencies with optional existing private-repository access
         id: install
         env:
@@ -79,18 +105,24 @@ jobs:
             echo '::notice::GH_PRIVATE_DEPS_TOKEN is absent; private dependencies may block installation.'
           fi
           npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify timestamp protocol and bounded network failure cases
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node --test tests/security-regression/opentimestamps-regression.mjs
       - name: Typecheck entire application
-        if: ${{ success() && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: ./node_modules/.bin/tsc --noEmit --pretty false
       - name: Lint entire application
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npm run lint
+        run: npm run lint -- --max-warnings=0
       - name: Build application without deployment or project credentials
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run build
+      - name: Require zero reported production dependency advisories
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm audit --package-lock-only --omit=dev --audit-level=low
 
-# This is a separate release gate: the isolated AURORA tests do not imply that
-# the complete application installs, builds, or works with production services.
+# Independent software gates, not proof of complete product or medical readiness.
 # No deployment, production migration, physical output or production API keys.
-# The existing download-only credential is available solely during npm ci;
+# Existing download-only credential is available solely during npm ci;
 # lifecycle scripts are disabled and the temporary askpass file is removed.
+# Upstream source and license are retained; public timestamp services are mocked.
