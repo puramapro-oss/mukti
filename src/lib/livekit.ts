@@ -1,4 +1,4 @@
-// MUKTI — G3 LiveKit SFU (server-side token generation)
+// MUKTI — LiveKit SFU (server-side token generation)
 // Cloud : cloud.livekit.io — env LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET
 // Utilisé quand circle.audio_mode = 'sfu' (max_participants > 8).
 
@@ -29,22 +29,19 @@ export interface LiveKitTokenInput {
   userName: string
   canPublish?: boolean
   canSubscribe?: boolean
+  /** An explicitly requested receive-only token, never a membership bypass. */
+  listenOnly?: boolean
   ttlSeconds?: number
 }
 
-/**
- * Génère un JWT LiveKit pour un participant d'un cercle.
- * TTL par défaut 2h (suffisant pour la plus longue session prévue).
- */
+/** Generate a token for an authorised member. Expiry limits entry, not session duration. */
 export async function generateLiveKitToken(input: LiveKitTokenInput): Promise<{ token: string; url: string; roomName: string }> {
   const creds = getLiveKitCredentials()
-  if (!creds) {
-    throw new Error('MUKTI_LIVEKIT_NOT_CONFIGURED')
-  }
+  if (!creds) throw new Error('MUKTI_LIVEKIT_NOT_CONFIGURED')
 
   const roomName = livekitRoomName(input.circleId)
-  const ttl = input.ttlSeconds ?? 2 * 60 * 60
-
+  const listener = input.listenOnly === true
+  const ttl = input.ttlSeconds ?? (listener ? 300 : 2 * 60 * 60)
   const at = new AccessToken(creds.apiKey, creds.apiSecret, {
     identity: input.userId,
     name: input.userName,
@@ -54,9 +51,9 @@ export async function generateLiveKitToken(input: LiveKitTokenInput): Promise<{ 
   at.addGrant({
     roomJoin: true,
     room: roomName,
-    canPublish: input.canPublish ?? true,
+    canPublish: listener ? false : input.canPublish ?? true,
     canSubscribe: input.canSubscribe ?? true,
-    canPublishData: true,
+    canPublishData: !listener,
   })
 
   const token = await at.toJwt()
