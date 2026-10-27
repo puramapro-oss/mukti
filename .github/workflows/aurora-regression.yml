@@ -53,9 +53,9 @@ jobs:
       - name: Run transport, audio and server-wiring fault injection
         working-directory: tests/aurora-regression
         run: node --test transport-regression.mjs audio-regression.mjs completion-wiring.mjs mediapipe-regression.mjs nature-regression.mjs
-      - name: Verify receive-only permissions and playback lifecycle with explicit doubles
+      - name: Verify receive-only permissions, playback lifecycle and explicit UI consent
         working-directory: tests/aurora-regression
-        run: node --test remote-listening-client.mjs remote-listening-server.mjs
+        run: node --test remote-listening-client.mjs remote-listening-server.mjs remote-listening-ui.mjs
       - name: Typecheck tested production modules and the independent test workspace
         working-directory: tests/aurora-regression
         run: npm run typecheck
