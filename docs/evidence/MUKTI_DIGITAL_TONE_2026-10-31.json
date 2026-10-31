@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-31",
+  "applicationCommit": "4472b4374ac3c69f5b3121984a73d2bea9f7e901",
+  "source": {
+    "path": "src/lib/pure-tone-player.ts",
+    "gitBlob": "055bd903cec299b432c05c5ca7c4a129bcfbfcfa",
+    "sha256": "5944a3e827178dde9447f4976bac4572cb9b5807b544b24e7943da5415f2f1ce"
+  },
+  "scope": "Actual graph rendered through OfflineAudioContext in headless Chromium. No acoustic output, transducer, physical hardware or clinical validation.",
+  "browser": "144.0.7559.96",
+  "waveformChecks": [
+    {"sampleRate":44100,"targetHz":432,"digitalGain":0.04,"estimatedHz":432.00000079144235,"steadyRms":0.028284270560062715,"fittedPeak":0.03999999902787003,"relativeSineResidual":3.335890983881397e-8,"peak":0.03999996557831764,"afterEndPeak":0,"firstSample":0},
+    {"sampleRate":48000,"targetHz":432,"digitalGain":0.04,"estimatedHz":432.00000074050445,"steadyRms":0.028284270475336618,"fittedPeak":0.039999998908049186,"relativeSineResidual":3.2764455878442204e-8,"peak":0.03999999910593033,"afterEndPeak":0,"firstSample":0},
+    {"sampleRate":96000,"targetHz":432,"digitalGain":0.12,"estimatedHz":432.00000011570876,"steadyRms":0.08485281174544891,"fittedPeak":0.11999999717589777,"relativeSineResidual":2.8955293118142002e-8,"peak":0.11999999731779099,"afterEndPeak":0,"firstSample":0},
+    {"sampleRate":48000,"targetHz":852,"digitalGain":0.04,"estimatedHz":852.0000053480076,"steadyRms":0.02828427056933421,"fittedPeak":0.03999999904098188,"relativeSineResidual":3.403745005586961e-8,"peak":0.03999999910593033,"afterEndPeak":0,"firstSample":0},
+    {"sampleRate":48000,"targetHz":432,"digitalGain":0,"estimatedHz":null,"steadyRms":0,"fittedPeak":0,"relativeSineResidual":0,"peak":0,"afterEndPeak":0,"firstSample":0}
+  ],
+  "lifecycleChecks": [
+    {"scenario":"stop","rate":48000,"changedAt":0.5013333333333333,"againAt":null,"peak":0.03999999910593033,"afterEndPeak":0,"quietPeak":0,"afterChangePeak":0},
+    {"scenario":"mute_then_unmute","rate":48000,"changedAt":0.5013333333333333,"againAt":0.8,"peak":0.03999999910593033,"afterEndPeak":0,"quietPeak":0,"afterChangePeak":0.03999999910593033},
+    {"scenario":"gain_change_keeps_end","rate":48000,"changedAt":0.5013333333333333,"againAt":null,"peak":0.11999999731779099,"afterEndPeak":0,"quietPeak":null,"afterChangePeak":0.11999999731779099}
+  ],
+  "passed": 8,
+  "physicalTests": 0,
+  "inputResultFilesSha256": {
+    "offline-render-results.json": "33068f8181e7352791b28affe33bb0e79974f601c466a604c6695426697f900e",
+    "offline-lifecycle-results.json": "52af69fe7d1b5bea55784a99a5b23de99a9677ed6751369ccd724fdb322e685a"
+  }
+}
