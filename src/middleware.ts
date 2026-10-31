@@ -27,6 +27,9 @@ function isPublicPath(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  // Exact static signal page only: no account, private content or token endpoint.
+  // Do not broaden to a prefix; private routes keep their existing checks below.
+  if (pathname === '/frequences') return NextResponse.next({ request })
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(

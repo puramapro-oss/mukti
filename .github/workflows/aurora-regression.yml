@@ -8,6 +8,11 @@ on:
       - 'src/components/reprogrammation/**'
       - 'src/components/exorcisme/hooks/**'
       - 'src/components/cercles/room/**'
+      - 'src/components/signals/**'
+      - 'src/app/frequences/**'
+      - 'src/lib/tone-program.ts'
+      - 'src/lib/pure-tone-player.ts'
+      - 'src/middleware.ts'
       - 'src/app/api/circles/**'
       - 'src/lib/livekit.ts'
       - 'src/lib/circle-listener.ts'
@@ -56,6 +61,9 @@ jobs:
       - name: Verify receive-only permissions, playback lifecycle and explicit UI consent
         working-directory: tests/aurora-regression
         run: node --test remote-listening-client.mjs remote-listening-server.mjs remote-listening-ui.mjs
+      - name: Verify shared tone schema, audio lifecycle and public route isolation
+        working-directory: tests/aurora-regression
+        run: node --test pure-tone-regression.mjs tone-route-regression.mjs
       - name: Typecheck tested production modules and the independent test workspace
         working-directory: tests/aurora-regression
         run: npm run typecheck
