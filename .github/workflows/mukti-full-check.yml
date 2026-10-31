@@ -108,6 +108,9 @@ jobs:
       - name: Verify timestamp protocol and bounded network failure cases
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: node --test tests/security-regression/opentimestamps-regression.mjs
+      - name: Verify patched glob compatibility through the actual Capacitor dependency path
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node --test tests/security-regression/glob-compatibility.mjs
       - name: Typecheck entire application
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: ./node_modules/.bin/tsc --noEmit --pretty false
