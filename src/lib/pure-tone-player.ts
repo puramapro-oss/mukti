@@ -108,6 +108,8 @@ export function createPureTonePlayer(notify: (status: ToneStatus, error?: string
       }
       ctx.addEventListener('statechange', current.changed)
       emit('starting')
+      // A subscriber may synchronously stop, dispose or replace this attempt.
+      if (disposed || active !== current) return false
       const deadline = new Promise<never>((_resolve, reject) => {
         current.timeout = setTimeout(() => reject(new Error('Autorisation audio expirée.')), 5_000)
       })
@@ -120,7 +122,8 @@ export function createPureTonePlayer(notify: (status: ToneStatus, error?: string
       // The audio clock stop is authoritative even if JS timers are throttled.
       current.watchdog = setTimeout(() => { if (active === current) stop() }, program.seconds * 1000 + 250)
       emit('playing')
-      return true
+      // Report only this attempt; a subscriber may already have stopped it.
+      return !disposed && active === current
     } catch {
       if (!disposed && (!run || active === run)) stop('error', 'Lecture indisponible ou interrompue. Réessaie explicitement.')
       return false

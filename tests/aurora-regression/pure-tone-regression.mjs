@@ -29,7 +29,7 @@ function fixture(options = {}) {
   class Context {
     constructor() {
       contexts.push(this); this.state = 'suspended'; this.sampleRate = options.sampleRate ?? 48000
-      this.currentTime = 0; this.destination = {}; this.sources = []; this.gains = []; this.handlers = new Set(); this.closes = 0
+      this.currentTime = 0; this.destination = {}; this.sources = []; this.gains = []; this.handlers = new Set(); this.closes = 0; this.resumes = 0
     }
     createBufferSource() { const o = new Node(); this.sources.push(o); return o }
     createBuffer(_channels, length, sampleRate) { const samples = new Float32Array(length); return { length, sampleRate, getChannelData: () => samples } }
@@ -37,6 +37,7 @@ function fixture(options = {}) {
     addEventListener(_name, fn) { if (options.failEvent) throw new Error('event'); this.handlers.add(fn) }
     removeEventListener(_name, fn) { this.handlers.delete(fn) }
     resume() {
+      this.resumes++
       if (options.throwResume) throw new Error('resume')
       if (options.rejectResume) return Promise.reject(new Error('resume'))
       if (options.pendingResume) return new Promise(resolve => { this.resolveResume = () => { this.state = 'running'; resolve() } })
@@ -60,7 +61,10 @@ function fixture(options = {}) {
     modules.set(name, exports); return exports
   }
   const schema = load('tone-program'), api = load('pure-tone-player')
-  const player = api.createPureTonePlayer((state, error) => states.push({ state, error }))
+  const player = api.createPureTonePlayer((state, error) => {
+    states.push({ state, error })
+    options.onNotify?.(state, player)
+  })
   return { schema, api, player, contexts, timers, states, advance(ms) {
     clock += ms
     for (const [id, timer] of [...timers]) if (timer.at <= clock) { timers.delete(id); timer.fn() }
@@ -177,4 +181,73 @@ test('100 lifecycle repetitions release every graph without accumulating timers'
   for (let i = 0; i < 100; i++) { assert.equal(await f.player.start(program), true); f.player.stop() }
   assert.equal(f.timers.size, 0); assert.equal(f.contexts.length, 100)
   assert.ok(f.contexts.every(ctx => ctx.closes === 1 && ctx.handlers.size === 0 && ctx.sources[0].disconnects === 1))
+})
+
+
+for (const action of ['stop', 'dispose']) {
+  test(`synchronous ${action} during the starting notification cannot resume or allocate a deadline`, async () => {
+    const f = fixture({ onNotify: (state, player) => { if (state === 'starting') player[action]() } })
+    assert.equal(await f.player.start(program), false)
+    assert.equal(f.timers.size, 0, 'Cancellation must not leave a five-second deadline behind')
+    assert.equal(f.contexts[0].resumes, 0, 'Do not resume a context cancelled before authorization')
+    assert.equal(f.contexts[0].closes, 1)
+    assert.equal(f.contexts[0].sources.length, 0)
+  })
+  test(`synchronous ${action} during the playing notification cannot report active playback`, async () => {
+    const f = fixture({ onNotify: (state, player) => { if (state === 'playing') player[action]() } })
+    assert.equal(await f.player.start(program), false, 'Stopped playback must not resolve as active')
+    assert.equal(f.timers.size, 0)
+    assert.equal(f.contexts[0].closes, 1)
+    assert.equal(f.contexts[0].sources[0].disconnects, 1)
+  })
+}
+
+test('100 synchronous cancellations leave no timer, resumed context or active source', async () => {
+  const f = fixture({ onNotify: (state, player) => { if (state === 'starting') player.stop() } })
+  for (let i = 0; i < 100; i++) assert.equal(await f.player.start(program), false)
+  assert.equal(f.timers.size, 0)
+  assert.ok(f.contexts.every(ctx => ctx.resumes === 0 && ctx.closes === 1 && ctx.sources.length === 0))
+})
+
+test('a throwing status subscriber does not prevent explicit playback and cleanup', async () => {
+  const f = fixture({ onNotify: () => { throw new Error('subscriber failed') } })
+  assert.equal(await f.player.start(program), true)
+  assert.doesNotThrow(() => f.player.stop())
+  assert.equal(f.timers.size, 0)
+  assert.equal(f.contexts[0].closes, 1)
+})
+
+test('a cancelled starting notification cannot resume after it starts a replacement', async () => {
+  let replacement, replaced = false
+  const f = fixture({ onNotify: (state, player) => {
+    if (state !== 'starting' || replaced) return
+    replaced = true
+    player.stop()
+    replacement = player.start({ ...program, hz: 639 })
+  } })
+  assert.equal(await f.player.start(program), false)
+  assert.equal(await replacement, true)
+  assert.equal(f.contexts.length, 2)
+  assert.equal(f.contexts[0].resumes, 0)
+  assert.equal(f.contexts[1].resumes, 1)
+  assert.equal(f.contexts[1].closes, 0)
+  f.player.stop()
+  assert.equal(f.timers.size, 0)
+})
+
+test('a stopped playing notification cannot report the replacement as its own success', async () => {
+  let replacement, replaced = false
+  const f = fixture({ onNotify: (state, player) => {
+    if (state !== 'playing' || replaced) return
+    replaced = true
+    player.stop()
+    replacement = player.start({ ...program, hz: 639 })
+  } })
+  assert.equal(await f.player.start(program), false)
+  assert.equal(await replacement, true)
+  assert.equal(f.contexts.length, 2)
+  assert.equal(f.contexts[0].closes, 1)
+  assert.equal(f.contexts[1].closes, 0)
+  f.player.stop()
+  assert.equal(f.timers.size, 0)
 })
