@@ -1,0 +1,181 @@
+{
+  "scope": "AURORA active-time correction and standalone regression harness; no production deployment",
+  "base_commit": "4efb1764435fad67fc345d79365e710858b5bdb4",
+  "base_tree": "39d71b9f3a867cdda97207dd4729c4ebd8de6dea",
+  "written_at_utc": "2026-11-10T22:12:36.136451+00:00",
+  "runtime": {
+    "node": "24.22.1",
+    "npm": "11.9.0",
+    "vitest": "5.0.3",
+    "vite": "8.3.4"
+  },
+  "tests": {
+    "status": "PASS",
+    "exit_code": 0,
+    "command": "RAYON_NUM_THREADS=1 npm test -- --reporter=default --reporter=json --outputFile=/tmp/aurora-continuity-final-pass.json",
+    "files": 24,
+    "passed": 366,
+    "failed": 0,
+    "pending": 0,
+    "duration_seconds": 24.45,
+    "new_timing_cases": 13,
+    "sql_cases": 15,
+    "json_sha256": "1e04498c7feb1b913a8d009d85a2da8ad50229de2ac6d58395447633cbddb769",
+    "started_at_utc": "2026-11-10T22:10:45.654000+00:00"
+  },
+  "reproduction": {
+    "base_commit": "4efb1764435fad67fc345d79365e710858b5bdb4",
+    "initial_new_tests_failed": 9,
+    "exit_code": 1,
+    "duration_seconds": 0.902,
+    "examples": [
+      {
+        "frame_seconds": 8.25,
+        "observed_elapsed_seconds": 8
+      },
+      {
+        "frame_seconds": 91.5,
+        "observed_elapsed_seconds": 8,
+        "observed_phase_index": 1
+      }
+    ]
+  },
+  "typecheck": {
+    "status": "PASS",
+    "exit_code": 0,
+    "command": "RAYON_NUM_THREADS=1 npm run typecheck",
+    "scope": "standalone harness config and its source imports",
+    "script": "node --max-old-space-size=512 node_modules/typescript/bin/tsc --project tsconfig.json",
+    "final_exit_code": 0
+  },
+  "build": {
+    "status": "PASS",
+    "exit_code": 0,
+    "command": "RAYON_NUM_THREADS=1 node --max-old-space-size=384 ../node_modules/vite/bin/vite.js build --config vite.config.ts --outDir /tmp/aurora-continuity-browser-dist",
+    "modules": 1869,
+    "reported_build_ms": 355,
+    "scope": "Vite client qualification harness; WebGL canvas replaced",
+    "warnings": [
+      "use client directives in client-only bundle",
+      "output directory outside project root"
+    ]
+  },
+  "independent_review": {
+    "status": "PASS",
+    "scope": "timeline catch-up, pause/stop/resume, callbacks, finalization, ritual replay",
+    "blocking_findings": 0
+  },
+  "earlier_interrupted_runs": {
+    "status": "SUPERSEDED_BY_FINAL_PASS",
+    "observed": [
+      "TypeScript/Vite processes exited 137 during resource contention",
+      "PGlite worker killed by SIGKILL before resource flags were passed to the worker"
+    ],
+    "resolution": "One WebAssembly compilation task and 512 MiB JS old-space per Vitest worker; RAYON_NUM_THREADS=1. No assertions or migrations removed."
+  },
+  "browser": {
+    "status": "BLOCKED_BEFORE_QUALIFICATION",
+    "executor": {
+      "chromium": "156.0.8078.79",
+      "playwright": "1.62.1",
+      "error": "socket() failed: Operation not permitted (1)",
+      "signal": "SIGABRT"
+    },
+    "cloud": {
+      "attempts": [
+        "local harness navigation: net::ERR_CONNECTION_REFUSED",
+        "shared-file navigation: tool timeout at 30 seconds",
+        "post-timeout browser inventory: Connection closed"
+      ],
+      "verified_scenarios": 0,
+      "screenshots": 0
+    }
+  },
+  "not_tested": [
+    "Next production build",
+    "global lint",
+    "remote authentication and deployed schema",
+    "multi-process database concurrency",
+    "real speech voices",
+    "physical audio output",
+    "WebGL/GPU",
+    "Hostinger/Cloudflare deployment"
+  ],
+  "historical_evidence": {
+    "base_commit": "4efb1764435fad67fc345d79365e710858b5bdb4",
+    "tests": 353,
+    "chromium_scenarios": 10,
+    "reference": "docs/MUKTI_WELLBEING_2026-11-10.md",
+    "note": "Prior executions, not the current fix's browser qualification"
+  },
+  "remaining_integration": {
+    "target": "Hostinger and Cloudflare",
+    "ritual_draft": "in-page memory with voluntary text export; no cloud goal synchronization",
+    "canonical_goal_model": "PURAMA ONE/IAO integration not established"
+  },
+  "source_files": {
+    "src/components/aurora/useAuroraPhase.ts": {
+      "sha256": "e65c51ac301145b39dc2e69b7614f654fc8e7618faad9ec25613ad651412f8af",
+      "git_blob": "53de759a27302637d1e53be85d76e995e1311765",
+      "bytes": 16941
+    },
+    "tests/aurora-regression/phase.test.tsx": {
+      "sha256": "14d07eefe8355a3be199f552a5332d3f50cc32d4139ae9f8ba6fbab4bf28884d",
+      "git_blob": "178e6316dc4adbaf7ac1e8a05f9b01a09c18625d",
+      "bytes": 4760
+    },
+    "tests/aurora-regression/phase-timing.test.ts": {
+      "sha256": "c7f23890050f1ce7b0be0fd91c193953b65b773b1b76ae3a6baa4924e42d29f8",
+      "git_blob": "25da38529b73d315baea36ef5f625682f77d1da5",
+      "bytes": 11017
+    },
+    "tests/aurora-regression/tsconfig.json": {
+      "sha256": "042d03d3ef9bda227d9101bd22a3fcec16936f48b9951c8e95c40ace1332e1ea",
+      "git_blob": "45cbb228a977f0f4f3244b04bd268e9f868b2102",
+      "bytes": 2046
+    },
+    "tests/aurora-regression/vitest.config.ts": {
+      "sha256": "4c7a5e8cbe692ac4f645b453ae03eaff100d49245f5750107d945ef0fad4564b",
+      "git_blob": "a7050a94d39126df4b61fa1267e8e60d2fcc8b55",
+      "bytes": 981
+    },
+    "tests/aurora-regression/package.json": {
+      "sha256": "4894539138d452e7c533c8ba9770114f5d2a6db208a339c8de6e2ed176371186",
+      "git_blob": "ef63c48255877d46b137d3640f6d5ca8b586c5e1",
+      "bytes": 1207
+    },
+    "tests/aurora-regression/README.md": {
+      "sha256": "3b3e76ba411646533a7b8c6cf42d61572536336fd06f1bb19c87969089a70863",
+      "git_blob": "36ca4ef44b77e28fe502f91e8141e837f04fdde9",
+      "bytes": 5937
+    },
+    "docs/AURORA_TIMING_2026-11-10.md": {
+      "sha256": "a7c3f6b5501a6d5b6eb67f59130a55c63054e8f89659cc1961f230e55d243a2a",
+      "git_blob": "1d1798747fe2bc913f2593c8c8757570d5e409f0",
+      "bytes": 7778
+    },
+    "vercel.json": {
+      "sha256": "66114f8dc04173e716ac6a12256eeec3be2ec5d73a01eb14296ae0f9bf62a767",
+      "git_blob": "24c51b21a01e6517da021463fdf9b03cd06c38b3",
+      "bytes": 2169
+    }
+  },
+  "materialization": {
+    "base_files": 158,
+    "unchanged_base_files": 151,
+    "changed_base_files": [
+      "tests/aurora-regression/tsconfig.json",
+      "tests/aurora-regression/package.json",
+      "tests/aurora-regression/vitest.config.ts",
+      "src/components/aurora/useAuroraPhase.ts",
+      "tests/aurora-regression/README.md",
+      "tests/aurora-regression/phase.test.tsx",
+      "vercel.json"
+    ]
+  },
+  "legacy_auto_deployment": {
+    "provider": "Vercel",
+    "branch": "codex/aurora-timing-reliability-20261110",
+    "deploymentEnabled": false
+  }
+}

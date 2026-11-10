@@ -32,6 +32,9 @@
       "react-dom/*": [
         "node_modules/@types/react-dom/*"
       ],
+      "next": [
+        "node_modules/next"
+      ],
       "next/*": [
         "node_modules/next/*"
       ],

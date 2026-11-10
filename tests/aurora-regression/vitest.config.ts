@@ -20,5 +20,8 @@ export default defineConfig({
     setupFiles: ['./setup.ts'],
     restoreMocks: true,
     maxWorkers: 1,
+    // PGlite compiles PostgreSQL WASM. Bound its compiler parallelism in the
+    // actual test worker: Vitest does not forward arbitrary parent V8 flags.
+    execArgv: ['--wasm-num-compilation-tasks=1', '--max-old-space-size=512'],
   },
 })
