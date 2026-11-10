@@ -2,7 +2,8 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
-      "codex/mukti-aurora-lifecycle-20261011": false
+      "codex/mukti-aurora-lifecycle-20261011": false,
+      "codex/aurora-intention-musique-20261110": false
     }
   },
   "buildCommand": "npm run build",

@@ -10,8 +10,10 @@ import AuroraCanvas from './AuroraCanvas'
 import PulseOfSafety from './PulseOfSafety'
 import ProgressRing5Phases, { phaseLabelShort } from './ProgressRing5Phases'
 import SessionControls from './SessionControls'
+import AuroraRitualPanel from './AuroraRitualPanel'
 import { useAuroraSession } from './useAuroraSession'
-import { AURORA_VARIANTS, type AuroraVariant } from '@/lib/constants'
+import { AURORA_PHASES, AURORA_VARIANTS, type AuroraVariant } from '@/lib/constants'
+import type { RitualDraft, RitualPlan } from '@/lib/aurora-ritual'
 
 export interface AuroraSessionFullProps {
   variant: AuroraVariant
@@ -26,7 +28,13 @@ function formatTime(sec: number): string {
 
 export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
   const meta = AURORA_VARIANTS.find((v) => v.id === variant)!
-  const session = useAuroraSession(variant)
+  const [ritualOpen, setRitualOpen] = useState(false)
+  const [ritualPlan, setRitualPlan] = useState<RitualPlan | null>(null)
+  const [ritualVariant, setRitualVariant] = useState(variant)
+  const [ritualDraft, setRitualDraft] = useState<RitualDraft>({
+    intention: '', outcome: '', obstacle: '', response: '', action: '', context: '', mode: 'mixte',
+  })
+  const session = useAuroraSession(ritualOpen ? ritualVariant : variant, ritualOpen ? ritualPlan : null)
   const { engine, voiceEnabled, setVoiceEnabled, powerSwitch, setPowerSwitch, persistError, completedInfo } = session
   const [particlesOn, setParticlesOn] = useState(true)
 
@@ -62,6 +70,18 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
     return `${score}%`
   }, [engine.meta.coherence])
 
+  if (ritualOpen) {
+    return <AuroraRitualPanel session={session} plan={ritualPlan} onPlanChange={setRitualPlan}
+      draft={ritualDraft} onDraftChange={setRitualDraft} variant={ritualVariant}
+      onVariantChange={setRitualVariant}
+      duration={AURORA_PHASES[ritualVariant].reduce((total, phase) => total + phase.duration_sec, 0)} onBack={() => {
+      session.resetRitualPreparation()
+      setRitualOpen(false)
+      setRitualPlan(null)
+      setVoiceEnabled(false)
+    }} />
+  }
+
   return (
     <div className="relative h-screen w-full">
       <AuroraCanvas
@@ -73,6 +93,13 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
       />
 
       {animating && <PulseOfSafety breathPhase={engine.state.phase} color={meta.color} />}
+
+      {!engine.meta.running && !session.starting && !session.saving && (
+        <button type="button" onClick={() => { session.resetRitualPreparation(); setRitualOpen(true) }}
+          className="absolute left-1/2 top-[52%] z-20 w-max max-w-[85%] -translate-x-1/2 rounded-2xl border border-teal-200/30 bg-slate-950/80 px-5 py-4 text-center text-sm text-teal-100 backdrop-blur hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-200">
+          Préparer un rituel · De l’intention à l’action
+        </button>
+      )}
 
       {/* Ring + labels */}
       <div className="pointer-events-none absolute left-1/2 top-24 z-20 flex -translate-x-1/2 flex-col items-center">

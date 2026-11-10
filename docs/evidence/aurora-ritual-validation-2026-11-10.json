@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "repository": "puramapro-oss/mukti",
+  "source_base_commit": "1e68ef01759e28bf2c47f599ea5435a6d7a1ba12",
+  "source_base_tree": "a2da4bb4bd24bf25641250dd749d68d922865b51",
+  "branch": "codex/aurora-intention-musique-20261110",
+  "verification_scope": "Targeted source snapshot; actual React components and state machines in jsdom; audio, haptic, server and WebGL mocked there. No production build or deployment.",
+  "gates": [
+    {
+      "name": "vitest",
+      "command": "npm test -- --pool=threads",
+      "cwd": "tests/aurora-regression",
+      "exit_code": 0,
+      "test_files_passed": 9,
+      "tests_passed": 156,
+      "duration_seconds": 29.56,
+      "output": "Test Files  9 passed (9)\n      Tests  156 passed (156)\n   Start at  03:18:53\n   Duration  29.56s (tests 40%, environment 38%, setup 11%, import 6%, transform 5%, worker 1%)\n\n    Isolate  9 workers spawned · ~1.57s startup each (spawn + environment, per file)\n             at least ~12.53s faster with isolate: false — reuses workers across files instead of one per file"
+    },
+    {
+      "name": "typescript_targeted",
+      "command": "npm run typecheck",
+      "cwd": "tests/aurora-regression",
+      "exit_code": 0
+    },
+    {
+      "name": "vite_client_harness_build",
+      "command": "node node_modules/vite/bin/vite.js build --config browser/vite.config.ts",
+      "cwd": "tests/aurora-regression",
+      "exit_code": 0,
+      "duration_seconds": 0.706,
+      "modules_transformed": 1759,
+      "warnings": "Next use-client directives are not preserved in the fully client Vite bundle; this is not a Next/RSC build."
+    },
+    {
+      "name": "browser_real",
+      "status": "BLOCKED",
+      "scenarios_validated": 0,
+      "chromium": "Executable absent; official installer failed with invalid ZIP archive.",
+      "firefox": "Browser and context created, but newPage did not complete. Playwright page setup timed out at120s; independent blank-page diagnostic stopped at20s before app code/navigation."
+    },
+    {
+      "name": "physical_audio_and_devices",
+      "status": "NOT_TESTED"
+    },
+    {
+      "name": "production_auth_iao_storage_and_rewards",
+      "status": "NOT_TESTED"
+    }
+  ],
+  "candidate_file_hashes": [
+    {
+      "path": "src/app/(dashboard)/dashboard/aurora/[variant]/page.tsx",
+      "bytes": 2706,
+      "git_blob_sha": "a9cf03e9b6ce9127b9244955c051534985e70435",
+      "sha256": "225d74337db69aa268acaa0fe27de1ccba2abf0d6443187ed126ac9d59fb6cae"
+    },
+    {
+      "path": "src/components/aurora/AuroraRitualPanel.tsx",
+      "bytes": 17880,
+      "git_blob_sha": "988fcbcdab9c9e86aa6dd2b5002f8d670f9b6030",
+      "sha256": "606a9257c244d0610b438f56e929387aee47feae4f095d70a737df4745f65cff"
+    },
+    {
+      "path": "src/components/aurora/AuroraSessionFull.tsx",
+      "bytes": 9490,
+      "git_blob_sha": "14a64b24e61db5e8053824470fb3e8f25bb801b5",
+      "sha256": "4e1731a67878acdb1c878ab235fd5f1fe26cfeb59309a88510cee2702904b3ed"
+    },
+    {
+      "path": "src/components/aurora/useAuroraPhase.ts",
+      "bytes": 16877,
+      "git_blob_sha": "893f42895552d30da87a7581ec6785dcdda44e3d",
+      "sha256": "462a7a7a4d0898a7e226cdb079dedec15e14e1bc7673c694348a5ba3350bfdfe"
+    },
+    {
+      "path": "src/components/aurora/useAuroraSession.ts",
+      "bytes": 14548,
+      "git_blob_sha": "cbbaf951165dc6c660819470269d9d6ed04073c7",
+      "sha256": "c6b26916106716ceeb3c6e2b38bfcd3d2bb0216b9027bc0419671b807541ad4e"
+    },
+    {
+      "path": "src/lib/aurora-audio.ts",
+      "bytes": 14793,
+      "git_blob_sha": "5050552b8cbefb2b6d38f2854ad6294d04f53dba",
+      "sha256": "fe53199585052c0e58b3af1d95b156765e7c23ff641e063f9c7fc6b1ccf44760"
+    },
+    {
+      "path": "src/lib/aurora-melody.ts",
+      "bytes": 6614,
+      "git_blob_sha": "87fe9794b1d88c5f0e9698186293fb0446a5ea6d",
+      "sha256": "79419d97938d14a745caaa0c70110a1f805330c2500e7c6845d9791e4305ab95"
+    },
+    {
+      "path": "src/lib/aurora-ritual.ts",
+      "bytes": 9396,
+      "git_blob_sha": "76c5146a8e652035b1915994d0c7782e224d6fcf",
+      "sha256": "7c0a77397492c3c737cad42f43cf9745c789b07b150e41c6a233def6d6e2fd9b"
+    },
+    {
+      "path": "tests/aurora-regression/.gitignore",
+      "bytes": 79,
+      "git_blob_sha": "b1b98cafbe291876346c491d441e94ce89c4f5c5",
+      "sha256": "d65d7930cc49dbc49a686c99937079bc1153ea1f9569963611d05f36120ed27f"
+    },
+    {
+      "path": "tests/aurora-regression/audio-ritual.test.ts",
+      "bytes": 20969,
+      "git_blob_sha": "c35aa3410ea840c8c4613372af3f784fd339f399",
+      "sha256": "40ae3ade8657c848401fb270aa04cc5c97e4ef37af5b5fea34f667096785c018"
+    },
+    {
+      "path": "tests/aurora-regression/browser/CanvasPlaceholder.tsx",
+      "bytes": 159,
+      "git_blob_sha": "271da75bd0ad0a63b65d88e125cba2cdb528f274",
+      "sha256": "dd5d7c6cac95a305b2adc9a9daf994a1e8f9e034f2cdd5f1544b6561e9817e0f"
+    },
+    {
+      "path": "tests/aurora-regression/browser/index.html",
+      "bytes": 281,
+      "git_blob_sha": "7d85a24aba0c73fc3cc9aeff9bc365fc8235c7ac",
+      "sha256": "aca1b4d4f673ee3795121ac4a4ca24cc7123ae5203c2ab60f635e33b5bcff020"
+    },
+    {
+      "path": "tests/aurora-regression/browser/main.tsx",
+      "bytes": 2379,
+      "git_blob_sha": "90a536a9cd712cf36bc18c67f6513ffe343bb0b3",
+      "sha256": "14a72e39109dfbe4f6be74e32ae2f15d5f8afa586e427a7fd28ec1d4cf651a0d"
+    },
+    {
+      "path": "tests/aurora-regression/browser/playwright.config.ts",
+      "bytes": 668,
+      "git_blob_sha": "7c362cfcb498c3a30120214928550314bc89b391",
+      "sha256": "bf8d016da1e7c4c7d5604f6bf15a6ffda7b77b8334a3060e6d3d01b91c2b01d2"
+    },
+    {
+      "path": "tests/aurora-regression/browser/ritual.browser.spec.ts",
+      "bytes": 7579,
+      "git_blob_sha": "f9fbd379420257e6efaa42be471f00ce8711a20b",
+      "sha256": "c2ba61028e431eaf6cc148a6175530b4600630145f689f320ef1024f85d17d29"
+    },
+    {
+      "path": "tests/aurora-regression/browser/style.css",
+      "bytes": 157,
+      "git_blob_sha": "0215b28d836d770d6c52950204f4fe7cbf34c665",
+      "sha256": "1e5a8cec7a663420d588f8b9c211a4441652f5eb0cbaf477f69547e71adafa03"
+    },
+    {
+      "path": "tests/aurora-regression/browser/vite.config.ts",
+      "bytes": 895,
+      "git_blob_sha": "0013a69d1c355c087c6dac24967d3421c58292d4",
+      "sha256": "dd8a9624096fec7cb8ad3a31369395c3e36a291942f955d0ecbe49daad9e0427"
+    },
+    {
+      "path": "tests/aurora-regression/package-lock.json",
+      "bytes": 135855,
+      "git_blob_sha": "c598b9e61d4dd92d51fa80acc3f31d32a3bb405e",
+      "sha256": "6d82d098aca2129bdae7a14e2ae2cb783b88868746c38ea0182882dc6c156052"
+    },
+    {
+      "path": "tests/aurora-regression/package.json",
+      "bytes": 988,
+      "git_blob_sha": "c7abaafdcd1056f98ead34113551d2d8de50c572",
+      "sha256": "a5041276da7ebf19f77b0dca7b09ac296863a81698519dde071779dc64ec8a5d"
+    },
+    {
+      "path": "tests/aurora-regression/ritual-plan.test.ts",
+      "bytes": 9805,
+      "git_blob_sha": "39172117a84eb8aa12a278f08aeedabdfbe78d10",
+      "sha256": "fc5777b8237543a6da3f9aae454a3ade810fc6ff2f217b92058c3e4ee4a92827"
+    },
+    {
+      "path": "tests/aurora-regression/ritual-seek.test.tsx",
+      "bytes": 10137,
+      "git_blob_sha": "408e2cf8dcfc18f31ac9f012b18620dae767cb90",
+      "sha256": "dd035020a296b27f6e7a5ad3de62b3667430d6d2a7e06d69cd1fb8c1246d0d2a"
+    },
+    {
+      "path": "tests/aurora-regression/ritual-session.test.tsx",
+      "bytes": 15987,
+      "git_blob_sha": "c203170dc19e4bf299002175855bd8b256d1fc57",
+      "sha256": "3d937c9ff8f90687d184dfafed2c2ba6329670220aeec5fa32f7b5028e73172d"
+    },
+    {
+      "path": "tests/aurora-regression/ritual-ui.test.tsx",
+      "bytes": 13355,
+      "git_blob_sha": "560a43b971bc80d4b304dd7911e12eeb4e9dd002",
+      "sha256": "263e3db081bdd745fb9bb65e229c90ea3fe5e83f079ad8a07c34d4328dbeb3c5"
+    },
+    {
+      "path": "vercel.json",
+      "bytes": 2153,
+      "git_blob_sha": "e20561e02ee38ef5dd5904e5c963da9762b72e6d",
+      "sha256": "1291aadd7278591f588af7c77453ea9eb3ec17db4cdcdafbee714c486f9104cd"
+    }
+  ]
+}
