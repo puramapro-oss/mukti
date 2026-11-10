@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { createAuroraAudio, type AuroraAudioHandle } from '@/lib/aurora-audio'
+import { createAuroraAudio, type AuroraAudioHandle, type AuroraRitualMix } from '@/lib/aurora-audio'
 import { createAuroraHaptic, type AuroraHapticHandle } from '@/lib/aurora-haptic'
 import { auroraRequest } from '@/lib/aurora-session-api'
-import type { AuroraVariant, AuroraPowerSwitch, AuroraPhaseName } from '@/lib/constants'
+import { ritualCueAt, type RitualPlan } from '@/lib/aurora-ritual'
+import { AURORA_PHASES, type AuroraVariant, type AuroraPowerSwitch, type AuroraPhaseName } from '@/lib/constants'
 import { useAuroraPhase, type AuroraPhaseMeta, type StoppedReason } from './useAuroraPhase'
 
 const CUES: Record<AuroraPhaseName, string> = {
@@ -17,8 +18,10 @@ const CUES: Record<AuroraPhaseName, string> = {
 }
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
-export function useAuroraSession(variant: AuroraVariant) {
+export function useAuroraSession(variant: AuroraVariant, ritualPlan: RitualPlan | null = null) {
   const [voiceEnabled, setVoiceEnabled] = useState(false)
+  const [ritualMix, setRitualMix] = useState<AuroraRitualMix>({ voice: 0.8, music: 0.3, tone: 0 })
+  const [ritualCompletion, setRitualCompletion] = useState<'completed' | 'stopped' | null>(null)
   const [powerSwitch, setPowerSwitch] = useState<AuroraPowerSwitch>('core')
   const [persistError, setPersistError] = useState<string | null>(null)
   const [completedInfo, setCompletedInfo] = useState<{ level: string | null; streak: number } | null>(null)
@@ -34,15 +37,33 @@ export function useAuroraSession(variant: AuroraVariant) {
   const savingRef = useRef(false)
   const mountedRef = useRef(false)
   const generationRef = useRef(0)
+  // Capture the approved plan for this run; editing a draft cannot rewrite a session.
+  const activeRitualRef = useRef<RitualPlan | null>(null)
+  const spokenCueRef = useRef<string | null>(null)
 
   const silence = useCallback(() => {
     audioRef.current?.stop()
     hapticRef.current?.cancel()
   }, [])
 
+  const createAudio = useCallback(() => createAuroraAudio({
+    onVoiceError: () => {
+      if (!mountedRef.current || !activeRef.current || !activeRitualRef.current) return
+      setVoiceEnabled(false)
+      setPersistError('La voix a été interrompue. Le texte reste disponible et la séance continue. Tu peux mettre en pause pour réessayer.')
+    },
+  }), [])
+
   const finish = useCallback(async (reason: StoppedReason, meta: AuroraPhaseMeta) => {
     activeRef.current = false
     silence()
+    if (activeRitualRef.current) {
+      // The existing API stores breathing metrics, not goals. Never send invented
+      // coherence, streaks, rewards or completion of the person's planned action.
+      sessionIdRef.current = null
+      if (mountedRef.current) setRitualCompletion(reason === 'glide_out_complete' ? 'completed' : 'stopped')
+      return
+    }
     const id = sessionIdRef.current
     sessionIdRef.current = null
     if (!id || savingRef.current) return
@@ -79,11 +100,33 @@ export function useAuroraSession(variant: AuroraVariant) {
 
   const engine = useAuroraPhase({
     variant, powerSwitch,
-    onPhaseChange: (phase) => { if (voiceEnabled) audioRef.current?.speakPhaseCue(CUES[phase]) },
-    onBreathStep: (phase) => { audioRef.current?.setPhase(phase); hapticRef.current?.pulse(phase) },
+    onPhaseChange: (phase) => {
+      if (!activeRitualRef.current && voiceEnabled) audioRef.current?.speakPhaseCue(CUES[phase])
+    },
+    onBreathStep: (phase) => {
+      if (!activeRitualRef.current) { audioRef.current?.setPhase(phase); hapticRef.current?.pulse(phase) }
+    },
     onComplete: (meta) => { void finish('glide_out_complete', meta) },
     onStop: (reason, meta) => { void finish(reason, meta) },
   })
+
+  const activateRitualAudio = useCallback(async (position: number, isCurrent: () => boolean) => {
+    const voiceRequested = voiceEnabled && ritualMix.voice > 0
+    const soundRequested = ritualMix.music > 0 || ritualMix.tone > 0
+    if (!voiceRequested && !soundRequested) { audioRef.current?.stop(); return }
+    audioRef.current ??= createAudio()
+    const audio = audioRef.current
+    audio.setRitualMix?.(ritualMix)
+    const capabilities = audio.getCapabilities?.()
+    if ((soundRequested && !capabilities?.audio) || (voiceRequested && !capabilities?.voice)) {
+      throw new Error('Une sortie demandée ou la voix française locale est indisponible. Choisis le texte seul ou désactive la voix pour écouter la musique.')
+    }
+    audio.setVoiceGuidance(voiceRequested)
+    audio.setPosition?.(position)
+    await audio.prepare()
+    if (!isCurrent()) return
+    await audio.start()
+  }, [createAudio, ritualMix, voiceEnabled])
 
   const start = useCallback(async () => {
     if (busyRef.current || savingRef.current || activeRef.current || !mountedRef.current) return
@@ -95,10 +138,24 @@ export function useAuroraSession(variant: AuroraVariant) {
     setStarting(true)
     setPersistError(null)
     setCompletedInfo(null)
+    setRitualCompletion(null)
     sessionIdRef.current = null
+    activeRitualRef.current = ritualPlan
+    spokenCueRef.current = null
     try {
-      audioRef.current ??= createAuroraAudio()
+      if (ritualPlan) {
+        if (ritualPlan.durationSec !== AURORA_PHASES[variant].reduce((total, phase) => total + phase.duration_sec, 0)) {
+          throw new Error('La durée a changé. Prépare à nouveau le texte de ton rituel.')
+        }
+        await activateRitualAudio(0, isCurrent)
+        if (!isCurrent()) return
+        activeRef.current = true
+        engine.actions.start()
+        return
+      }
+      audioRef.current ??= createAudio()
       hapticRef.current ??= createAuroraHaptic()
+      audioRef.current.setRitualMix?.(null)
       audioRef.current.setVoiceGuidance(voiceEnabled)
       // Resume during the user gesture, at zero gain, before the network round trip.
       const prepared = audioRef.current.prepare().then(() => true, () => false)
@@ -130,7 +187,7 @@ export function useAuroraSession(variant: AuroraVariant) {
         setStarting(false)
       }
     }
-  }, [engine.actions, powerSwitch, silence, variant, voiceEnabled])
+  }, [activateRitualAudio, createAudio, engine.actions, powerSwitch, ritualPlan, silence, variant, voiceEnabled])
 
   const cancelPending = useCallback(() => {
     generationRef.current += 1
@@ -152,16 +209,27 @@ export function useAuroraSession(variant: AuroraVariant) {
     busyRef.current = true
     const ticket = ++generationRef.current
     setStarting(true)
+    setPersistError(null)
     try {
-      await audioRef.current?.start()
+      const isCurrent = () => mountedRef.current && ticket === generationRef.current
+      const replayFrom = activeRitualRef.current && voiceEnabled && ritualMix.voice > 0
+        ? ritualCueAt(activeRitualRef.current, engine.meta.sessionElapsedSec).at : null
+      if (activeRitualRef.current) await activateRitualAudio(replayFrom ?? engine.meta.sessionElapsedSec, isCurrent)
+      else await audioRef.current?.start()
       if (!mountedRef.current || ticket !== generationRef.current) return
+      if (replayFrom !== null) {
+        if (!engine.actions.rewindPausedTo(replayFrom)) throw new Error('Impossible de reprendre cette étape. Arrête le rituel puis prépare une nouvelle écoute.')
+        spokenCueRef.current = null
+      }
       engine.actions.resume()
-      audioRef.current?.setPhase(engine.state.phase)
-      hapticRef.current?.pulse(engine.state.phase)
-    } catch {
+      if (!activeRitualRef.current) {
+        audioRef.current?.setPhase(engine.state.phase)
+        hapticRef.current?.pulse(engine.state.phase)
+      }
+    } catch (error) {
       if (mountedRef.current && ticket === generationRef.current) {
         silence()
-        setPersistError('Audio indisponible. La session reste en pause.')
+        setPersistError(error instanceof Error ? `${error.message} La session reste en pause.` : 'Audio indisponible. La session reste en pause.')
       }
     } finally {
       if (mountedRef.current && ticket === generationRef.current) {
@@ -169,7 +237,7 @@ export function useAuroraSession(variant: AuroraVariant) {
         setStarting(false)
       }
     }
-  }, [engine.actions, engine.meta.paused, engine.meta.running, engine.state.phase, silence])
+  }, [activateRitualAudio, engine.actions, engine.meta.paused, engine.meta.running, engine.meta.sessionElapsedSec, engine.state.phase, ritualMix.voice, silence, voiceEnabled])
 
   const stop = useCallback((reason: StoppedReason = 'user_stop') => {
     if (!activeRef.current && !busyRef.current) return
@@ -180,6 +248,47 @@ export function useAuroraSession(variant: AuroraVariant) {
   }, [cancelPending, engine.actions, silence])
 
   useEffect(() => { audioRef.current?.setVoiceGuidance(voiceEnabled) }, [voiceEnabled])
+
+  useEffect(() => {
+    const plan = activeRitualRef.current
+    if (!plan || !engine.meta.running || engine.meta.paused || !activeRef.current) return
+    audioRef.current?.setPosition?.(engine.meta.sessionElapsedSec)
+    const cue = ritualCueAt(plan, engine.meta.sessionElapsedSec)
+    if (voiceEnabled && ritualMix.voice > 0 && spokenCueRef.current !== cue.id) {
+      spokenCueRef.current = cue.id
+      audioRef.current?.speakPhaseCue(cue.text)
+    }
+  }, [engine.meta.paused, engine.meta.running, engine.meta.sessionElapsedSec, ritualMix.voice, voiceEnabled])
+
+  const muteRitual = useCallback(() => {
+    if (!activeRitualRef.current) return
+    silence()
+    setVoiceEnabled(false)
+    setRitualMix({ voice: 0, music: 0, tone: 0 })
+  }, [silence])
+
+  const replayRitualCue = useCallback(() => {
+    const plan = activeRitualRef.current
+    if (plan && activeRef.current && !engine.meta.paused && voiceEnabled && ritualMix.voice > 0) {
+      const cue = ritualCueAt(plan, engine.meta.sessionElapsedSec)
+      engine.actions.pause()
+      if (engine.actions.rewindPausedTo(cue.at)) {
+        audioRef.current?.setPosition?.(cue.at)
+        spokenCueRef.current = cue.id
+        audioRef.current?.speakPhaseCue(cue.text)
+      }
+      engine.actions.resume()
+    }
+  }, [engine.actions, engine.meta.paused, engine.meta.sessionElapsedSec, ritualMix.voice, voiceEnabled])
+
+  const resetRitualPreparation = useCallback(() => {
+    if (busyRef.current || activeRef.current || savingRef.current) return
+    activeRitualRef.current = null
+    spokenCueRef.current = null
+    setRitualCompletion(null)
+    setPersistError(null)
+    setCompletedInfo(null)
+  }, [])
 
   const pauseRef = useRef(pause)
   useEffect(() => { pauseRef.current = pause }, [pause])
@@ -207,5 +316,6 @@ export function useAuroraSession(variant: AuroraVariant) {
   }, [])
 
   return { engine, voiceEnabled, setVoiceEnabled, powerSwitch, setPowerSwitch,
-    persistError, completedInfo, starting, saving, start, pause, resume, stop }
+    persistError, completedInfo, starting, saving, start, pause, resume, stop,
+    ritualMix, setRitualMix, ritualCompletion, muteRitual, replayRitualCue, resetRitualPreparation }
 }

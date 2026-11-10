@@ -15,7 +15,7 @@
 //   - meta  : { currentPhaseIndex, currentPhaseName, totalPhases: 5,
 //              phaseStartSec, sessionElapsedSec, coherence, breathsCounted,
 //              phasesCompleted[], running, paused }
-//   - actions : start, pause, resume, stop, markDizzy
+//   - actions : start, pause, resume, stop, markDizzy, rewindPausedTo (rituel)
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AURORA_PHASES } from '@/lib/constants'
@@ -293,6 +293,87 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
     setMeta((p) => ({ ...p, paused: true }))
   }, [])
 
+  /**
+   * Ritual-only replay support: reposition an already paused session without
+   * starting a second clock or emitting breathing/audio/haptic callbacks.
+   * The caller decides when to replay its narration and call resume().
+   */
+  const rewindPausedTo = useCallback((seconds: number): boolean => {
+    if (!runningRef.current || !pausedRef.current || pauseStartRef.current === null ||
+        typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0 ||
+        seconds >= sessionTotalSec) return false
+
+    const currentPhase = phases[phaseIndexRef.current]
+    if (!currentPhase) return false
+    const elapsedAtPause = phaseStartSessionSecRef.current + Math.max(0, Math.min(
+      currentPhase.duration_sec, (pauseStartRef.current - phaseStartTsRef.current) / 1000
+    ))
+    if (seconds > elapsedAtPause) return false
+
+    let targetIndex = 0
+    let targetPhaseStart = 0
+    while (targetIndex < phases.length - 1 &&
+           seconds >= targetPhaseStart + phases[targetIndex].duration_sec) {
+      targetPhaseStart += phases[targetIndex].duration_sec
+      targetIndex += 1
+    }
+    const targetPhase = phases[targetIndex]
+    const phaseElapsed = seconds - targetPhaseStart
+    const cycle = planBreathCycle(targetPhase.breath)
+    const cycleDuration = cycle.reduce((sum, step) => sum + step.plannedSec, 0)
+    const completedCycles = Math.floor(phaseElapsed / cycleDuration)
+    let subElapsed = phaseElapsed - completedCycles * cycleDuration
+    let targetSubIndex = 0
+    while (targetSubIndex < cycle.length - 1 && subElapsed >= cycle[targetSubIndex].plannedSec) {
+      subElapsed -= cycle[targetSubIndex].plannedSec
+      targetSubIndex += 1
+    }
+    const targetSub = cycle[targetSubIndex]
+    const now = performance.now()
+
+    // Rebase all timestamps together. Time already spent paused cannot be
+    // counted on the next resume, and no RAF is requested while rewinding.
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    rafRef.current = null
+    phaseIndexRef.current = targetIndex
+    phaseStartSessionSecRef.current = targetPhaseStart
+    phaseStartTsRef.current = now - phaseElapsed * 1000
+    cycleRef.current = cycle
+    subIndexRef.current = targetSubIndex
+    subStartTsRef.current = now - subElapsed * 1000
+    pauseStartRef.current = now
+    phaseBreathsRef.current = completedCycles
+    phasesCompletedRef.current = phasesCompletedRef.current.slice(0, targetIndex)
+    // Samples are not timestamped, so retaining them would include observations
+    // from after the rewind point. Completed earlier phase records remain intact.
+    coherenceSamplesRef.current = []
+
+    setState({
+      phase: targetSub.sub,
+      progress: subElapsed / targetSub.plannedSec,
+      elapsedSec: seconds,
+      phaseDurationSec: targetSub.plannedSec,
+    })
+    setMeta((previous) => ({
+      ...previous,
+      currentPhaseIndex: targetIndex,
+      currentPhaseName: targetPhase.name,
+      currentPhaseLabel: targetPhase.label_fr,
+      totalPhases: phases.length,
+      sessionElapsedSec: seconds,
+      sessionTotalSec,
+      phaseStartSec: targetPhaseStart,
+      phaseDurationSec: targetPhase.duration_sec,
+      breathsCounted: completedCycles,
+      coherence: computeRollingCoherence(),
+      phasesCompleted: [...phasesCompletedRef.current],
+      running: true,
+      paused: true,
+      stoppedReason: null,
+    }))
+    return true
+  }, [phases, sessionTotalSec, computeRollingCoherence])
+
   const resume = useCallback(() => {
     if (!runningRef.current || !pausedRef.current) return
     pausedRef.current = false
@@ -364,6 +445,6 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   return {
     state,
     meta,
-    actions: { start, pause, resume, stop, markDizzy },
+    actions: { start, pause, resume, stop, markDizzy, rewindPausedTo },
   }
 }

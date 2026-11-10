@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { AURORA_VARIANTS } from '@/lib/constants'
-import { isValidVariant, getVariantTotalSec } from '@/lib/aurora'
+import { isValidVariant } from '@/lib/aurora'
 import AuroraSessionFull from '@/components/aurora/AuroraSessionFull'
 
 export const dynamic = 'force-dynamic'
@@ -31,7 +31,6 @@ export default async function AuroraVariantPage({ params }: PageProps) {
   if (!user) redirect(`/login?next=/dashboard/aurora/${variant}`)
 
   const meta = AURORA_VARIANTS.find((v) => v.id === variant)!
-  const totalSec = getVariantTotalSec(variant)
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0A0A0F] text-white">
@@ -50,7 +49,7 @@ export default async function AuroraVariantPage({ params }: PageProps) {
               {meta.glyph} {meta.name}
             </div>
             <div className="text-xs text-white/50">
-              {Math.round(totalSec / 60)} min · 5 phases
+              Guidage AURORA
             </div>
           </div>
         </div>
@@ -62,7 +61,7 @@ export default async function AuroraVariantPage({ params }: PageProps) {
       {/* Disclaimer permanent (sécurité — brief section 5) */}
       <footer className="absolute bottom-0 left-0 right-0 z-30 pb-6 text-center">
         <p className="mx-auto max-w-md px-6 text-[11px] leading-relaxed text-white/40">
-          Pas d&apos;hyperventilation, pas de rétention longue. Si tu ressens des vertiges → repasse en SOFT ou arrête.
+          Pas d&apos;hyperventilation ni de rétention prolongée. En cas d&apos;inconfort, arrête et respire naturellement.
         </p>
       </footer>
     </main>
