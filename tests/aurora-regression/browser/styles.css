@@ -1,0 +1,7 @@
+@import "../../../src/app/globals.css";
+@source "../../../src/components/mode20";
+@source "../../../src/components/mode19";
+@source "../../../src/components/mode18";
+@source "../../../src/components/wellbeing";
+@source "../../../src/components/aurora";
+@source "./main.tsx";

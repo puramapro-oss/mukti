@@ -20,6 +20,7 @@ export default function NotificationsPage() {
     sb.from('notifications')
       .select('*')
       .eq('user_id', profile.id)
+      .neq('type', 'relapse_risk')
       .order('created_at', { ascending: false })
       .limit(50)
       .then(({ data }) => {

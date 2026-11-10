@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { type Page, type TestInfo } from '@playwright/test'
+import { test, expect } from './browser-test'
 import { readFile } from 'node:fs/promises'
 
 const sample = {
@@ -11,7 +12,7 @@ const sample = {
 }
 
 async function prepare(page: Page) {
-  await page.goto('/')
+  await page.goto('/?view=aurora')
   await page.getByRole('button', { name: 'Préparer un rituel' }).click()
   for (const [field, value] of Object.entries(sample)) await page.locator(`#ritual-${field}`).fill(value)
   await page.getByRole('button', { name: 'Préparer le texte', exact: true }).click()
@@ -28,18 +29,64 @@ function collectErrors(page: Page) {
   return errors
 }
 
+async function assertMobileLayout(page: Page, testInfo: TestInfo, phase: string, buttonNames: string[]) {
+  const panel = page.getByRole('region', { name: 'De l’intention à l’action', exact: true })
+  const { padding, header, firstContent } = await panel.evaluate(element => {
+    const style = getComputedStyle(element)
+    const header = element.closest('main')?.querySelector('header')
+    const content = Array.from(element.querySelectorAll('p')).find(node => node.textContent === 'AURORA · Réalisation de soi')
+    if (!header || !content) throw new Error('The header and first ritual content must exist.')
+    const box = (node: Element) => {
+      const { x, y, width, height } = node.getBoundingClientRect()
+      return { x, y, width, height }
+    }
+    // Read both boxes in one layout frame, even if focus has scrolled the page.
+    return {
+      padding: { top: parseFloat(style.paddingTop), left: parseFloat(style.paddingLeft), right: parseFloat(style.paddingRight) },
+      header: box(header), firstContent: box(content),
+    }
+  })
+  const buttons = await Promise.all(buttonNames.map(async name => ({
+    name,
+    ...await page.getByRole('button', { name, exact: true }).evaluate(element => {
+      const box = element.getBoundingClientRect()
+      const style = getComputedStyle(element)
+      return {
+        width: box.width, height: box.height,
+        padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft].map(parseFloat),
+      }
+    }),
+  })))
+  const clearance = firstContent.y - (header.y + header.height)
+  await testInfo.attach(`mobile-layout-${phase}.json`, {
+    body: Buffer.from(JSON.stringify({ padding, header, firstContent, clearance, buttons }, null, 2)),
+    contentType: 'application/json',
+  })
+  // Measure rendered spacing and touch targets, independently of class names.
+  expect(padding.top, 'The ritual must retain real top padding').toBeGreaterThan(0)
+  expect(clearance, 'Ritual content must start below the header with a visible gap').toBeGreaterThanOrEqual(12)
+  expect(Math.min(padding.left, padding.right), 'Content needs gutters on a narrow viewport').toBeGreaterThanOrEqual(12)
+  for (const button of buttons) {
+    expect(button.height, `${button.name}: usable mobile touch height`).toBeGreaterThanOrEqual(44)
+    expect(button.width, `${button.name}: usable mobile touch width`).toBeGreaterThanOrEqual(44)
+    expect(Math.min(...button.padding), `${button.name}: text must have breathing room`).toBeGreaterThanOrEqual(8)
+  }
+}
+
 test('mobile : préparation, consentement, texte seul, pause, export et brouillon conservé', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const errors = collectErrors(page)
   const apiRequests: string[] = []
   page.on('request', (request) => { if (request.url().includes('/api/')) apiRequests.push(request.url()) })
   await prepare(page)
+  await assertMobileLayout(page, testInfo, 'preparation', ['Préparer le texte', 'Commencer mon rituel'])
   const start = page.getByRole('button', { name: 'Commencer mon rituel' })
   await expect(start).toBeDisabled()
   await page.getByRole('button', { name: 'Texte seul', exact: true }).click()
   await approve(page)
   await start.click()
   await expect(page.getByRole('heading', { name: 'Étape 1 sur 8' })).toBeVisible()
+  await assertMobileLayout(page, testInfo, 'playback', ['Mettre le rituel en pause', 'Arrêter le rituel'])
   await expect(page.getByText('Régularité du guidage')).toHaveCount(0)
   await expect(page.getByLabel('Avancement du rituel')).toHaveAttribute('max', '468')
   await expect.poll(() => page.getByRole('timer').innerText()).not.toContain('0:00 /')

@@ -2,10 +2,10 @@
 // 4 variantes AURORA OMEGA (G5)
 // Les phases sont définies à part dans AURORA_PHASES (structure 5 phases/variante)
 export const AURORA_VARIANTS = [
-  { id: 'calm',   name: 'Calm',   duration_min: 8,  description: 'Anti-stress profond',       color: '#06b6d4', glyph: '🌊' },
+  { id: 'calm',   name: 'Calm',   duration_min: 8,  description: 'Pause guidée',       color: '#06b6d4', glyph: '🌊' },
   { id: 'focus',  name: 'Focus',  duration_min: 4,  description: 'Avant travail créatif',     color: '#7c3aed', glyph: '🎯' },
-  { id: 'sleep',  name: 'Sleep',  duration_min: 10, description: 'Endormissement guidé',      color: '#1e1b4b', glyph: '🌙' },
-  { id: 'ignite', name: 'Ignite', duration_min: 2,  description: 'Énergie immédiate',         color: '#F59E0B', glyph: '⚡' },
+  { id: 'sleep',  name: 'Sleep',  duration_min: 10, description: 'Rituel avant le coucher',      color: '#1e1b4b', glyph: '🌙' },
+  { id: 'ignite', name: 'Ignite', duration_min: 2,  description: 'Pause courte',         color: '#F59E0B', glyph: '⚡' },
 ] as const
 export type AuroraVariant = typeof AURORA_VARIANTS[number]['id']
 
@@ -50,19 +50,19 @@ export const AURORA_PHASES: Record<AuroraVariant, AuroraPhase[]> = {
   ],
 }
 
-// Niveaux cohérence AURORA (section 5 du brief) — Brume → Onde → Aura → Polaris
+// Repères de participation AURORA — aucune mesure physiologique.
 export const AURORA_LEVELS = [
   { id: 'brume',   name: 'Brume',   min_days: 0,  min_sessions: 0,  color: '#64748b', glyph: '🌫️',  description_fr: 'Tu poses tes premiers souffles.' },
-  { id: 'onde',    name: 'Onde',    min_days: 7,  min_sessions: 5,  color: '#06b6d4', glyph: '🌊',  description_fr: 'Ton rythme commence à stabiliser.' },
-  { id: 'aura',    name: 'Aura',    min_days: 21, min_sessions: 15, color: '#7c3aed', glyph: '✨',  description_fr: 'Tu ressens la fractale en toi.' },
-  { id: 'polaris', name: 'Polaris', min_days: 60, min_sessions: 40, color: '#f472b6', glyph: '⭐',  description_fr: 'Cohérence stable. Tu es une ancre.' },
+  { id: 'onde',    name: 'Onde',    min_days: 7,  min_sessions: 5,  color: '#06b6d4', glyph: '🌊',  description_fr: 'Tu as enregistré au moins 5 séances.' },
+  { id: 'aura',    name: 'Aura',    min_days: 21, min_sessions: 15, color: '#7c3aed', glyph: '✨',  description_fr: 'Tu as enregistré au moins 15 séances.' },
+  { id: 'polaris', name: 'Polaris', min_days: 60, min_sessions: 40, color: '#f472b6', glyph: '⭐',  description_fr: 'Tu as enregistré au moins 40 séances.' },
 ] as const
 export type AuroraLevel = typeof AURORA_LEVELS[number]['id']
 
-// Power Switch — 3 niveaux auto-ajustés (sécurité)
+// Options manuelles de guidage ; Soft par défaut, aucune progression automatique.
 export const AURORA_POWER_SWITCHES = [
-  { id: 'soft', name: 'Soft',  holds: false, description_fr: 'Pas de pause (débutant·e·s, vertiges)' },
-  { id: 'core', name: 'Core',  holds: true,  description_fr: 'Pause 1-2s (utilisateur·rice régulier·e)' },
-  { id: 'omega',name: 'Omega', holds: true,  description_fr: 'Pause 2s fluide (cohérence stable)' },
+  { id: 'soft', name: 'Soft',  holds: false, description_fr: 'Sans rétention — option par défaut' },
+  { id: 'core', name: 'Core',  holds: true,  description_fr: 'Pause guidée facultative de 1 à 2 s' },
+  { id: 'omega',name: 'Omega', holds: true,  description_fr: 'Même rythme guidé que Core' },
 ] as const
 export type AuroraPowerSwitch = typeof AURORA_POWER_SWITCHES[number]['id']

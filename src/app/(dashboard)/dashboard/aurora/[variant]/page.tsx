@@ -59,9 +59,9 @@ export default async function AuroraVariantPage({ params }: PageProps) {
       <AuroraSessionFull key={variant} variant={variant} />
 
       {/* Disclaimer permanent (sécurité — brief section 5) */}
-      <footer className="absolute bottom-0 left-0 right-0 z-30 pb-6 text-center">
+      <footer className="relative z-30 pb-6 text-center">
         <p className="mx-auto max-w-md px-6 text-[11px] leading-relaxed text-white/40">
-          Pas d&apos;hyperventilation ni de rétention prolongée. En cas d&apos;inconfort, arrête et respire naturellement.
+          Respire sans forcer. Si tu ressens des vertiges ou un inconfort, arrête le guidage et reprends une respiration naturelle.
         </p>
       </footer>
     </main>

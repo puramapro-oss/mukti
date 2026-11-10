@@ -3,12 +3,14 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft, Droplets } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { todayStatus } from '@/lib/minimal-ritual'
+import { loadMinimalRitualToday, MinimalRitualError, type MinimalRitualToday } from '@/lib/minimal-ritual'
+import { DEFAULT_WELLBEING_TIME_ZONE, localDay } from '@/lib/wellbeing-date'
 import MinimalHabitsList from '@/components/mode19/MinimalHabitsList'
+import WellbeingCheckin from '@/components/wellbeing/WellbeingCheckin'
 
 export const metadata: Metadata = {
   title: 'Rituel Minimaliste — MUKTI',
-  description: '8 micro-habitudes invisibles. Pour les jours sans motivation.',
+  description: 'Des gestes courts, des variantes accessibles et le choix du repos, à ton rythme.',
   robots: { index: false, follow: false },
 }
 
@@ -21,8 +23,17 @@ export default async function RituelMinimalistePage() {
   } = await sb.auth.getUser()
   if (!user) redirect('/login?next=/dashboard/rituel-minimaliste')
 
-  const initialStatus = await todayStatus()
-  const tickedCount = initialStatus.filter(s => s.ticked_today).length
+  let snapshot: MinimalRitualToday = {
+    habits: [], day: localDay(new Date(), DEFAULT_WELLBEING_TIME_ZONE), time_zone: DEFAULT_WELLBEING_TIME_ZONE,
+  }
+  let initialError: string | null = null
+  try {
+    snapshot = await loadMinimalRitualToday()
+  } catch (error) {
+    initialError = error instanceof MinimalRitualError
+      ? error.message
+      : 'Impossible de lire tes choix enregistrés. Tu peux réessayer.'
+  }
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] pb-20 text-white">
@@ -41,7 +52,7 @@ export default async function RituelMinimalistePage() {
       <section className="mx-auto mt-8 max-w-3xl px-6">
         <div className="flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-white/55">
           <Droplets className="h-3.5 w-3.5 text-[#06b6d4]" />
-          Mode 19 · {tickedCount}/{initialStatus.length} aujourd&apos;hui
+          Mode 19 · À ton rythme
         </div>
         <h1 className="mt-3 text-3xl font-light tracking-tight sm:text-4xl">
           Rituel{' '}
@@ -50,12 +61,20 @@ export default async function RituelMinimalistePage() {
           </span>
         </h1>
         <p className="mt-3 text-sm text-white/70">
-          8 micro-habitudes invisibles (10-60s). Même dans tes pires jours, une respiration
-          consciente, une gratitude — ça compte.
+          Choisis un geste qui te convient, une version adaptée ou du repos. Les durées
+          sont indicatives ; tu n’as pas à tout faire. Tes jours déjà reconnus restent conservés.
         </p>
 
+        <div className="mt-6">
+          <WellbeingCheckin />
+        </div>
         <div className="mt-8">
-          <MinimalHabitsList initialStatus={initialStatus} />
+          <MinimalHabitsList
+            initialStatus={snapshot.habits}
+            initialDay={snapshot.day}
+            timeZone={snapshot.time_zone}
+            initialError={initialError}
+          />
         </div>
       </section>
     </main>

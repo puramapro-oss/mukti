@@ -5,8 +5,9 @@
 //           + ProgressRing5Phases + SessionControls + persistence API.
 // Remplace AuroraSessionPreview (G5.2). Preview kept for standalone demos.
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import AuroraCanvas from './AuroraCanvas'
+import WellbeingFeedback from '@/components/wellbeing/WellbeingFeedback'
 import PulseOfSafety from './PulseOfSafety'
 import ProgressRing5Phases, { phaseLabelShort } from './ProgressRing5Phases'
 import SessionControls from './SessionControls'
@@ -64,12 +65,6 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
   const phaseElapsedSec = Math.max(0, engine.meta.sessionElapsedSec - engine.meta.phaseStartSec)
   const phaseRemainingSec = Math.max(0, engine.meta.phaseDurationSec - phaseElapsedSec)
   const sessionRemainingSec = Math.max(0, engine.meta.sessionTotalSec - engine.meta.sessionElapsedSec)
-
-  const coherenceDisplay = useMemo(() => {
-    const score = Math.round(engine.meta.coherence * 100)
-    return `${score}%`
-  }, [engine.meta.coherence])
-
   if (ritualOpen) {
     return <AuroraRitualPanel session={session} plan={ritualPlan} onPlanChange={setRitualPlan}
       draft={ritualDraft} onDraftChange={setRitualDraft} variant={ritualVariant}
@@ -83,6 +78,7 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
   }
 
   return (
+    <>
     <div className="relative h-screen w-full">
       <AuroraCanvas
         breathState={engine.state}
@@ -148,7 +144,7 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
             </div>
           </div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
-            Régularité du guidage {coherenceDisplay} · {engine.meta.breathsCounted} cycle{engine.meta.breathsCounted > 1 ? 's' : ''} guidé{engine.meta.breathsCounted > 1 ? 's' : ''}
+            {engine.meta.breathsCounted} cycle{engine.meta.breathsCounted > 1 ? 's' : ''} guidé{engine.meta.breathsCounted > 1 ? 's' : ''}
           </div>
         </div>
       )}
@@ -161,15 +157,16 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
 
       {/* Feedback final si session complétée */}
       {completedInfo && !engine.meta.running && (
-        <div className="pointer-events-none absolute bottom-36 left-1/2 z-20 -translate-x-1/2 text-center">
+        <div className="absolute bottom-36 left-1/2 z-20 -translate-x-1/2 text-center">
           <div className="rounded-2xl border border-white/15 bg-white/[0.06] px-5 py-3 backdrop-blur-xl">
-            <div className="text-[11px] uppercase tracking-[0.3em] text-white/60">Niveau</div>
+            <div className="text-[11px] uppercase tracking-[0.3em] text-white/60">Participation enregistrée</div>
             <div className="mt-0.5 text-lg font-light capitalize" style={{ color: meta.color }}>
               {completedInfo.level ?? 'Aucun niveau atteint'}
             </div>
             <div className="text-xs text-white/60">
-              Streak {completedInfo.streak} jour{completedInfo.streak > 1 ? 's' : ''}
+              Tes acquis restent disponibles après une pause.
             </div>
+            <a href="#aurora-feedback" className="mt-2 inline-block text-xs underline">Donner un retour facultatif</a>
           </div>
         </div>
       )}
@@ -209,5 +206,9 @@ export default function AuroraSessionFull({ variant }: AuroraSessionFullProps) {
         onDizzy={() => session.stop('dizzy')}
       />
     </div>
+    {completedInfo && !engine.meta.running && <div id="aurora-feedback" className="mx-auto max-w-3xl px-6 py-8">
+      <WellbeingFeedback sessionId={completedInfo.sessionId} />
+    </div>}
+    </>
   )
 }

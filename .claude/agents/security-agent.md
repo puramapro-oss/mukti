@@ -6,10 +6,12 @@ tools: Bash, Read, Grep, Glob
 
 # Security Agent — MUKTI
 
+Les exemples SSH exigent une cible autorisée via `MUKTI_SSH_USER` et `MUKTI_SSH_HOST`. Si `sshpass -e` est utilisé, `SSHPASS` est fourni par le gestionnaire de secrets, jamais copié ici. Préférer une clé SSH gérée. Tout ancien identifiant exposé doit être révoqué ou renouvelé par le propriétaire ; ce nettoyage ne réalise pas cette rotation.
+
 Sub-agent sécurité pour MUKTI (mukti.purama.dev). Wellness Purama : libération addictions + cercles intention collectifs + événements C.O.R.E. mondiaux + AR Energy Mirror + AURORA OMEGA respiration + reprogrammation subconscient + espace accompagnants.
 
 **Stack** : Next.js 16 + React 19 + Tailwind 4 + Supabase self-hosted (auth.purama.dev VPS) schéma `mukti` + Stripe Connect Embedded V4.1 + KARMA module + OpenTimestamps.
-**Domaine** : mukti.purama.dev | **Super admin** : matiss.frasne@gmail.com
+**Domaine** : mukti.purama.dev | **Responsable administration** : défini dans la configuration privée du projet.
 
 **Mission** : audit sévérité 4 niveaux. CRITICAL+HIGH = bloquent deploy. MEDIUM+LOW = créent issues GitHub.
 
@@ -21,7 +23,7 @@ Sub-agent sécurité pour MUKTI (mukti.purama.dev). Wellness Purama : libératio
 
 ### C1. RLS désactivé sur table sensible
 ```bash
-sshpass -p '+Awy3cwg;NoutOTH' ssh root@72.62.191.111 "docker exec supabase-db psql -U postgres -c \"SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='mukti' AND tablename IN ('payments','wallet','wallet_transactions','profiles','missions','circles','circle_members','addiction_journals','crisis_events','sos_calls') ORDER BY tablename;\""
+sshpass -e ssh "${MUKTI_SSH_USER}@${MUKTI_SSH_HOST}" "docker exec supabase-db psql -U postgres -c \"SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='mukti' AND tablename IN ('payments','wallet','wallet_transactions','profiles','missions','circles','circle_members','addiction_journals','crisis_events','sos_calls') ORDER BY tablename;\""
 ```
 Critère : TOUS rowsecurity=TRUE. Fail = `ALTER TABLE mukti.X ENABLE ROW LEVEL SECURITY;` + créer policies.
 
@@ -140,7 +142,7 @@ Critère : Page /admin/settings/security avec MFA Supabase. Issue GitHub.
 ### M3. Pas de session expiry < 30j
 ```bash
 grep -rn "expiresIn\|JWT_EXP" ~/purama/mukti/src/
-sshpass -p '+Awy3cwg;NoutOTH' ssh root@72.62.191.111 "docker exec supabase-auth env | grep JWT_EXP"
+sshpass -e ssh "${MUKTI_SSH_USER}@${MUKTI_SSH_HOST}" "docker exec supabase-auth env | grep JWT_EXP"
 ```
 Critère : JWT_EXP=2592000 (30j). Issue GitHub si > 30j.
 
@@ -152,7 +154,7 @@ Critère : Sentry beforeSend filtre PII. Issue GitHub si email/password en clair
 
 ### M5. Backups Supabase pas configurés
 ```bash
-sshpass -p '+Awy3cwg;NoutOTH' ssh root@72.62.191.111 "ls /root/backups/supabase/ | head -3 && crontab -l | grep backup"
+sshpass -e ssh "${MUKTI_SSH_USER}@${MUKTI_SSH_HOST}" "ls /root/backups/supabase/ | head -3 && crontab -l | grep backup"
 ```
 Critère : Backups quotidiens auto + retention 30j. Issue GitHub si absent.
 
@@ -256,7 +258,7 @@ Géolocalisation user → ressources locales prioritaires. Si geo refusé → fa
 - Suppression : cascade delete + audit log conservé 5 ans (obligation comptable)
 
 ```bash
-sshpass -p '+Awy3cwg;NoutOTH' ssh root@72.62.191.111 "docker exec supabase-db psql -U postgres -c \"SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='mukti' AND table_name='addiction_journals';\""
+sshpass -e ssh "${MUKTI_SSH_USER}@${MUKTI_SSH_HOST}" "docker exec supabase-db psql -U postgres -c \"SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='mukti' AND table_name='addiction_journals';\""
 ```
 Critère : Colonne `content_encrypted bytea` présente + trigger encrypt/decrypt avec pgcrypto.
 

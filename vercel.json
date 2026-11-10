@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "codex/mukti-aurora-lifecycle-20261011": false,
+      "codex/mukti-wellbeing-continuity-20261110": false,
       "codex/aurora-intention-musique-20261110": false
     }
   },
@@ -52,10 +53,6 @@
     {
       "path": "/api/cron/core-phase-tick",
       "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/mental-journal-relapse-scan",
-      "schedule": "10 * * * *"
     },
     {
       "path": "/api/cron/contest-karma-weekly-close",

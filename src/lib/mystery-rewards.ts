@@ -1,217 +1,125 @@
-// MUKTI — G6 Mode 18 Récompenses Mystères
-// Roll côté serveur, 1 claim par user+date (idempotent via UNIQUE constraint).
-// Probas écrites dans constants.ts, auditables.
+// The historical routes are kept, but no random or financial reward is issued here.
+// Daily recognition is a separate, free record. Legacy receipts remain unchanged.
 
 import { createServerSupabaseClient } from './supabase-server'
 import { createServiceClient } from './supabase'
 import {
-  MYSTERY_REWARD_TIERS,
-  MYSTERY_STREAK_BONUSES,
-  type MysteryTier,
-} from './constants'
+  RECOGNITION_FORMAT,
+  RECOGNITION_TIME_ZONE,
+  isDailyRecognition,
+  isLegacyMysteryReward,
+  recognitionHistoryLimit,
+  utcRecognitionDate,
+  type DailyRecognition,
+  type LegacyMysteryReward,
+  type RecognitionOverview,
+} from './daily-recognition'
 
-export interface MysteryReward {
-  id: string
-  user_id: string
-  claim_date: string // YYYY-MM-DD
-  tier: MysteryTier
-  reward_type: 'points' | 'coupon' | 'booster' | 'coin' | 'xp' | 'nothing'
-  reward_amount: number
-  reward_meta: Record<string, unknown> | null
-  streak_day: number
-  claimed_at: string
-}
+export type MysteryReward = LegacyMysteryReward
 
-interface RolledReward {
-  tier: MysteryTier
-  reward_type: MysteryReward['reward_type']
-  reward_amount: number
-  reward_meta: Record<string, unknown> | null
-}
-
-/** Deterministic-ish seeded roll based on user_id + date. */
-function rollReward(userId: string, date: string): RolledReward {
-  // Deterministic hash for audit fairness: same user+date → same roll (anti-abuse via replay).
-  let seed = 0
-  const key = `${userId}:${date}`
-  for (let i = 0; i < key.length; i++) {
-    seed = (seed * 31 + key.charCodeAt(i)) | 0
-  }
-  // Mulberry32 PRNG from seed
-  const rand = () => {
-    seed |= 0
-    seed = (seed + 0x6d2b79f5) | 0
-    let t = seed
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return (((t ^ (t >>> 14)) >>> 0) / 4294967296)
-  }
-
-  const total = MYSTERY_REWARD_TIERS.reduce((s, t) => s + t.probability, 0)
-  const pick = rand() * total
-  let acc = 0
-  const chosen = MYSTERY_REWARD_TIERS.find(t => {
-    acc += t.probability
-    return pick < acc
-  })
-  if (!chosen) {
-    return { tier: 'common', reward_type: 'nothing', reward_amount: 0, reward_meta: null }
-  }
-  const amount = Math.round(
-    chosen.min_amount + rand() * (chosen.max_amount - chosen.min_amount)
-  )
-  const rewardType = chosen.rewards[Math.floor(rand() * chosen.rewards.length)]!
-  return {
-    tier: chosen.tier,
-    reward_type: rewardType as MysteryReward['reward_type'],
-    reward_amount: rewardType === 'nothing' ? 0 : amount,
-    reward_meta: { probability_pool: chosen.probability, total_pool: total },
+export class RecognitionError extends Error {
+  constructor(message: string, public readonly status = 503) {
+    super(message)
+    this.name = 'RecognitionError'
   }
 }
 
-/** Apply streak bonus multiplier to reward_amount. */
-function applyStreakBonus(amount: number, streakDay: number): number {
-  let multiplier = 1
-  for (const b of MYSTERY_STREAK_BONUSES) {
-    if (streakDay >= b.min_streak) multiplier = b.multiplier
-  }
-  return Math.round(amount * multiplier)
-}
+const UNAVAILABLE = 'Enregistrement indisponible. Réessaie plus tard.'
+const HISTORY_UNAVAILABLE = 'Historique indisponible. Réessaie plus tard.'
 
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-/** Compute current streak for user (consecutive days claimed). */
-async function computeStreak(userId: string): Promise<number> {
-  const sb = createServiceClient()
-  const { data } = await sb
-    .schema('mukti')
-    .from('mystery_rewards')
-    .select('claim_date')
-    .eq('user_id', userId)
-    .order('claim_date', { ascending: false })
-    .limit(60)
-  const dates = new Set((data ?? []).map(r => (r as { claim_date: string }).claim_date))
-  let streak = 0
-  const cursor = new Date()
-  // Start from yesterday (today's claim hasn't happened yet)
-  cursor.setUTCDate(cursor.getUTCDate() - 1)
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
-    streak += 1
-    cursor.setUTCDate(cursor.getUTCDate() - 1)
-  }
-  return streak + 1 // +1 because today's claim extends
-}
-
-/** Claim today's mystery chest. Idempotent. */
-export async function claimDailyChest(): Promise<{
-  reward: MysteryReward | null
-  alreadyClaimed: boolean
-  error: string | null
-}> {
+async function resolveProfileId(): Promise<string> {
   const supabase = await createServerSupabaseClient()
-  const profileId = await resolveProfileId(supabase)
-  if (!profileId) {
-    return { reward: null, alreadyClaimed: false, error: 'Profil introuvable — reconnecte-toi.' }
-  }
-
-  const date = todayUtc()
-  const sb = createServiceClient()
-
-  // Check if already claimed today
-  const { data: existing } = await sb
-    .schema('mukti')
-    .from('mystery_rewards')
-    .select('*')
-    .eq('user_id', profileId)
-    .eq('claim_date', date)
-    .maybeSingle()
-  if (existing) {
-    return { reward: existing as MysteryReward, alreadyClaimed: true, error: null }
-  }
-
-  const streak = await computeStreak(profileId)
-  const roll = rollReward(profileId, date)
-  const finalAmount = applyStreakBonus(roll.reward_amount, streak)
-
-  const { data, error } = await sb
-    .schema('mukti')
-    .from('mystery_rewards')
-    .insert({
-      user_id: profileId,
-      claim_date: date,
-      tier: roll.tier,
-      reward_type: roll.reward_type,
-      reward_amount: finalAmount,
-      reward_meta: { ...roll.reward_meta, streak_bonus_applied: finalAmount !== roll.reward_amount },
-      streak_day: streak,
-    })
-    .select('*')
-    .single()
-  if (error || !data) {
-    // Race condition : row was inserted concurrently. Re-fetch.
-    const { data: retry } = await sb
-      .schema('mukti')
-      .from('mystery_rewards')
-      .select('*')
-      .eq('user_id', profileId)
-      .eq('claim_date', date)
-      .maybeSingle()
-    if (retry) return { reward: retry as MysteryReward, alreadyClaimed: true, error: null }
-    return { reward: null, alreadyClaimed: false, error: 'Impossible de réclamer le coffre.' }
-  }
-
-  // If reward_type=points, credit purama_points
-  if (roll.reward_type === 'points' && finalAmount > 0) {
-    try {
-      const { data: profile } = await sb
-        .schema('mukti')
-        .from('profiles')
-        .select('purama_points')
-        .eq('id', profileId)
-        .maybeSingle()
-      const currentPoints = (profile as { purama_points: number } | null)?.purama_points ?? 0
-      await sb
-        .schema('mukti')
-        .from('profiles')
-        .update({ purama_points: currentPoints + finalAmount })
-        .eq('id', profileId)
-    } catch {
-      // Non-blocking : le reward reste enregistré
-    }
-  }
-
-  return { reward: data as MysteryReward, alreadyClaimed: false, error: null }
-}
-
-export async function listRewards(limit: number = 14): Promise<MysteryReward[]> {
-  const supabase = await createServerSupabaseClient()
-  const profileId = await resolveProfileId(supabase)
-  if (!profileId) return []
-  const sb = createServiceClient()
-  const { data } = await sb
-    .schema('mukti')
-    .from('mystery_rewards')
-    .select('*')
-    .eq('user_id', profileId)
-    .order('claim_date', { ascending: false })
-    .limit(Math.max(1, Math.min(60, limit)))
-  return (data ?? []) as MysteryReward[]
-}
-
-async function resolveProfileId(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
-): Promise<string | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data } = await supabase
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new RecognitionError('Connexion requise.', 401)
+  const { data, error } = await supabase
     .schema('mukti')
     .from('profiles')
     .select('id')
     .eq('auth_user_id', user.id)
     .maybeSingle()
-  return (data as { id: string } | null)?.id ?? null
+  if (error) throw new RecognitionError(UNAVAILABLE)
+  if (!data?.id) throw new RecognitionError('Profil introuvable — reconnecte-toi.', 409)
+  return data.id as string
+}
+
+/**
+ * Compatibility name for the old endpoint. The database owns the UTC day and
+ * serializes concurrent calls with UNIQUE(user_id, recognition_date).
+ * There is no activity check, streak, amount, wallet write or benefit to redeem.
+ */
+export async function claimDailyChest(): Promise<{
+  recognition: DailyRecognition
+  alreadyClaimed: boolean
+}> {
+  const profileId = await resolveProfileId()
+  const service = createServiceClient()
+  const { data, error } = await service.schema('mukti').rpc('record_daily_recognition', {
+    p_profile_id: profileId,
+  })
+  if (error || !data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new RecognitionError(UNAVAILABLE)
+  }
+  const result = data as Record<string, unknown>
+  if (!isDailyRecognition(result.recognition) || typeof result.already_recorded !== 'boolean') {
+    throw new RecognitionError(UNAVAILABLE)
+  }
+  return { recognition: result.recognition, alreadyClaimed: result.already_recorded }
+}
+
+function legacyRows(data: unknown): LegacyMysteryReward[] {
+  if (!Array.isArray(data)) throw new RecognitionError(HISTORY_UNAVAILABLE)
+  return data.map(row => {
+    const legacy: unknown = row && typeof row === 'object'
+      ? { ...row, delivery_status: 'unknown' }
+      : null
+    if (!isLegacyMysteryReward(legacy)) throw new RecognitionError(HISTORY_UNAVAILABLE)
+    return legacy
+  })
+}
+
+/** Legacy history only; does not infer delivery or adjust any historical balance. */
+export async function listRewards(limit = 14): Promise<LegacyMysteryReward[]> {
+  const profileId = await resolveProfileId()
+  const { data, error } = await createServiceClient()
+    .schema('mukti')
+    .from('mystery_rewards')
+    .select('id, claim_date, tier, reward_type, reward_amount, streak_day, claimed_at')
+    .eq('user_id', profileId)
+    .order('claim_date', { ascending: false })
+    .limit(recognitionHistoryLimit(limit))
+  if (error) throw new RecognitionError(HISTORY_UNAVAILABLE)
+  return legacyRows(data)
+}
+
+export async function getRecognitionOverview(limit = 14): Promise<RecognitionOverview> {
+  const profileId = await resolveProfileId()
+  const service = createServiceClient()
+  const count = recognitionHistoryLimit(limit)
+  const today = utcRecognitionDate()
+  const [recognitionsResult, legacyResult] = await Promise.all([
+    service.schema('mukti').from('daily_recognitions')
+      .select('id, recognition_date, recognized_at')
+      .eq('user_id', profileId)
+      .order('recognition_date', { ascending: false })
+      .limit(count),
+    service.schema('mukti').from('mystery_rewards')
+      .select('id, claim_date, tier, reward_type, reward_amount, streak_day, claimed_at')
+      .eq('user_id', profileId)
+      .order('claim_date', { ascending: false })
+      .limit(count),
+  ])
+  if (recognitionsResult.error || legacyResult.error
+    || !Array.isArray(recognitionsResult.data)
+    || !recognitionsResult.data.every(isDailyRecognition)) {
+    throw new RecognitionError(HISTORY_UNAVAILABLE)
+  }
+  const recognitions = recognitionsResult.data as DailyRecognition[]
+  return {
+    format: RECOGNITION_FORMAT,
+    time_zone: RECOGNITION_TIME_ZONE,
+    today,
+    recognition: recognitions.find(row => row.recognition_date === today) ?? null,
+    recognitions,
+    legacy_rewards: legacyRows(legacyResult.data),
+  }
 }

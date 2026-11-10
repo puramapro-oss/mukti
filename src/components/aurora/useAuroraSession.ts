@@ -10,10 +10,10 @@ import { AURORA_PHASES, type AuroraVariant, type AuroraPowerSwitch, type AuroraP
 import { useAuroraPhase, type AuroraPhaseMeta, type StoppedReason } from './useAuroraPhase'
 
 const CUES: Record<AuroraPhaseName, string> = {
-  armement: 'Armement. Respire doucement.',
+  armement: 'Installation. Respire sans forcer.',
   double_sigh: 'Double soupape. Laisse tomber.',
   resonance_core: 'Résonance. Inspire, expire longuement.',
-  omega_lock: 'Omega Lock. Maîtrise.',
+  omega_lock: 'Poursuis à ton rythme. Tu peux arrêter.',
   glide_out: 'Glide Out. Tu ralentis.',
 }
 const jsonHeaders = { 'Content-Type': 'application/json' }
@@ -22,9 +22,9 @@ export function useAuroraSession(variant: AuroraVariant, ritualPlan: RitualPlan 
   const [voiceEnabled, setVoiceEnabled] = useState(false)
   const [ritualMix, setRitualMix] = useState<AuroraRitualMix>({ voice: 0.8, music: 0.3, tone: 0 })
   const [ritualCompletion, setRitualCompletion] = useState<'completed' | 'stopped' | null>(null)
-  const [powerSwitch, setPowerSwitch] = useState<AuroraPowerSwitch>('core')
+  const [powerSwitch, setPowerSwitch] = useState<AuroraPowerSwitch>('soft')
   const [persistError, setPersistError] = useState<string | null>(null)
-  const [completedInfo, setCompletedInfo] = useState<{ level: string | null; streak: number } | null>(null)
+  const [completedInfo, setCompletedInfo] = useState<{ level: string | null; streak: number; sessionId: string } | null>(null)
   const [starting, setStarting] = useState(false)
   const [saving, setSaving] = useState(false)
   const audioRef = useRef<AuroraAudioHandle | null>(null)
@@ -83,7 +83,7 @@ export function useAuroraSession(variant: AuroraVariant, ritualPlan: RitualPlan 
         throw new Error('Réponse du serveur invalide.')
       }
       if (!mountedRef.current || ticket !== generationRef.current) return
-      setCompletedInfo({ level: data.level_reached, streak: data.streak_days })
+      setCompletedInfo({ level: data.level_reached, streak: data.streak_days, sessionId: id })
       setPersistError(null)
       if (reason === 'glide_out_complete') toast.success('Session terminée et enregistrée.', { duration: 4000 })
       else toast.info(reason === 'dizzy' ? 'Session arrêtée. Reprends une respiration naturelle.' : 'Session arrêtée et enregistrée.')

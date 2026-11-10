@@ -92,24 +92,8 @@ export const ALT_REALITY_HORIZONS = [
 ] as const
 export type AltRealityHorizon = typeof ALT_REALITY_HORIZONS[number]['days']
 
-// Mode 18 — Récompenses Mystères : distribution probas (somme = 1000)
-// Rolled server-side, idempotent per user+date.
-export const MYSTERY_REWARD_TIERS = [
-  { tier: 'common',    probability: 600, min_amount: 10,  max_amount: 50,   rewards: ['points','xp'] },
-  { tier: 'rare',      probability: 280, min_amount: 100, max_amount: 300,  rewards: ['points','coupon'] },
-  { tier: 'legendary', probability: 90,  min_amount: 500, max_amount: 1500, rewards: ['points','booster','coin'] },
-  { tier: 'jackpot',   probability: 20,  min_amount: 5000, max_amount: 10000, rewards: ['points','coin'] },
-  { tier: 'common',    probability: 10,  min_amount: 0,   max_amount: 0,    rewards: ['nothing'] },
-] as const
-export type MysteryTier = typeof MYSTERY_REWARD_TIERS[number]['tier']
-
-// Streak bonus multiplier (consecutive days)
-export const MYSTERY_STREAK_BONUSES = [
-  { min_streak: 3,  multiplier: 1.2 },
-  { min_streak: 7,  multiplier: 1.5 },
-  { min_streak: 14, multiplier: 2.0 },
-  { min_streak: 30, multiplier: 3.0 },
-] as const
+// Mode 18 — legacy receipt labels only; no active distribution or streak multiplier.
+export type MysteryTier = 'common' | 'rare' | 'legendary' | 'jackpot'
 
 // Mode 19 — Rituel Minimaliste : 8 micro-habitudes invisibles (10-60s)
 export const MINIMAL_RITUAL_HABITS = [
@@ -124,6 +108,5 @@ export const MINIMAL_RITUAL_HABITS = [
 ] as const
 export type MinimalRitualHabit = typeof MINIMAL_RITUAL_HABITS[number]['slug']
 
-// Mode 20 — Journal Mental : seuils d'alerte
-export const MENTAL_JOURNAL_RELAPSE_ALERT_THRESHOLD = 0.75
+// Mode 20 — bounded optional recording; no inferred relapse threshold.
 export const MENTAL_JOURNAL_MAX_AUDIO_SEC = 180

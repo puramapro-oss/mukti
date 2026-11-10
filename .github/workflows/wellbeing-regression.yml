@@ -1,0 +1,39 @@
+name: Wellbeing regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'migrations/**'
+      - 'schema.sql'
+      - 'tests/aurora-regression/**'
+      - '.github/workflows/wellbeing-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wellbeing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tests/aurora-regression
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tests/aurora-regression/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm audit --package-lock-only --audit-level=high
+      - run: npm test
+      - run: npm run typecheck
+      - run: npx --no-install playwright install --with-deps --only-shell chromium
+      - run: npx --no-install playwright test --config browser/playwright.config.ts

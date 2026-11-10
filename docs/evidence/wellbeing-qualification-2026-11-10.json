@@ -1,0 +1,504 @@
+{
+  "created_at": "2026-11-10T02:58:58.770303+00:00",
+  "overall_status": "PARTIEL",
+  "repository": "puramapro-oss/mukti",
+  "branch": "codex/mukti-wellbeing-continuity-20261110",
+  "integration_base": {
+    "pr": 3,
+    "commit": "6edfb20aa6d635444ac1439344611d08a8d768db",
+    "depends_on_pr": 1,
+    "lifecycle_commit": "1e68ef01759e28bf2c47f599ea5435a6d7a1ba12"
+  },
+  "scope": "Local code qualification: no production deployment, live medical data, remote migrations or external provider calls.",
+  "runtime": {
+    "node": "24.22.1",
+    "npm": "11.9.0",
+    "next": "16.4.6",
+    "vitest": "5.0.3",
+    "playwright": "1.59.1",
+    "chromium": "147.0.7727.0",
+    "postcss_harness": "8.5.29"
+  },
+  "checks": {
+    "unit_integration_sql": {
+      "status": "PASS",
+      "exit_code": 0,
+      "tests_passed": 353,
+      "files_passed": 23,
+      "sql_tests_included": 15,
+      "command": "cd tests/aurora-regression && node --max-old-space-size=1024 node_modules/vitest/vitest.mjs run --config vitest.config.ts --reporter=default --reporter=json --outputFile=../../docs/evidence/wellbeing-tests-2026-11-10.json"
+    },
+    "browser": {
+      "status": "PASS",
+      "exit_code": 0,
+      "stats": {
+        "startTime": "2026-11-10T02:55:57.139Z",
+        "duration": 35247.297,
+        "expected": 10,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "distribution": "@sparticuz/chromium",
+      "package_version": "147.0.2",
+      "api_responses": "synthetic",
+      "graphics": "WebGL canvas replaced; real MediaRecorder and Web Audio",
+      "layout_baseline": "Expected failing scenario preserved in layout-before-after.json"
+    },
+    "typecheck_harness": {
+      "status": "PASS",
+      "exit_code": 0,
+      "command": "npm --prefix tests/aurora-regression run typecheck",
+      "includes_browser_config": true
+    },
+    "next_production_build": {
+      "status": "PASS",
+      "exit_code": 0,
+      "command": "CIRCLE_NODE_TOTAL=2 NODE_OPTIONS=--max-old-space-size=2048 NEXT_TELEMETRY_DISABLED=1 npm run build -- --webpack",
+      "includes_application_typecheck": true,
+      "latest_attempt_after_css_fix": true
+    },
+    "npm_audit_harness": {
+      "status": "PASS",
+      "exit_code": 0,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      }
+    },
+    "npm_audit_production": {
+      "status": "PARTIEL",
+      "exit_code": 1,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 1,
+        "moderate": 9,
+        "high": 1,
+        "critical": 2,
+        "total": 13
+      },
+      "remaining_dependency_graph": "javascript-opentimestamps"
+    },
+    "lint_full_application": {
+      "status": "BLOQUE",
+      "reason": "Shared file dependency @purama/eslint-config unavailable in this checkout."
+    }
+  },
+  "not_tested": [
+    "Real Supabase auth, deployed schema and concurrent processes",
+    "Live transcription/reflection providers",
+    "Physical microphone, mobile devices, speakers and WebGL",
+    "Clinical effectiveness or health claims",
+    "Production deployment",
+    "Cross-module cumulative time budget"
+  ],
+  "source_scope": "Changed tracked source/config/test files compared with integration_base; unchanged files remain supplied by that commit.",
+  "source_files": {
+    ".github/workflows/wellbeing-regression.yml": {
+      "sha256": "c2b38851e4a96c697c1d2e88ad45c6633fd03e3fb43d68a13d345d266ce4e174",
+      "bytes": 1135
+    },
+    "migrations/0013_wellbeing_continuity.sql": {
+      "sha256": "6e0dc2f1c584909c6de36d98303d8b6b0bb567bdee8c6a6cd6a646d67d37bd5b",
+      "bytes": 5167
+    },
+    "migrations/0014_journal_reflection.sql": {
+      "sha256": "b9e38a49e20feb11d83984b1ec9aefd30ab9b0aebbcef7ae3ad7ad37585d074a",
+      "bytes": 3093
+    },
+    "migrations/0015_rewards_integrity.sql": {
+      "sha256": "fb77e9b1611ee4e919b447ff716cee0b07d617966580f8d99418a0c828563751",
+      "bytes": 3511
+    },
+    "migrations/0016_minimal_ritual_integrity.sql": {
+      "sha256": "a3f42b75f68c9e8ffa4b57eb8e67d4dbc99a2a385305bc4a5214f5796d4367f8",
+      "bytes": 3629
+    },
+    "migrations/0017_profile_and_aurora_integrity.sql": {
+      "sha256": "37dd74b1ae7e59256972bb10acd534cb5dd9e6b0504b6d6c811de84600054c33",
+      "bytes": 8205
+    },
+    "next-env.d.ts": {
+      "sha256": "1862ac4bbbc5192d4bf562161df66ea547ed3e67173100656ab606ae9797db2b",
+      "bytes": 288
+    },
+    "package-lock.json": {
+      "sha256": "f2ca4554ea64df85e883dcaf5b50e685b33582203a0b9c3ef9b48a04a826d71e",
+      "bytes": 460761
+    },
+    "package.json": {
+      "sha256": "96d9f4fda9bb9828d38a5e3df75c458274dddb3540a5f88cfa15a4d2c4c2b123",
+      "bytes": 2276
+    },
+    "src/app/(dashboard)/dashboard/aurora/[variant]/page.tsx": {
+      "sha256": "ce0fa4a674cdb616c93d4a33f1965dadf624ded02cf239c61fbc2c14ac3f583a",
+      "bytes": 2689
+    },
+    "src/app/(dashboard)/dashboard/aurora/page.tsx": {
+      "sha256": "e7118263c32d32be711dc3c5416653781207212d1f993ddae4c531f92c98084a",
+      "bytes": 5329
+    },
+    "src/app/(dashboard)/dashboard/journal-mental/page.tsx": {
+      "sha256": "7fe77bd992fc37a6165f8897db251f8007440c7e5f306a4b7e96a7dade645f59",
+      "bytes": 2465
+    },
+    "src/app/(dashboard)/dashboard/notifications/page.tsx": {
+      "sha256": "36d884f8b5f65eeca27b42cc3dd88b188105b5e95e03ba296f6cf8972a96568f",
+      "bytes": 3253
+    },
+    "src/app/(dashboard)/dashboard/recompenses/page.tsx": {
+      "sha256": "da5a08c35719df77c05521c6e5ed7e703b009e9285f8f4beea8f1d83ab5ad350",
+      "bytes": 2356
+    },
+    "src/app/(dashboard)/dashboard/rituel-minimaliste/page.tsx": {
+      "sha256": "910cf0d3cae1944015dc2ab0e07789095107ec89f432f6edc043f960356076eb",
+      "bytes": 3240
+    },
+    "src/app/api/aurora/session/[id]/complete/route.ts": {
+      "sha256": "9a676a5e344a0f27453c534a52afea8cbe775ce282d0c3dbdfbf071132507eef",
+      "bytes": 2831
+    },
+    "src/app/api/aurora/session/route.ts": {
+      "sha256": "dfbdbf65c6835d8849c1c3b9e25ba7156e2fb45ae4bd48ac565691743004efb7",
+      "bytes": 2253
+    },
+    "src/app/api/cron/mental-journal-relapse-scan/route.ts": {
+      "sha256": "ac7303b5f6bbb27524d96ea7f208bbb29aecf3ea90aeaedb3b7b0e617b14edf5",
+      "bytes": 843
+    },
+    "src/app/api/mental-journal/analyze/route.ts": {
+      "sha256": "d774ee2f89b3e02e87da8fe151d0c2db2da1d9fb968fa854ab1f7d683a875caf",
+      "bytes": 1381
+    },
+    "src/app/api/mental-journal/entries/route.ts": {
+      "sha256": "344946be35384070d3dbd6a06c171aeb69347e4b912624db30bc6d6293c5367d",
+      "bytes": 2604
+    },
+    "src/app/api/minimal-ritual/tick/route.ts": {
+      "sha256": "4e2e90985213b71007751f5d1772a198fc81a6f04ace464745fdc6d1955e3b44",
+      "bytes": 2594
+    },
+    "src/app/api/minimal-ritual/today/route.ts": {
+      "sha256": "cebb5b70f2e94cbc0250a26ca1696766ac1a801849fc01621a6828e48ce55002",
+      "bytes": 1457
+    },
+    "src/app/api/mystery-rewards/claim-daily/route.ts": {
+      "sha256": "2af4833407cd2b78dd9e33328b2b9b4e46e269288b76b345932a9f4b64d7d4aa",
+      "bytes": 1872
+    },
+    "src/app/api/mystery-rewards/history/route.ts": {
+      "sha256": "a299426c2cc3e87aeb325f25f713434fbbdb23599b2a73e416a18dba0ef03ebf",
+      "bytes": 1589
+    },
+    "src/app/api/wellbeing/context/route.ts": {
+      "sha256": "feecb5a9638fcb8b79c7d466142ef21cae9bc993c12d634399992902272cf948",
+      "bytes": 2262
+    },
+    "src/app/api/wellbeing/feedback/route.ts": {
+      "sha256": "63649fece3e3044402384dbb0f5514632891133be5cd6d033a496e4644067f22",
+      "bytes": 2554
+    },
+    "src/app/globals.css": {
+      "sha256": "6063bdc36c1caddcf60a8f98339fc3746782c007de6d9b3332fd73f8b5bcef4d",
+      "bytes": 14251
+    },
+    "src/components/aurora/AuroraSessionFull.tsx": {
+      "sha256": "7920075d328f6689266e81ff401a45c076f401b39376fc18def158e55e1054b7",
+      "bytes": 9652
+    },
+    "src/components/aurora/useAuroraSession.ts": {
+      "sha256": "d00d249845d5d6564fc28852dc59a7b8388cd763fdf0f0e5f7be6c9b5efa07db",
+      "bytes": 14607
+    },
+    "src/components/mode18/MysteryChest.tsx": {
+      "sha256": "0166f73a6d2de041172eb12d00cbb9198474624d9a2fbd1f43614cccbeaecd87",
+      "bytes": 10122
+    },
+    "src/components/mode19/MinimalHabitsList.tsx": {
+      "sha256": "e45cb3650c2b14d18df918a2fbc732a279e3432d47f9feb160197dc01464033a",
+      "bytes": 12799
+    },
+    "src/components/mode20/MentalJournalRecorder.tsx": {
+      "sha256": "dc6027b32cde31164b58ebb12cf4090cd425343188dee800a2a06d717b4ceb8b",
+      "bytes": 22786
+    },
+    "src/components/wellbeing/WellbeingCheckin.tsx": {
+      "sha256": "b14ee8d359bf8ada9b0ed02fa54b163c199e4f8ab4621200bef73bfb36214649",
+      "bytes": 13561
+    },
+    "src/components/wellbeing/WellbeingFeedback.tsx": {
+      "sha256": "6c98b7370e17ea7e9cf0a524231822bf20f2b755dfdad04c54e0538393ccfb80",
+      "bytes": 10925
+    },
+    "src/lib/aurora.ts": {
+      "sha256": "6f4e10c0d8bb7ad18af01b42a4e758bb8240f265781b51fb229405e5cba9490d",
+      "bytes": 9279
+    },
+    "src/lib/constants/advanced-modes.ts": {
+      "sha256": "53d1c8217540af9f600268352cd309b449123227abcd07e74813322fa2220ced",
+      "bytes": 5242
+    },
+    "src/lib/constants/aurora.ts": {
+      "sha256": "84fa1c691531d3897531478faf95f1886c943ae601ebaccdc19e392e18c13af5",
+      "bytes": 5748
+    },
+    "src/lib/constants/core-events.ts": {
+      "sha256": "00b3e62eed4ac50f6da57e6456f3a21532a9dd86b5d0aa282739aaec49301736",
+      "bytes": 8283
+    },
+    "src/lib/constants/minimal-ritual.ts": {
+      "sha256": "154f3add81178f9cf55824d13e2370a95395bb230501bbc036b1e5bcc60014f0",
+      "bytes": 1829
+    },
+    "src/lib/daily-recognition.ts": {
+      "sha256": "261e114bd1be876a355b36d515c77203f70ecfb9f0a0949f9dbb6f33b588cf0a",
+      "bytes": 4214
+    },
+    "src/lib/mental-journal-contract.ts": {
+      "sha256": "938ccfd275d6555bcab182e4f2a07a0edfb759fa3f283c34b90ba274501aa980",
+      "bytes": 2620
+    },
+    "src/lib/mental-journal-http.ts": {
+      "sha256": "4d17d4277f96cbed9acd45f539c3e46d997ed8efc88a8849d03fce51d767cfc6",
+      "bytes": 1989
+    },
+    "src/lib/mental-journal.ts": {
+      "sha256": "168b7091889be1256141aa1c51a102ade5e5ab13944cc348c73f1eac2e015fa2",
+      "bytes": 13733
+    },
+    "src/lib/minimal-ritual.ts": {
+      "sha256": "680e086e3d38957b17f045152f03013f3a650d11aa064d68ffeb971b8b1de2ad",
+      "bytes": 10519
+    },
+    "src/lib/mystery-rewards.ts": {
+      "sha256": "a351d1f4bddf028c09a3b1b30e0d93b95f24ccd9a75c7d6d4fdff3ac2dbe1444",
+      "bytes": 4805
+    },
+    "src/lib/wellbeing-auth.ts": {
+      "sha256": "9aaddbef6ca96cfb461847f5425ccf6fc63cdec21ffc6dc934b6bdfb8e8d6cee",
+      "bytes": 764
+    },
+    "src/lib/wellbeing-date.ts": {
+      "sha256": "5ac36a25b6c257045ef95e6ccc13f3cd6e555c26289ad38bf7796f83f6412af5",
+      "bytes": 1439
+    },
+    "src/lib/wellbeing-request.ts": {
+      "sha256": "08ebb6d875e88b5fac6c638406569275b0472b5bf6df13510f8b3961e372f49a",
+      "bytes": 2305
+    },
+    "src/lib/wellbeing-state.ts": {
+      "sha256": "089cef3b412997a8e7cbf0ead96dd089a85f8e6c135020ea6fb377f9ee60de1b",
+      "bytes": 2080
+    },
+    "src/lib/wellbeing.ts": {
+      "sha256": "6938770f79e1b658f8f8de3724f43eb8072969020798017b872231835d94e711",
+      "bytes": 5300
+    },
+    "tests/aurora-regression/browser/.gitignore": {
+      "sha256": "3255bfdeed9469961e76bc075210c07e810a34b4db654384f8f977165b7417a8",
+      "bytes": 21
+    },
+    "tests/aurora-regression/browser/aurora-probe.ts": {
+      "sha256": "d680fdbc746364df73b67f0c000bbeadec83d5a482298ad4604af70062ffcf31",
+      "bytes": 1309
+    },
+    "tests/aurora-regression/browser/browser-test.ts": {
+      "sha256": "c9e8ce1fe2a6e1663e1dd65d0ec733f4444d67f45b11724e847ba8c4aecf7924",
+      "bytes": 1050
+    },
+    "tests/aurora-regression/browser/fixtures.ts": {
+      "sha256": "047a9110df8ae894b6cf09680d9592fc51d3a85dd778030f1976eb7c73d6b838",
+      "bytes": 1978
+    },
+    "tests/aurora-regression/browser/index.html": {
+      "sha256": "eadeaa8cfd7b9fe5744921ccac3e73869987b92c31e9606c50417d2cf158e0ae",
+      "bytes": 271
+    },
+    "tests/aurora-regression/browser/main.tsx": {
+      "sha256": "e4bea6327501446413dc022b2155d08cfd7876c4af4200072e788dcd18c7167c",
+      "bytes": 2686
+    },
+    "tests/aurora-regression/browser/next-link.tsx": {
+      "sha256": "36a59d370a827bf3193735dc13b15829f7f70eb415026158b4205922f8895e9e",
+      "bytes": 228
+    },
+    "tests/aurora-regression/browser/playwright.config.ts": {
+      "sha256": "acafe57f28a3f020e4827d7d93700c969df19292731491f30148dcf107ffce02",
+      "bytes": 1441
+    },
+    "tests/aurora-regression/browser/ritual.browser.spec.ts": {
+      "sha256": "05e175d31a35b3e40b276c7bb9643089d4962726fa21ae82e2d0044e8960a8f7",
+      "bytes": 10377
+    },
+    "tests/aurora-regression/browser/styles.css": {
+      "sha256": "515d6d5839d737907a728ff82ffcc05cec6f55bfde5cc7e1cacc10ff253274ca",
+      "bytes": 275
+    },
+    "tests/aurora-regression/browser/ui.spec.ts": {
+      "sha256": "5560da2dcbb487449cb59d3ae6e1ecd0a7255e66ed03125e12193db883c25ead",
+      "bytes": 15527
+    },
+    "tests/aurora-regression/browser/vite.config.ts": {
+      "sha256": "20adfd5ff9ae54f4bbf9dcadc1d295e49c8399fa011f74d9ae3a323dd7839a3d",
+      "bytes": 1325
+    },
+    "tests/aurora-regression/mental-journal-server.test.ts": {
+      "sha256": "d4c93289c86e1ca6ab596fa7ba5225658b293c7ff086a552e176bb81ff3b6604",
+      "bytes": 18630
+    },
+    "tests/aurora-regression/mental-journal-ui.test.tsx": {
+      "sha256": "e6c45d768cb25a9e2423a44c8fbd91b3cc4a913d322d42f25c5a81028a0311f2",
+      "bytes": 16136
+    },
+    "tests/aurora-regression/minimal-ritual-routes.test.ts": {
+      "sha256": "5f398ef612449b6972d0ea886695a1d79921fe15c8eee87db86d260e99b03a08",
+      "bytes": 4960
+    },
+    "tests/aurora-regression/minimal-ritual-ui.test.tsx": {
+      "sha256": "cb6fa200b61feeda93409fe9e4fc2965b730c6d6e0fd7339389c96ed38f4ac30",
+      "bytes": 8029
+    },
+    "tests/aurora-regression/minimal-ritual.test.ts": {
+      "sha256": "f8fa21b378a24f4819663449e3a239c03bc10df4831e41473bc2b2c9ac0a7d58",
+      "bytes": 10999
+    },
+    "tests/aurora-regression/package-lock.json": {
+      "sha256": "2a7ef57fc877a3c8881c008d40c51cf113c3b5e2a6ef68e4ac8d8c68fae37790",
+      "bytes": 150650
+    },
+    "tests/aurora-regression/package.json": {
+      "sha256": "ceec3b2f81ae2d4fda9652b92114a21d4cb0d0a9a1e53130c937017247cb22bb",
+      "bytes": 1149
+    },
+    "tests/aurora-regression/rewards-routes.test.ts": {
+      "sha256": "512581641768b256a44fb9fad5a6d74ce8f1351f124cfc351a2117bf49d64333",
+      "bytes": 4473
+    },
+    "tests/aurora-regression/rewards-ui.test.tsx": {
+      "sha256": "789ac2fb92dffea080b6bab6897749d978f52df448d93a579ea422122ed2ce33",
+      "bytes": 7187
+    },
+    "tests/aurora-regression/rewards.test.ts": {
+      "sha256": "71a85ca2c9fd85f830938600c118b194864bff562ee2a39ae2423a388dddb361",
+      "bytes": 7575
+    },
+    "tests/aurora-regression/tsconfig.json": {
+      "sha256": "8ded8974dfee647b7ed37f699e03fc78cd14b6a6a46dd6a2c14b56b5411a9c6a",
+      "bytes": 1993
+    },
+    "tests/aurora-regression/vitest.config.ts": {
+      "sha256": "675b908a7804afdd0462e43face6298cbb4a93746da941f79889da9ee11f686c",
+      "bytes": 747
+    },
+    "tests/aurora-regression/wellbeing-database.test.ts": {
+      "sha256": "53743912c5e8c422d32e42af52e036c0f128355dc962030e0531f5d1b940cc7b",
+      "bytes": 19706
+    },
+    "tests/aurora-regression/wellbeing-request.test.ts": {
+      "sha256": "56270e0f0223b149a09e6e496c5ebf364ad79da94f0262b23870455bf6e5971a",
+      "bytes": 2755
+    },
+    "tests/aurora-regression/wellbeing-routes.test.ts": {
+      "sha256": "821891da64658b1074bf82deb403636ae13dbb80d00da1086504e0738ae39753",
+      "bytes": 3986
+    },
+    "tests/aurora-regression/wellbeing-storage.test.ts": {
+      "sha256": "804e39db9ef64697329bb216d2a291e4a76ef645a52be818512828cc6249dc04",
+      "bytes": 1748
+    },
+    "tests/aurora-regression/wellbeing-ui.test.tsx": {
+      "sha256": "744dd7153cb9dcac878040e6761c71c60b57fe4449b64fab262aa409dc5a22e3",
+      "bytes": 13423
+    },
+    "tests/aurora-regression/wellbeing.test.ts": {
+      "sha256": "7cbcce4cd7eb677b42b60c023a3cb2e469e8115a2c9743479dac2a3021adaae0",
+      "bytes": 4088
+    },
+    "tsconfig.json": {
+      "sha256": "38af675de21169e22bf625cb91ead619be9ea0eb61e485fbdaf7820651d0cf05",
+      "bytes": 826
+    },
+    "vercel.json": {
+      "sha256": "ed9370e06bc17f4fc1f3655bae4d5708ce4a2165dc3c43a89ae741ab53868e3e",
+      "bytes": 2112
+    }
+  },
+  "deleted_source_files": [
+    "tests/aurora-regression/browser/style.css"
+  ],
+  "evidence_files": {
+    "docs/evidence/aurora-ritual-validation-2026-11-10.json": {
+      "sha256": "d1650af1d42d8a368e924ec60c3cd04bf5cd329c56403564446ba438a5ba86e4",
+      "bytes": 8065
+    },
+    "docs/evidence/browser-2026-11-10/browser-version.json": {
+      "sha256": "82808900a2064b7e5f4b36bd4f84eef6a59fd5ad52f801053c8c49686405cd32",
+      "bytes": 38
+    },
+    "docs/evidence/browser-2026-11-10/layout-before-after.json": {
+      "sha256": "c10b0b9ee6903c2c43e99f699b2b97184f1556f451b932381824de52ac59bd6f",
+      "bytes": 5042
+    },
+    "docs/evidence/browser-2026-11-10/layout-before-after.md": {
+      "sha256": "df01040b9b614066a33bd0994d14fbf18775a235dd149fd0aaac235225b490f6",
+      "bytes": 1928
+    },
+    "docs/evidence/browser-2026-11-10/results.json": {
+      "sha256": "bf93e79d91fc09675f20c59e4f915764900d59845d8e25bce546ca43a09b0ec2",
+      "bytes": 15049
+    },
+    "docs/evidence/browser-2026-11-10/ritual-desktop-final.png": {
+      "sha256": "701833078f96dab9d6057f1d8394899e1cee12e40c29f12f6e0c75a66692a764",
+      "bytes": 642490
+    },
+    "docs/evidence/browser-2026-11-10/ritual-mobile-final.png": {
+      "sha256": "9a19cfe2a0109df4f45ac2be7433854c5adaeba86ee9f560f8531f12bf3bcccd",
+      "bytes": 350704
+    },
+    "docs/evidence/browser-2026-11-10/runtime.json": {
+      "sha256": "9bddf0c40efae3bb45c6ff565fb2b5dde5c61b605adc0c148acc299463e3751c",
+      "bytes": 2114
+    },
+    "docs/evidence/dependency-smoke-2026-11-10.json": {
+      "sha256": "03781e3a46a1e5f1a7f712bc18c9c102a9701fd56a059bd52308903f649a0544",
+      "bytes": 1001
+    },
+    "docs/evidence/next-build-2026-11-10.txt": {
+      "sha256": "45e05f6f528c3f1c2d4ccabf871d416b01c5814fcaeb866835ad254b64dc62d3",
+      "bytes": 8696
+    },
+    "docs/evidence/npm-candidate-metadata-2026-11-10.json": {
+      "sha256": "a797da30aa0d19d062651b3b7471fbd47050d94b44631ef4dc560f26627fc87c",
+      "bytes": 5782
+    },
+    "docs/evidence/npm-production-audit-2026-11-10.json": {
+      "sha256": "a2bfa5f44fb488fe06ee114dfbbbb2a6e8447fc53a617ec9c9c8f57744b23254",
+      "bytes": 45047
+    },
+    "docs/evidence/npm-production-audit-after-2026-11-10.json": {
+      "sha256": "870ebc6ffaede0720c9874e1e478464f6a28e47499b4ca6e9d7d3e521b0c9fe1",
+      "bytes": 14200
+    },
+    "docs/evidence/npm-regression-audit-2026-11-10.json": {
+      "sha256": "b60f5766ccd71a574d954f316fed95cc23a6be62eb3771900269e8146d4e6203",
+      "bytes": 3990
+    },
+    "docs/evidence/npm-regression-audit-after-2026-11-10.json": {
+      "sha256": "f74ded65a1d10c91fda130109edc5fd86567b25d73386850a695544320bf51f0",
+      "bytes": 363
+    },
+    "docs/evidence/wellbeing-tests-2026-11-10.json": {
+      "sha256": "c31563546d7128c41ad432de132c72f403322db0fee2092010f662ac9683a5bb",
+      "bytes": 126456
+    },
+    "docs/evidence/wellbeing-typecheck-2026-11-10.txt": {
+      "sha256": "b14c0e368284c6471104a4d774694163eb24778e8659287985e029b3b51bd776",
+      "bytes": 142
+    }
+  },
+  "log_normalization": "Progress carriage returns and trailing whitespace normalized in build/typecheck text logs; diagnostic content preserved."
+}
