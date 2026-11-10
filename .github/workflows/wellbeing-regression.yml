@@ -19,7 +19,9 @@ concurrency:
 
 jobs:
   regression:
-    runs-on: ubuntu-latest
+    # Playwright 1.59.1 is locked in the harness and supports Ubuntu 24.04.
+    # Avoid ubuntu-latest advancing beyond the browser's supported platforms.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
       run:
@@ -37,3 +39,4 @@ jobs:
       - run: npm run typecheck
       - run: npx --no-install playwright install --with-deps --only-shell chromium
       - run: npx --no-install playwright test --config browser/playwright.config.ts
+

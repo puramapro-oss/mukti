@@ -82,3 +82,11 @@ La cible d'hébergement retenue est **Hostinger avec Cloudflare**. L'ancien stat
 
 Les limites déjà consignées dans le lot continuité (configuration ESLint partagée, dépendances OpenTimestamps, modèle d'objectifs et intégration distante) restent ouvertes. Ce correctif ne modifie pas ces autres chantiers.
 
+
+## Contrôle indépendant après publication
+
+La première CI du correctif, [run 42912965049](https://github.com/puramapro-oss/mukti/actions/runs/42912965049) sur `9a23f3ff6ffbdcb3ea0e1033e24d0ab63e2f4336`, a confirmé **366 tests, TypeScript et zéro vulnérabilité signalée dans le verrouillage du banc**.
+
+L'installation du navigateur s'est ensuite arrêtée : `ubuntu-latest` a fourni Ubuntu 26.04.1, non pris en charge par le Playwright 1.59.1 verrouillé. Le test Playwright n'avait pas été exécuté. Le workflow cible maintenant **Ubuntu 24.04**, présent dans le registre des navigateurs et des dépendances de cette version de Playwright.
+
+Ce complément conserve les permissions de lecture et toutes les étapes de contrôle. Le résultat de la CI sur le nouveau commit est à consulter dans [la PR #4](https://github.com/puramapro-oss/mukti/pull/4) ; les résultats du premier run ne constituent pas une validation Chromium.

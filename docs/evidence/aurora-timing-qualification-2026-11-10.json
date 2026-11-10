@@ -150,14 +150,19 @@
       "bytes": 5937
     },
     "docs/AURORA_TIMING_2026-11-10.md": {
-      "sha256": "a7c3f6b5501a6d5b6eb67f59130a55c63054e8f89659cc1961f230e55d243a2a",
-      "git_blob": "1d1798747fe2bc913f2593c8c8757570d5e409f0",
-      "bytes": 7778
+      "sha256": "42b518f537a64d14cb1b3c8025a1cd467465fde6cb358f4a869342920c1fa90a",
+      "git_blob": "7e8ab6289b4c3dece3e1f57af9250d1ff25d40d8",
+      "bytes": 8720
     },
     "vercel.json": {
       "sha256": "66114f8dc04173e716ac6a12256eeec3be2ec5d73a01eb14296ae0f9bf62a767",
       "git_blob": "24c51b21a01e6517da021463fdf9b03cd06c38b3",
       "bytes": 2169
+    },
+    ".github/workflows/wellbeing-regression.yml": {
+      "sha256": "b8e9b8cf8e3f24558790c6c8aaaf8d1ad5ee63970c38898b2cb5bbc30ca7131f",
+      "git_blob": "ca64ee9f5af9d20157af55276c697f43267c6229",
+      "bytes": 1289
     }
   },
   "materialization": {
@@ -177,5 +182,17 @@
     "provider": "Vercel",
     "branch": "codex/aurora-timing-reliability-20261110",
     "deploymentEnabled": false
+  },
+  "initial_remote_ci": {
+    "run_id": 42912965049,
+    "head_sha": "9a23f3ff6ffbdcb3ea0e1033e24d0ab63e2f4336",
+    "conclusion": "failure",
+    "tests": 366,
+    "typecheck": "PASS",
+    "test_lock_audit": "0 vulnerabilities",
+    "browser_tests": "SKIPPED",
+    "failure": "Playwright 1.59.1 does not support chromium-headless-shell on ubuntu26.04-x64",
+    "runner_observed": "Ubuntu 26.04.1",
+    "fix": "runs-on ubuntu-24.04"
   }
 }
