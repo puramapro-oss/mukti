@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --config vitest.config.ts",
-    "typecheck": "tsc --project tsconfig.json",
+    "typecheck": "node --max-old-space-size=512 node_modules/typescript/bin/tsc --project tsconfig.json",
     "test:browser": "playwright test --config browser/playwright.config.ts"
   },
   "devDependencies": {
