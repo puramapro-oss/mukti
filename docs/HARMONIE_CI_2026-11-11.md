@@ -86,3 +86,79 @@ Empreintes SHA-256 du code vérifié :
 Les changements proposés se limitent à ces deux nouveaux fichiers et à cette
 note. Le produit, les dépendances produit, les trois workflows existants,
 `vercel.json`, les licences et les preuves historiques ne sont pas modifiés.
+
+## Ajout du 11 novembre — qualification d'un approvisionnement CI versionné
+
+Les empreintes indiquées avant cet ajout désignent la proposition initiale ;
+elles sont conservées comme preuve historique et ne désignent pas le workflow
+corrigé décrit dans cette section.
+
+Les trois premières exécutions GitHub du raccordement ont conservé leurs
+résultats : [43050012078](https://github.com/puramapro-oss/mukti/actions/runs/43050012078)
+annulée, puis [43052436115](https://github.com/puramapro-oss/mukti/actions/runs/43052436115)
+et [43053126424](https://github.com/puramapro-oss/mukti/actions/runs/43053126424)
+en échec APT. Le miroir Azure et les deux archives Ubuntu officielles échouent
+en résolution DNS. Aucun des 27 contrôles logiciels n'a été exécuté dans ces
+trois runs ; leurs étapes de tests sont ignorées. Le troisième run confirme
+la disparition de l'avertissement d'accès de `_apt` après le déplacement du
+répertoire temporaire sous `/tmp`.
+
+La proposition suivante remplace uniquement l'approvisionnement FFmpeg du
+nouveau workflow. Les tests, l'exécuteur et les versions NumPy/SciPy restent
+identiques. Le distributeur [FFmpeg-Builds](https://github.com/FFmpeg-Builds/FFmpeg-Builds)
+figure sur la [page de téléchargement FFmpeg](https://ffmpeg.org/download.html) ;
+ce binaire est publié par ce distributeur, pas compilé ou publié par le projet
+FFmpeg lui-même.
+
+| Élément épinglé | Valeur |
+| --- | --- |
+| Tag | `autobuild-2026-10-31-12-59` |
+| Asset GitHub | `695398022` |
+| Archive | `ffmpeg-n8.1.3-27-g8dca1586f4-linux64-gpl-8.1.tar.xz` |
+| Taille | `152246308` octets |
+| SHA-256 | `41e9c565594c390622cf968d82fa4135d9e9a11d06c1515644288cbc844e3380` |
+| Recette | `5031c6f1082414e53688d39e521849905071070d` |
+| Source FFmpeg | `8dca1586f468bfcbb78ae3ed618af1361d9f140a` |
+| Job producteur | `124536872170`, succès selon ses métadonnées |
+
+Le SHA-256 est concordant entre les
+[métadonnées de l'asset](https://api.github.com/repos/FFmpeg-Builds/FFmpeg-Builds/releases/assets/695398022)
+et le [manifest du distributeur](https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/checksums.sha256).
+La [recette GPL](https://github.com/FFmpeg-Builds/FFmpeg-Builds/blob/5031c6f1082414e53688d39e521849905071070d/variants/defaults-gpl.sh)
+et ses dépendances activent ffprobe, Rubber Band et libx264. Cela établit les
+capacités attendues ; leur présence réelle et leur comportement doivent être
+qualifiés par le contrôle logiciel existant.
+
+Le téléchargement utilise exclusivement HTTPS avec validation TLS normale,
+une reprise au maximum et une borne globale de 240 secondes. La taille et le
+SHA-256 sont vérifiés avant toute extraction ou exécution. Seuls trois fichiers
+réguliers sont extraits depuis la racine exacte attendue : `bin/ffmpeg`,
+`bin/ffprobe` et `LICENSE.txt`. Les liens, doublons, fichiers manquants et tailles
+excessives pour ces entrées provoquent un échec. Les autres entrées ne sont
+pas extraites. Le chemin du dossier temporaire est ajouté au PATH du job ;
+aucun `sudo`, changement DNS ou installation système n'est effectué.
+
+L'artefact CI conserve `harmonie-ffmpeg-provenance.json`, les empreintes des
+fichiers extraits et la licence GPLv3 fournie. Les versions et capacités
+effectives de ffmpeg/ffprobe sont consignées dans les journaux du contrôle
+Harmonie. Les binaires et l'archive ne sont pas joints à l'artefact, ajoutés au
+dépôt ou livrés dans le produit.
+
+Aucune attestation cryptographique de build n'a été vérifiée, et aucune
+recompilation reproductible n'est revendiquée. L'intégrité repose ici sur
+l'archive exacte dont le digest est épinglé après revue des sources publiques.
+La licence MIT du dépôt d'automatisation ne remplace pas la licence GPLv3
+du binaire sélectionné.
+
+**Maintenance : réexaminer et renouveler ce pin avant le 30 septembre 2028.**
+La [politique du distributeur](https://github.com/FFmpeg-Builds/FFmpeg-Builds/blob/5031c6f1082414e53688d39e521849905071070d/util/prunetags.sh)
+conserve 24 versions mensuelles ; le tag retenu n'est pas une garantie
+d'archivage permanent. Toute disparition ou divergence doit faire échouer
+la qualification. Aucun alias `latest`, remplacement automatique ou miroir
+alternatif n'est prévu. Le renouvellement doit reprendre la revue de provenance,
+licence, taille et digest, puis exécuter les quatre suites avant acceptation.
+
+**NON TESTÉ au stade de cette proposition :** téléchargement de cette archive,
+inspection de ses octets et exécution de ce binaire sur le runner. Les preuves
+locales antérieures et les trois échecs hébergés restent distincts. Chrome,
+appareils physiques, mobile et production restent hors de cette qualification.
