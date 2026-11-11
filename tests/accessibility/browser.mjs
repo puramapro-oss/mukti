@@ -36,6 +36,7 @@ try {
   const globalsPath = path.join(root, 'src/app/globals.css');
   const compiled = await postcss([tailwind({ ...config.plugins['@tailwindcss/postcss'], base: root })]).process(await readFile(globalsPath, 'utf8'), { from: globalsPath });
   css = compiled.css + '\n' + await readFile(path.join(root, 'src/app/accessibility.css'), 'utf8') + '\n@keyframes fixture-motion { from { opacity: .5; } to { opacity: 1; } }';
+  await writeFile(path.join(output, 'compiled-css.log'), css);
   // The plugin exports its dist entry point, but not its package.json subpath.
   const tailwindPackage = JSON.parse(await readFile(path.resolve(path.dirname(tooling.resolve('@tailwindcss/postcss')), '../package.json'), 'utf8'));
   assert.equal(tailwindPackage.name, '@tailwindcss/postcss');
@@ -108,19 +109,46 @@ try {
   await page.setViewportSize({ width: 320, height: 1100 });
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   await page.waitForFunction(() => getComputedStyle(document.documentElement).fontSize === '32px');
-  report.pageStyles = await page.getByRole('heading', { level: 1, name: 'Accessibilité', exact: true }).evaluate(title => {
-    const header = title.parentElement, wrapper = header?.parentElement;
-    if (header?.tagName !== 'HEADER' || !wrapper) throw new Error('Expected the real page header and wrapper.');
-    const headingStyle = getComputedStyle(title), wrapperStyle = getComputedStyle(wrapper);
-    return {
-      headingCount: document.querySelectorAll('h1').length, title: title.textContent,
-      rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
-      headingFontSize: parseFloat(headingStyle.fontSize), headingLineHeight: headingStyle.lineHeight,
-      headingFontWeight: headingStyle.fontWeight, headingOverflowWrap: headingStyle.overflowWrap, headingWordBreak: headingStyle.wordBreak,
-      wrapperPaddingLeft: parseFloat(wrapperStyle.paddingLeft), wrapperPaddingRight: parseFloat(wrapperStyle.paddingRight), wrapperWidth: wrapper.getBoundingClientRect().width,
-      bodyFontFamily: getComputedStyle(document.body).fontFamily,
-    };
-  });
+  report.styleReadiness = { status: 'PENDING', timeoutMs: 5000, pollingMs: 100, requiredConsecutiveMatches: 2, scope: 'Observe the complete text-scale precondition; this does not establish a browser cause for an earlier inconsistent sample.' };
+  try {
+    await page.waitForFunction(() => {
+      const probe = window.__muktiStyleProbe ??= { startedAt: performance.now(), samples: [], consecutiveMatches: 0 };
+      const title = document.querySelector('h1'), header = title?.parentElement, wrapper = header?.parentElement;
+      if (header?.tagName !== 'HEADER' || !wrapper) throw new Error('Expected the real page header and wrapper.');
+      const headingStyle = getComputedStyle(title), wrapperStyle = getComputedStyle(wrapper), rootStyle = getComputedStyle(document.documentElement);
+      const sample = {
+        elapsedMs: performance.now() - probe.startedAt,
+        headingCount: document.querySelectorAll('h1').length, title: title.textContent,
+        rootFontSize: parseFloat(rootStyle.fontSize),
+        headingFontSize: parseFloat(headingStyle.fontSize), headingLineHeight: headingStyle.lineHeight,
+        headingFontWeight: headingStyle.fontWeight, headingOverflowWrap: headingStyle.overflowWrap, headingWordBreak: headingStyle.wordBreak,
+        wrapperPaddingLeft: parseFloat(wrapperStyle.paddingLeft), wrapperPaddingRight: parseFloat(wrapperStyle.paddingRight), wrapperWidth: wrapper.getBoundingClientRect().width,
+        bodyFontFamily: getComputedStyle(document.body).fontFamily,
+        rootText2xl: rootStyle.getPropertyValue('--text-2xl').trim(), rootSpacing: rootStyle.getPropertyValue('--spacing').trim(),
+      };
+      probe.samples.push(sample);
+      const matches = sample.rootFontSize === 32 && sample.headingFontSize === 48 && sample.wrapperPaddingLeft === 32 && sample.wrapperPaddingRight === 32;
+      probe.consecutiveMatches = matches ? probe.consecutiveMatches + 1 : 0;
+      return probe.consecutiveMatches >= 2;
+    }, null, { timeout: 5000, polling: 100 });
+    report.styleReadiness.status = 'PASS';
+  } catch (error) {
+    report.styleReadiness.status = 'FAIL'; report.styleReadiness.failure = String(error); throw error;
+  } finally {
+    try {
+      Object.assign(report.styleReadiness, await page.evaluate(() => {
+        const probe = window.__muktiStyleProbe, samples = probe?.samples ?? [];
+        const observation = { initial: samples[0] ?? null, final: samples.at(-1) ?? null, samples, elapsedMs: probe ? performance.now() - probe.startedAt : null, consecutiveMatches: probe?.consecutiveMatches ?? 0 };
+        delete window.__muktiStyleProbe;
+        return observation;
+      }));
+      report.pageStyles = report.styleReadiness.final;
+    } catch (error) { report.styleReadiness.observationFailure = String(error); }
+    if (report.styleReadiness.status === 'FAIL') {
+      try { await page.screenshot({ path: path.join(output, 'mukti-accessibility-style-failure.png'), fullPage: true }); }
+      catch (error) { report.styleReadiness.captureFailure = String(error); }
+    }
+  }
   assert.equal(report.pageStyles.headingCount, 1);
   assert.equal(report.pageStyles.headingFontSize, 1.5 * report.pageStyles.rootFontSize, 'The real text-2xl utility must be compiled and applied.');
   assert.equal(report.pageStyles.headingFontWeight, '600', 'The real font-semibold utility must be compiled and applied.');
