@@ -83,13 +83,53 @@ try {
   report.checks.push('Contrast tokens work in light and dark themes without filtering images.');
   await page.setViewportSize({ width: 320, height: 1100 });
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
-  assert.equal(await page.evaluate(() => [...document.querySelectorAll('.mukti-accessibility-panel label, .mukti-accessibility-panel button')].some(el => { const r = el.getBoundingClientRect(); return r.right > innerWidth + 1 || r.left < -1; })), false);
-  assert.equal(await page.evaluate(() => [...document.querySelectorAll('.mukti-accessibility-panel label, .mukti-accessibility-panel button')].every(el => el.getBoundingClientRect().height >= 44)), true);
-  await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
-  report.axe = await page.evaluate(async () => { const r = await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa'] } }); return { violations: r.violations, incomplete: r.incomplete.map(x => x.id), passes: r.passes.length }; });
-  assert.deepEqual(report.axe.violations, []);
-  report.checks.push('320px layout and 200% text without clipped controls; labels/buttons at least 44px; automated axe check.');
+  await page.waitForFunction(() => getComputedStyle(document.documentElement).fontSize === '32px');
+  report.reflow = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const outside = rect => rect.width > 0 && rect.height > 0 && (rect.left < -1 || rect.right > width + 1);
+    const identify = el => el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).replace(/\s+/g, '.') : '');
+    const elementOverflows = [...document.body.querySelectorAll('*')].filter(el => outside(el.getBoundingClientRect())).map(el => ({ element: identify(el), left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right }));
+    // Element boxes can fit while their text is clipped by an ancestor. Inspect text rectangles too.
+    const textOverflows = [], walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent.trim()) continue;
+      const range = document.createRange(); range.selectNodeContents(node);
+      for (const rect of range.getClientRects()) if (outside(rect)) textOverflows.push({ parent: identify(node.parentElement), text: node.textContent.trim().slice(0, 160), left: rect.left, right: rect.right });
+    }
+    const headings = [...document.querySelectorAll('h1,h2,legend')].map(el => ({ element: identify(el), text: el.textContent, width: el.getBoundingClientRect().width }));
+    const switchRows = [...document.querySelectorAll('.mukti-a11y-choice label')].map(label => {
+      const span = label.querySelector('span').getBoundingClientRect(), control = label.querySelector('input').getBoundingClientRect(), box = label.getBoundingClientRect();
+      return { text: label.querySelector('span').textContent, labelWidth: box.width, textWidth: span.width, textBottom: span.bottom, controlTop: control.top };
+    });
+    return { viewport: width, documentWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth, elementOverflows, textOverflows, headings, switchRows,
+      rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize), buttonFontSize: parseFloat(getComputedStyle(document.querySelector('.mukti-accessibility-panel button')).fontSize),
+      targetHeights: [...document.querySelectorAll('.mukti-accessibility-panel label, .mukti-accessibility-panel button')].map(el => el.getBoundingClientRect().height) };
+  });
   await page.screenshot({ path: path.join(output, 'mukti-accessibility-mobile.png'), fullPage: true });
+  assert.ok(report.reflow.documentWidth <= report.reflow.viewport + 1, 'Document must not overflow horizontally.');
+  assert.ok(report.reflow.bodyWidth <= report.reflow.viewport + 1, 'Body must not overflow horizontally.');
+  assert.deepEqual(report.reflow.elementOverflows, [], 'Every visible element must remain inside the viewport.');
+  assert.deepEqual(report.reflow.textOverflows, [], 'Heading and body text must remain visible, including inside clipped ancestors.');
+  assert.ok(report.reflow.switchRows.every(row => row.textWidth >= row.labelWidth - 1 && row.controlTop >= row.textBottom - 1), 'Mobile switches must put full-width labels above their controls.');
+  assert.ok(report.reflow.targetHeights.every(height => height >= 44));
+  assert.equal(report.reflow.buttonFontSize, report.reflow.rootFontSize, 'Button text must follow the chosen text size.');
+  await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
+  report.axe = { themes: [], status: 'NON_TESTE' };
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value; }, theme);
+    const result = await page.evaluate(async () => {
+      const r = await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa'] } });
+      // Keep full incomplete nodes/check data for review; an ID alone loses the reason and target.
+      return { violations: r.violations, incomplete: r.incomplete, passes: r.passes.length, bodyBackgroundImage: getComputedStyle(document.body).backgroundImage, bodyBackgroundColor: getComputedStyle(document.body).backgroundColor };
+    });
+    report.axe.themes.push({ theme, ...result });
+  }
+  const violations = report.axe.themes.flatMap(result => result.violations);
+  const incomplete = report.axe.themes.flatMap(result => result.incomplete);
+  report.axe.status = violations.length ? 'FAIL' : incomplete.length ? 'PARTIEL' : 'PASS';
+  assert.deepEqual(violations, []);
+  assert.deepEqual(incomplete.filter(result => result.id === 'color-contrast'), [], 'Contrast must be measurable in both enhanced-contrast themes; review full incomplete nodes in the report.');
+  report.checks.push('320px/200%: no global or text overflow, headings visible, full-width switch labels, button text scales and targets are at least 44px. Enhanced-contrast themes checked by axe with incomplete details preserved.');
   await context.close();
   const blocked = await browser.newContext();
   await blocked.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Blocked', 'QuotaExceededError'); }; });
@@ -100,7 +140,7 @@ try {
   report.checks.push('Blocked persistence still changes this tab and announces the exact limitation.');
   await blocked.close();
   assert.deepEqual(report.errors, []);
-  report.status = 'PASS';
+  report.status = report.axe.status === 'PASS' ? 'PASS' : 'PARTIEL';
 } catch (error) { report.status = 'FAIL'; report.failure = String(error); throw error; }
 finally { await writeFile(path.join(output, 'browser-report.json'), JSON.stringify(report, null, 2)); await browser.close(); await new Promise(resolve => server.close(resolve)); }
 console.log(JSON.stringify(report, null, 2));

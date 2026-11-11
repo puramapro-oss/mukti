@@ -3,8 +3,9 @@ import AccessibilityPreferencesRoot from '@/components/shared/AccessibilityPrefe
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 export default function Fixture() {
   const reduced = useReducedMotion()
-  return <><AccessibilityPreferencesRoot /><main style={{ maxWidth: '46rem', margin: '1rem auto', padding: '1rem' }}>
-    <h1>Accessibilité MUKTI</h1><AccessibilityClient />
+  return <><AccessibilityPreferencesRoot /><main style={{ maxWidth: '46rem', margin: '1rem auto', padding: 'clamp(8px, 3vw, 16px)' }}>
+    {/* Match the actual page's text-2xl title; the isolated fixture has no Tailwind preflight. */}
+    <h1 style={{ fontSize: '1.5rem', lineHeight: 1.2, overflowWrap: 'break-word', marginBottom: '.75em' }}>Accessibilité</h1><AccessibilityClient />
     <p id="token-sample" style={{ color: 'var(--text-muted)' }}>Texte avec les couleurs du thème.</p>
     <p id="motion-result" data-reduced={String(reduced)}>Mouvement réduit : {String(reduced)}</p>
     <div id="motion-sample" aria-hidden="true" style={{ animation: 'fixture-motion 2s infinite', width: '1rem', height: '1rem', background: 'var(--cyan)' }} />
