@@ -13,6 +13,7 @@ on:
       - 'src/app/layout.tsx'
       - 'src/app/globals.css'
       - 'src/app/accessibility.css'
+      - 'postcss.config.mjs'
       - 'src/app/(dashboard)/dashboard/profile/accessibility/**'
       - 'tests/accessibility/**'
       - 'tsconfig.accessibility.json'
@@ -39,7 +40,7 @@ jobs:
         run: |
           qa_dir="$RUNNER_TEMP/mukti-accessibility-qa"
           mkdir -p "$qa_dir"
-          npm install --prefix "$qa_dir" --no-package-lock --ignore-scripts typescript@5.7.2 react@19.2.4 react-dom@19.2.4 @types/react@19.1.2 @types/react-dom@19.1.2 @types/node@20.17.30 esbuild@0.28.2 playwright@1.62.1 axe-core@4.11.0
+          npm install --prefix "$qa_dir" --no-package-lock --ignore-scripts typescript@5.7.2 react@19.2.4 react-dom@19.2.4 @types/react@19.1.2 @types/react-dom@19.1.2 @types/node@20.17.30 esbuild@0.28.2 playwright@1.62.1 axe-core@4.11.0 tailwindcss@4.2.2 @tailwindcss/postcss@4.2.2 postcss@8.5.23
           test ! -e node_modules
           ln -s "$qa_dir/node_modules" node_modules
           "$qa_dir/node_modules/.bin/playwright" install --with-deps chromium
@@ -50,7 +51,7 @@ jobs:
           mkdir -p tests/accessibility/evidence
           node --test tests/accessibility/preferences.test.mjs | tee tests/accessibility/evidence/unit.log
           node node_modules/typescript/bin/tsc -p tsconfig.accessibility.json | tee tests/accessibility/evidence/types.log
-      - name: Verify the actual components in a browser fixture
+      - name: Verify the actual page and components in a browser fixture
         run: node tests/accessibility/browser.mjs
       - name: Preserve scoped evidence
         if: always()

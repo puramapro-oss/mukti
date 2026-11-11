@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import http from 'node:http';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const require = createRequire(path.join(root, 'package.json'));
@@ -22,14 +23,35 @@ try { assert.equal(render(), serverMarkup, 'Saved browser preferences must not c
 finally { delete globalThis.window; }
 await writeFile(path.join(output, 'ssr-report.json'), JSON.stringify({ status: 'PASS', scope: 'Actual SSR component tree renders identically with and without saved browser preferences.', serverMarkupBytes: Buffer.byteLength(serverMarkup) }, null, 2));
 if (process.env.A11Y_SSR_ONLY === '1') { console.log('PASS: SSR markup is stable with saved browser preferences.'); process.exit(0); }
-const globals = (await readFile(path.join(root, 'src/app/globals.css'), 'utf8')).replace('@import "tailwindcss";', '');
-const css = globals + '\n' + await readFile(path.join(root, 'src/app/accessibility.css'), 'utf8') + '\n@keyframes fixture-motion { from { opacity: .5; } to { opacity: 1; } }';
+const cssReport = { status: 'NON_TESTE', scope: 'Actual page and stylesheet sources; Tailwind compiled with the application PostCSS configuration. Dashboard layout and next/font are not rendered.', sources: {}, runtime: {} };
+let css;
+try {
+  for (const file of ['src/app/(dashboard)/dashboard/profile/accessibility/page.tsx', 'tests/accessibility/Fixture.tsx', 'tests/accessibility/server.tsx', 'tests/accessibility/client.tsx', 'src/app/globals.css', 'src/app/accessibility.css', 'postcss.config.mjs']) {
+    cssReport.sources[file] = createHash('sha256').update(await readFile(path.join(root, file))).digest('hex');
+  }
+  const postcss = tooling('postcss');
+  const tailwind = tooling('@tailwindcss/postcss');
+  const { default: config } = await import(pathToFileURL(path.join(root, 'postcss.config.mjs')).href);
+  assert.deepEqual(Object.keys(config.plugins), ['@tailwindcss/postcss'], 'Review the isolated compiler when application PostCSS plugins change.');
+  const globalsPath = path.join(root, 'src/app/globals.css');
+  const compiled = await postcss([tailwind({ ...config.plugins['@tailwindcss/postcss'], base: root })]).process(await readFile(globalsPath, 'utf8'), { from: globalsPath });
+  css = compiled.css + '\n' + await readFile(path.join(root, 'src/app/accessibility.css'), 'utf8') + '\n@keyframes fixture-motion { from { opacity: .5; } to { opacity: 1; } }';
+  // The plugin exports its dist entry point, but not its package.json subpath.
+  const tailwindPackage = JSON.parse(await readFile(path.resolve(path.dirname(tooling.resolve('@tailwindcss/postcss')), '../package.json'), 'utf8'));
+  assert.equal(tailwindPackage.name, '@tailwindcss/postcss');
+  cssReport.runtime = { postcss: tooling('postcss/package.json').version, tailwindcss: tooling('tailwindcss/package.json').version, tailwindPostcss: tailwindPackage.version };
+  cssReport.compiledBytes = Buffer.byteLength(css);
+  cssReport.compiledSha256 = createHash('sha256').update(css).digest('hex');
+  cssReport.warnings = compiled.warnings().map(warning => warning.toString());
+  cssReport.status = 'PASS_COMPILED';
+} catch (error) { cssReport.status = 'FAIL'; cssReport.failure = String(error); throw error; }
+finally { await writeFile(path.join(output, 'css-report.json'), JSON.stringify(cssReport, null, 2)); }
 const bundle = await readFile(path.join(output, 'client.js'));
 const html = '<!doctype html><html lang="fr" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Test accessibilité MUKTI</title><style>' + css + '</style></head><body><div id="root">' + render() + '</div><script src="/client.js" defer></script></body></html>';
 const server = http.createServer((req, res) => { if (req.url === '/client.js') { res.setHeader('Content-Type', 'text/javascript; charset=utf-8'); res.end(bundle); } else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); } });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = 'http://127.0.0.1:' + server.address().port;
-const report = { sourceBase: '1ead78251bf48df493fb9bca14e4cb90f2df1c9a', testedCommit: process.env.GITHUB_SHA ?? null, scope: 'Real preference components and hooks, SSR/hydration, local browser fixture. Not a full Next build, physical hardware or production audit.', runtime: { node: process.version, react: require('react/package.json').version, typescript: require('typescript/package.json').version, playwright: tooling('playwright/package.json').version, axe: require('axe-core/package.json').version }, checks: [], errors: [] };
+const report = { sourceBase: 'b7e76735d6ee2498d72be06d624e96a090f8ad96', testedCommit: process.env.GITHUB_SHA ?? null, scope: 'Actual AccessibilityPage, preference components and hooks, compiled application styles, SSR/hydration in a local browser fixture. Dashboard layout, next/font, complete Next route, physical hardware and production are not qualified.', stylesheets: cssReport, runtime: { node: process.version, react: require('react/package.json').version, typescript: require('typescript/package.json').version, playwright: tooling('playwright/package.json').version, axe: require('axe-core/package.json').version }, checks: [], errors: [] };
 let browser;
 try { browser = await chromium.launch({ headless: true, executablePath: process.env.A11Y_BROWSER_EXECUTABLE, args: ['--no-sandbox'] }); }
 catch (error) { await writeFile(path.join(output, 'browser-report.json'), JSON.stringify({ ...report, status: 'BLOCKED', failure: String(error) }, null, 2)); await new Promise(resolve => server.close(resolve)); throw error; }
@@ -45,6 +67,8 @@ try {
   page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
   await page.goto(origin);
   await page.waitForFunction(() => getComputedStyle(document.documentElement).fontSize === '18px');
+  assert.equal(await page.locator('h1').count(), 1, 'The actual page must supply the sole h1.');
+  assert.equal(await page.getByRole('heading', { level: 1, name: 'Accessibilité', exact: true }).count(), 1);
   assert.equal(await page.getByRole('switch', { name: 'Vibrations des pratiques' }).isChecked(), false);
   assert.equal(await page.getByRole('button', { name: 'Tester une vibration' }).isDisabled(), true);
   report.checks.push('Saved legacy settings hydrate without mismatch; previous silence remains effective.');
@@ -84,6 +108,25 @@ try {
   await page.setViewportSize({ width: 320, height: 1100 });
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   await page.waitForFunction(() => getComputedStyle(document.documentElement).fontSize === '32px');
+  report.pageStyles = await page.getByRole('heading', { level: 1, name: 'Accessibilité', exact: true }).evaluate(title => {
+    const header = title.parentElement, wrapper = header?.parentElement;
+    if (header?.tagName !== 'HEADER' || !wrapper) throw new Error('Expected the real page header and wrapper.');
+    const headingStyle = getComputedStyle(title), wrapperStyle = getComputedStyle(wrapper);
+    return {
+      headingCount: document.querySelectorAll('h1').length, title: title.textContent,
+      rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
+      headingFontSize: parseFloat(headingStyle.fontSize), headingLineHeight: headingStyle.lineHeight,
+      headingFontWeight: headingStyle.fontWeight, headingOverflowWrap: headingStyle.overflowWrap, headingWordBreak: headingStyle.wordBreak,
+      wrapperPaddingLeft: parseFloat(wrapperStyle.paddingLeft), wrapperPaddingRight: parseFloat(wrapperStyle.paddingRight), wrapperWidth: wrapper.getBoundingClientRect().width,
+      bodyFontFamily: getComputedStyle(document.body).fontFamily,
+    };
+  });
+  assert.equal(report.pageStyles.headingCount, 1);
+  assert.equal(report.pageStyles.headingFontSize, 1.5 * report.pageStyles.rootFontSize, 'The real text-2xl utility must be compiled and applied.');
+  assert.equal(report.pageStyles.headingFontWeight, '600', 'The real font-semibold utility must be compiled and applied.');
+  assert.equal(report.pageStyles.wrapperPaddingLeft, report.pageStyles.rootFontSize, 'The real px-4 utility must be compiled and applied.');
+  assert.equal(report.pageStyles.wrapperPaddingRight, report.pageStyles.rootFontSize);
+  report.checks.push('The actual page supplies the sole h1; its Tailwind title and wrapper utilities are applied at 320px/200%. No fixture heading or wrapping rule.');
   report.reflow = await page.evaluate(() => {
     const width = document.documentElement.clientWidth;
     const outside = rect => rect.width > 0 && rect.height > 0 && (rect.left < -1 || rect.right > width + 1);

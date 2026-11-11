@@ -5,5 +5,5 @@
     "strict": true, "skipLibCheck": true, "noEmit": true,
     "baseUrl": ".", "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src/lib/accessibility.ts", "src/lib/a11y.ts", "src/hooks/useAccessibilityPrefs.ts", "src/hooks/useReducedMotion.ts", "src/components/shared/AccessibilityPreferencesRoot.tsx", "src/components/exorcisme/hooks/usePrefersReducedMotion.ts", "src/app/(dashboard)/dashboard/profile/accessibility/AccessibilityClient.tsx"]
+  "include": ["src/lib/accessibility.ts", "src/lib/a11y.ts", "src/hooks/useAccessibilityPrefs.ts", "src/hooks/useReducedMotion.ts", "src/components/shared/AccessibilityPreferencesRoot.tsx", "src/components/exorcisme/hooks/usePrefersReducedMotion.ts", "src/app/(dashboard)/dashboard/profile/accessibility/AccessibilityClient.tsx", "src/app/(dashboard)/dashboard/profile/accessibility/page.tsx", "tests/accessibility/Fixture.tsx"]
 }
