@@ -1,4 +1,5 @@
 // MUKTI G8.1 — a11y helpers (contrast check + reduced-motion)
+import { loadA11yPrefs } from '@/lib/accessibility'
 
 export interface RgbColor { r: number; g: number; b: number }
 
@@ -47,6 +48,7 @@ export function meetsContrast(fg: string, bg: string, level: WcagLevel = 'AA', i
 
 // Client-side prefers-reduced-motion detection
 export function prefersReducedMotion(): boolean {
+  if (loadA11yPrefs().reducedMotionForced) return true
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
   try {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
