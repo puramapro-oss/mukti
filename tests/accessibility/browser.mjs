@@ -26,7 +26,7 @@ if (process.env.A11Y_SSR_ONLY === '1') { console.log('PASS: SSR markup is stable
 const cssReport = { status: 'NON_TESTE', scope: 'Actual page and stylesheet sources; Tailwind compiled with the application PostCSS configuration. Dashboard layout and next/font are not rendered.', sources: {}, runtime: {} };
 let css;
 try {
-  for (const file of ['src/app/(dashboard)/dashboard/profile/accessibility/page.tsx', 'tests/accessibility/Fixture.tsx', 'tests/accessibility/server.tsx', 'tests/accessibility/client.tsx', 'src/app/globals.css', 'src/app/accessibility.css', 'postcss.config.mjs']) {
+  for (const file of ['src/app/(dashboard)/dashboard/profile/accessibility/page.tsx', 'src/components/ui/Modal.tsx', 'src/components/shared/ShareStoryButton.tsx', 'tests/accessibility/Fixture.tsx', 'tests/accessibility/server.tsx', 'tests/accessibility/client.tsx', 'src/app/globals.css', 'src/app/accessibility.css', 'postcss.config.mjs']) {
     cssReport.sources[file] = createHash('sha256').update(await readFile(path.join(root, file))).digest('hex');
   }
   const postcss = tooling('postcss');
@@ -52,7 +52,7 @@ const html = '<!doctype html><html lang="fr" data-theme="dark"><head><meta chars
 const server = http.createServer((req, res) => { if (req.url === '/client.js') { res.setHeader('Content-Type', 'text/javascript; charset=utf-8'); res.end(bundle); } else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); } });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = 'http://127.0.0.1:' + server.address().port;
-const report = { sourceBase: 'b7e76735d6ee2498d72be06d624e96a090f8ad96', testedCommit: process.env.GITHUB_SHA ?? null, scope: 'Actual AccessibilityPage, preference components and hooks, compiled application styles, SSR/hydration in a local browser fixture. Dashboard layout, next/font, complete Next route, physical hardware and production are not qualified.', stylesheets: cssReport, runtime: { node: process.version, react: require('react/package.json').version, typescript: require('typescript/package.json').version, playwright: tooling('playwright/package.json').version, axe: require('axe-core/package.json').version }, checks: [], errors: [] };
+const report = { sourceBase: '2ab63923e1dbc31adac428da0a7754d8092d68aa', testedCommit: process.env.GITHUB_SHA ?? null, scope: 'Actual AccessibilityPage, shared native Modal, preference components and hooks, compiled application styles, SSR/hydration in a local browser fixture. Dashboard layout, next/font, complete Next route, physical hardware and production are not qualified.', stylesheets: cssReport, runtime: { node: process.version, react: require('react/package.json').version, typescript: require('typescript/package.json').version, playwright: tooling('playwright/package.json').version, axe: require('axe-core/package.json').version }, checks: [], errors: [] };
 let browser;
 try { browser = await chromium.launch({ headless: true, executablePath: process.env.A11Y_BROWSER_EXECUTABLE, args: ['--no-sandbox'] }); }
 catch (error) { await writeFile(path.join(output, 'browser-report.json'), JSON.stringify({ ...report, status: 'BLOCKED', failure: String(error) }, null, 2)); await new Promise(resolve => server.close(resolve)); throw error; }
@@ -68,6 +68,37 @@ try {
   page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
   await page.goto(origin);
   await page.waitForFunction(() => getComputedStyle(document.documentElement).fontSize === '18px');
+  const modalTrigger = page.getByRole('button', { name: 'Ouvrir la fenêtre de test', exact: true });
+  await modalTrigger.focus(); await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Exemple de partage', exact: true });
+  await dialog.waitFor({ state: 'visible', timeout: 3000 });
+  const closeModal = dialog.getByRole('button', { name: 'Fermer', exact: true });
+  assert.equal(await closeModal.evaluate(el => el === document.activeElement), true, 'Closing must be available immediately on open.');
+  const closeBox = await closeModal.boundingBox();
+  assert.ok(closeBox.width >= 44 && closeBox.height >= 44, 'Close target must be at least 44 × 44 CSS pixels.');
+  for (const key of ['Tab', 'Tab', 'Tab', 'Shift+Tab']) {
+    await page.keyboard.press(key);
+    assert.equal(await dialog.evaluate(el => el.contains(document.activeElement)), true, 'Focus must remain inside the native modal.');
+  }
+  await dialog.getByRole('textbox', { name: 'Message de test' }).fill('Texte de contrôle');
+  await page.keyboard.press('Escape');
+  await dialog.waitFor({ state: 'detached' });
+  assert.equal(await modalTrigger.evaluate(el => el === document.activeElement), true, 'Escape must restore focus to the trigger.');
+  assert.equal(await page.locator('#modal-close-count').textContent(), 'Fermetures : 1', 'Escape requests exactly one close.');
+  await page.keyboard.press('Enter');
+  await dialog.waitFor({ state: 'visible' });
+  await closeModal.click();
+  await dialog.waitFor({ state: 'detached' });
+  assert.equal(await modalTrigger.evaluate(el => el === document.activeElement), true, 'The close button must restore focus.');
+  assert.equal(await page.locator('#modal-submit-count').textContent(), 'Actions : 0', 'Closing a modal inside a form must not submit the form.');
+  const untitledTrigger = page.getByRole('button', { name: 'Ouvrir sans titre', exact: true });
+  await untitledTrigger.click();
+  const untitled = page.getByRole('dialog', { name: 'Fenêtre de dialogue', exact: true });
+  await untitled.waitFor({ state: 'visible' });
+  await untitled.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await untitled.waitFor({ state: 'detached' });
+  assert.equal(await untitledTrigger.evaluate(el => el === document.activeElement), true);
+  report.checks.push('Native shared modal: accessible title and fallback, named 44px close target, initial focus, Tab containment, Escape exactly once, return focus, repeated opening and no accidental form submission.');
   assert.equal(await page.locator('h1').count(), 1, 'The actual page must supply the sole h1.');
   assert.equal(await page.getByRole('heading', { level: 1, name: 'Accessibilité', exact: true }).count(), 1);
   assert.equal(await page.getByRole('switch', { name: 'Vibrations des pratiques' }).isChecked(), false);
@@ -202,6 +233,68 @@ try {
   assert.deepEqual(incomplete.filter(result => result.id === 'color-contrast'), [], 'Contrast must be measurable in both enhanced-contrast themes; review full incomplete nodes in the report.');
   report.checks.push('320px/200%: no global or text overflow, headings visible, full-width switch labels, button text scales and targets are at least 44px. Enhanced-contrast themes checked by axe with incomplete details preserved.');
   await context.close();
+  report.modalReflow = [];
+  for (const viewport of [{ width: 320, height: 640 }, { width: 640, height: 360 }]) {
+    const storyContext = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+    let shareRequests = 0;
+    const storyPage = await storyContext.newPage();
+    storyPage.on('pageerror', error => report.errors.push(String(error)));
+    await storyPage.route('**/api/story/share', async route => {
+      shareRequests++;
+      assert.equal(route.request().method(), 'POST');
+      const body = route.request().postDataJSON();
+      assert.equal(body.type, 'streak'); assert.equal(body.shared_to, 'native');
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        ok: true, share_id: 'synthetic-accessibility-share', points_given: 0, daily_remaining: 0,
+        referral_url: 'https://example.invalid/partage-synthetique',
+        image_url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'%3E%3Crect width='1080' height='1920' fill='%23365974'/%3E%3C/svg%3E",
+      }) });
+    });
+    await storyPage.goto(origin);
+    await storyPage.waitForFunction(() => document.documentElement.dataset.muktiTextSize === 'md');
+    await storyPage.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    const storyTrigger = storyPage.getByRole('button', { name: 'Ouvrir le partage complet', exact: true });
+    await storyTrigger.focus(); await storyPage.keyboard.press('Enter');
+    const storyDialog = storyPage.getByRole('dialog', { name: '🚀 Partage ta story', exact: true });
+    await storyDialog.getByTestId('share-story-image').waitFor({ state: 'visible' });
+    const reading = storyDialog.getByRole('region', { name: 'Contenu de la fenêtre', exact: true });
+    const dismiss = storyDialog.getByRole('button', { name: 'Fermer', exact: true });
+    const lastAction = storyDialog.getByTestId('share-story-download');
+    const measure = () => storyDialog.evaluate(dialog => {
+      const box = element => { const rect = element.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom }; };
+      const region = dialog.querySelector('[role="region"]');
+      return { viewport: { width: innerWidth, height: innerHeight }, rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
+        close: box(dialog.querySelector('[aria-label="Fermer"]')), content: box(region), lastAction: box(dialog.querySelector('[data-testid="share-story-download"]')),
+        scrollTop: region.scrollTop, scrollHeight: region.scrollHeight, clientHeight: region.clientHeight, clientWidth: region.clientWidth, scrollWidth: region.scrollWidth };
+    });
+    const inside = (box, size) => box.x >= -1 && box.y >= -1 && box.right <= size.width + 1 && box.bottom <= size.height + 1;
+    const before = await measure();
+    assert.equal(before.rootFontSize, 32);
+    assert.ok(inside(before.close, viewport) && before.close.width >= 44 && before.close.height >= 44, 'The close action must remain entirely visible with enlarged text.');
+    assert.ok(inside(before.content, viewport) && before.content.height >= 96, 'A useful part of the long content must remain visible.');
+    assert.ok(before.scrollHeight > before.clientHeight, 'The real share content must exercise vertical scrolling.');
+    assert.ok(before.scrollWidth <= before.clientWidth + 1, 'Share content must not require horizontal scrolling.');
+    await reading.focus(); await storyPage.keyboard.press('End');
+    await storyPage.waitForFunction(() => { const region = document.querySelector('dialog [role="region"]'); return region && region.scrollTop >= region.scrollHeight - region.clientHeight - 2; });
+    const afterEnd = await measure();
+    assert.ok(inside(afterEnd.close, viewport));
+    assert.ok(inside(afterEnd.lastAction, viewport), 'The final share action must be visible after keyboard scrolling.');
+    for (let step = 0; step < 20 && !(await lastAction.evaluate(element => element === document.activeElement)); step++) {
+      await storyPage.keyboard.press('Tab');
+      assert.equal(await storyDialog.evaluate(element => element.contains(document.activeElement)), true);
+    }
+    assert.equal(await lastAction.evaluate(element => element === document.activeElement), true, 'The final action must be reachable with Tab.');
+    const afterTab = await measure();
+    assert.ok(inside(afterTab.close, viewport) && inside(afterTab.lastAction, viewport));
+    await storyPage.screenshot({ path: path.join(output, `mukti-modal-${viewport.width}x${viewport.height}.png`) });
+    await dismiss.focus(); await storyPage.keyboard.press('Enter');
+    await storyDialog.waitFor({ state: 'detached' });
+    assert.equal(await storyTrigger.evaluate(element => element === document.activeElement), true);
+    assert.equal(shareRequests, 1, 'Only the intercepted synthetic loading request is allowed; sharing actions are never activated.');
+    report.modalReflow.push({ viewport, before, afterEnd, afterTab, returnedFocus: true, syntheticShareRequests: shareRequests });
+    await storyContext.close();
+  }
+  report.checks.push('Real ShareStoryButton with intercepted synthetic loading: 320×640 and 640×360 at 200% text, visible close action, bounded reading region, End scrolling, final action reachable by Tab and focus returned without activating any share endpoint.');
   const blocked = await browser.newContext();
   await blocked.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Blocked', 'QuotaExceededError'); }; });
   const blockedPage = await blocked.newPage(); await blockedPage.goto(origin);
