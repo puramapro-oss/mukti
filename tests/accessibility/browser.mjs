@@ -5,6 +5,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import http from 'node:http';
+import { verifyStorageRecovery } from './storage-recovery.mjs';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const require = createRequire(path.join(root, 'package.json'));
 const tooling = process.env.A11Y_TOOLING_PACKAGE ? createRequire(process.env.A11Y_TOOLING_PACKAGE) : require;
@@ -26,7 +27,7 @@ if (process.env.A11Y_SSR_ONLY === '1') { console.log('PASS: SSR markup is stable
 const cssReport = { status: 'NON_TESTE', scope: 'Actual page and stylesheet sources; Tailwind compiled with the application PostCSS configuration. Dashboard layout and next/font are not rendered.', sources: {}, runtime: {} };
 let css;
 try {
-  for (const file of ['src/app/(dashboard)/dashboard/profile/accessibility/page.tsx', 'src/components/ui/Modal.tsx', 'src/components/shared/ShareStoryButton.tsx', 'tests/accessibility/Fixture.tsx', 'tests/accessibility/server.tsx', 'tests/accessibility/client.tsx', 'src/app/globals.css', 'src/app/accessibility.css', 'postcss.config.mjs']) {
+  for (const file of ['src/app/(dashboard)/dashboard/profile/accessibility/page.tsx', 'src/lib/accessibility.ts', 'src/hooks/useAccessibilityPrefs.ts', 'src/components/ui/Modal.tsx', 'src/components/shared/ShareStoryButton.tsx', 'tests/accessibility/Fixture.tsx', 'tests/accessibility/server.tsx', 'tests/accessibility/client.tsx', 'tests/accessibility/storage-recovery.mjs', 'src/app/globals.css', 'src/app/accessibility.css', 'postcss.config.mjs']) {
     cssReport.sources[file] = createHash('sha256').update(await readFile(path.join(root, file))).digest('hex');
   }
   const postcss = tooling('postcss');
@@ -52,11 +53,12 @@ const html = '<!doctype html><html lang="fr" data-theme="dark"><head><meta chars
 const server = http.createServer((req, res) => { if (req.url === '/client.js') { res.setHeader('Content-Type', 'text/javascript; charset=utf-8'); res.end(bundle); } else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(html); } });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = 'http://127.0.0.1:' + server.address().port;
-const report = { sourceBase: '2ab63923e1dbc31adac428da0a7754d8092d68aa', testedCommit: process.env.GITHUB_SHA ?? null, scope: 'Actual AccessibilityPage, shared native Modal, preference components and hooks, compiled application styles, SSR/hydration in a local browser fixture. Dashboard layout, next/font, complete Next route, physical hardware and production are not qualified.', stylesheets: cssReport, runtime: { node: process.version, react: require('react/package.json').version, typescript: require('typescript/package.json').version, playwright: tooling('playwright/package.json').version, axe: require('axe-core/package.json').version }, checks: [], errors: [] };
+const report = { sourceBase: '5cccffae122c7cb07c8681c3ca8fd7e0ae8c4f78', testedCommit: process.env.GITHUB_SHA ?? null, scope: 'Actual AccessibilityPage, shared native Modal, preference components and hooks, compiled application styles, SSR/hydration in a local browser fixture. Dashboard layout, next/font, complete Next route, physical hardware and production are not qualified.', stylesheets: cssReport, runtime: { node: process.version, react: require('react/package.json').version, typescript: require('typescript/package.json').version, playwright: tooling('playwright/package.json').version, axe: require('axe-core/package.json').version }, checks: [], errors: [] };
 let browser;
 try { browser = await chromium.launch({ headless: true, executablePath: process.env.A11Y_BROWSER_EXECUTABLE, args: ['--no-sandbox'] }); }
 catch (error) { await writeFile(path.join(output, 'browser-report.json'), JSON.stringify({ ...report, status: 'BLOCKED', failure: String(error) }, null, 2)); await new Promise(resolve => server.close(resolve)); throw error; }
 try {
+  report.runtime.chromium = browser.version();
   const context = await browser.newContext({ viewport: { width: 960, height: 1000 }, reducedMotion: 'no-preference' });
   await context.addInitScript(() => {
     if (!localStorage.getItem('mukti.a11y.prefs')) localStorage.setItem('mukti.a11y.prefs', JSON.stringify({ fontSize: 'lg', silentMode: true, captionsForced: true }));
@@ -303,6 +305,7 @@ try {
   assert.match(await blockedPage.getByRole('status').innerText(), /dans cet onglet/);
   report.checks.push('Blocked persistence still changes this tab and announces the exact limitation.');
   await blocked.close();
+  await verifyStorageRecovery(browser, origin, report);
   assert.deepEqual(report.errors, []);
   report.status = report.axe.status === 'PASS' ? 'PASS' : 'PARTIEL';
 } catch (error) { report.status = 'FAIL'; report.failure = String(error); throw error; }

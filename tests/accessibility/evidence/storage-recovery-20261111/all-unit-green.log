@@ -1,0 +1,34 @@
+✔ shared native dialog exposes its title and a named close action (85.70125ms)
+✔ dialog without a title remains named and has a visible close action (11.625857ms)
+✔ dialog content has a named keyboard-focusable reading region (12.921625ms)
+✔ native cancel requests one controlled close and prevents independent DOM closure (4.587578ms)
+✔ closing does not submit an enclosing form (9.960933ms)
+✔ controlled close restores focus and supports reopening under StrictMode (15.830031ms)
+✔ unmount restores focus without stealing it on unrelated parent renders (5.151609ms)
+✔ SSR returns independent defaults and never touches storage (2.416501ms)
+✔ stored values are restricted to the existing six preference fields (1.362057ms)
+✔ null arrays strings malformed and oversized storage use safe defaults (3.221966ms)
+✔ inherited preference properties are ignored (0.635135ms)
+✔ patch preserves legacy silent and captions choices and ignores invalid values (0.621536ms)
+✔ blocked writes apply only in this tab and report persistence failure (0.638992ms)
+✔ read and write failures do not prevent a session preference (0.653793ms)
+✔ local listeners re-read storage and do not trust event payloads (0.71314ms)
+✔ only relevant localStorage cross-tab events refresh preferences (0.693822ms)
+✔ legacy silence and disabled haptics prevent new vibration (1.14705ms)
+✔ disabling haptics also cancels a running vibration (0.628286ms)
+✔ hardware errors and invalid vibration patterns return false (1.233196ms)
+✔ storage recovery merges only local changes with another tab without needing an event (0.700342ms)
+✔ storage events preserve pending local choices and merge actual remote values before retry (0.673392ms)
+✔ temporary read failure retains the last observed settings without overwriting unknown changes (0.647724ms)
+✔ a blocked read prevents a writable store from losing unseen preferences (0.651379ms)
+✔ invalid patches during blocked writes do not pin default values over another tab (0.738888ms)
+✔ remote storage clearing resets persisted fields while keeping unsaved local choices (0.573324ms)
+✔ an explicit local reset replaces pending changes and can be retried after recovery (0.596128ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 696.004923

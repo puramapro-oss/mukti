@@ -1,0 +1,94 @@
+{
+  "recorded_at": "2026-11-11T22:48:20.882043+00:00",
+  "base": "5cccffae122c7cb07c8681c3ca8fd7e0ae8c4f78",
+  "base_tree": "9d8f61284cf5720caf08611f52387d88c92b39b5",
+  "initial_materialization": "884/884 files matched GitHub blob identifiers; git status clean before edits",
+  "scope": [
+    "src/lib/accessibility.ts",
+    "tests/accessibility/preferences.test.mjs",
+    "tests/accessibility/browser.mjs",
+    "tests/accessibility/storage-recovery.mjs"
+  ],
+  "changes": "Retain validated unpersisted per-field choices, re-read other persisted fields on recovery, keep last readable snapshot across read failures, do not write when storage cannot first be read. Same API, key and six preference fields.",
+  "gates": [
+    {
+      "command": "node --test tests/accessibility/preferences.test.mjs",
+      "stage": "red",
+      "exit": 1,
+      "total": 19,
+      "pass": 13,
+      "fail": 6,
+      "skipped": 0,
+      "evidence": "preferences-red.log"
+    },
+    {
+      "command": "node --test tests/accessibility/preferences.test.mjs tests/accessibility/modal.test.mjs",
+      "stage": "green",
+      "exit": 0,
+      "total": 26,
+      "pass": 26,
+      "fail": 0,
+      "skipped": 0,
+      "evidence": "all-unit-green.log"
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc -p tsconfig.accessibility.json",
+      "exit": 0,
+      "evidence": "types.log"
+    },
+    {
+      "command": "A11Y_BROWSER_EXECUTABLE=/tmp/chromium node tests/accessibility/browser.mjs",
+      "stage": "original source + new tests",
+      "exit": 1,
+      "failure": "A real storage event must retain the unsaved local size",
+      "evidence": "browser-red-report.json"
+    },
+    {
+      "command": "A11Y_BROWSER_EXECUTABLE=/tmp/chromium node tests/accessibility/browser.mjs",
+      "stage": "fixed source + same tests",
+      "exit": 0,
+      "status": "PASS",
+      "check_groups": 11,
+      "browser": "153.0.8010.0",
+      "errors": [],
+      "evidence": "browser-final/browser-report.json"
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0,
+      "evidence": "diff-check.log"
+    }
+  ],
+  "runtime": {
+    "node": "v24.22.1",
+    "react": "19.2.4",
+    "typescript": "5.7.2",
+    "playwright": "1.62.1",
+    "axe": "4.11.0",
+    "chromium": "153.0.8010.0"
+  },
+  "sources": {
+    "src/lib/accessibility.ts": "d3f46cc1c6a249002b98c2c092e0d7f17b1beecf262e0dc3ccc1bd17c0bdd32c",
+    "tests/accessibility/preferences.test.mjs": "1122b1b13c0965e8001e73c9a1e58526f54e562f43ddc862523341d98a717111",
+    "tests/accessibility/browser.mjs": "8c172437adddb19054b077bc22e6a1a715e45fec814e511d33be1d555c85c472",
+    "tests/accessibility/storage-recovery.mjs": "6f7bd00a53ec8ba60c52b07b58b658e513ddefda1e75b2698548489f08a5b46c"
+  },
+  "limits": [
+    "Focused real-component fixture, not full Next dashboard or full product build.",
+    "No iOS/Android hardware, VoiceOver/TalkBack/NVDA, braille or physical haptic tests.",
+    "localStorage is not transactional: truly simultaneous read/write interleavings are not serialized.",
+    "Cross-domain/account/device preferences remain unsupported."
+  ],
+  "record_phase": "local_verification_before_publication",
+  "source_receipt_sha256": "cd3164aa8111d6632e0167902a3b6913ec9bbd2856eaf55944d1792d16c6c7e9",
+  "publication_state_at_verification": "Before publication: no remote commit, push, merge, production deployment or new PR was performed by the local verification run. This historical receipt does not describe the current PR or deployment state.",
+  "archive_selection": {
+    "retained": [
+      "verification.json",
+      "browser-final/browser-report.json",
+      "all-unit-green.log",
+      "preferences-red.log"
+    ],
+    "other_log_references": "Other evidence paths in gates refer to temporary run receipts and are not included in this limited archive."
+  }
+}

@@ -13,7 +13,8 @@ function fixture({ raw = null, readBlocked = false, writeBlocked = false, server
   const window = new EventTarget(); window.localStorage = storage;
   const context = vm.createContext({ exports: {}, Event, CustomEvent, ...(server ? {} : { window }), navigator: { vibrate } });
   vm.runInContext(compiled, context);
-  return { api: context.exports, saved, window, storage };
+  return { api: context.exports, saved, window, storage,
+    setReadBlocked: value => { readBlocked = value; }, setWriteBlocked: value => { writeBlocked = value; } };
 }
 const plain = value => JSON.parse(JSON.stringify(value));
 
@@ -94,4 +95,106 @@ test('hardware errors and invalid vibration patterns return false', () => {
   let calls = 0; const second = fixture({ vibrate: () => { calls++; return true; } }).api;
   for (const pattern of [-1, Infinity, NaN, 10001, [50, -1], Array(65).fill(1)]) assert.equal(second.safeVibrate(pattern), false);
   assert.equal(calls, 0); assert.equal(second.safeVibrate([100,50,100]), true);
+});
+
+test('storage recovery merges only local changes with another tab without needing an event', () => {
+  const { api, saved, setWriteBlocked } = fixture({ raw: '{"captionsForced":true}', writeBlocked: true });
+  assert.equal(api.saveA11yPrefsWithStatus({ fontSize: 'xl' }).persisted, false);
+  saved.set(api.A11Y_STORAGE_KEY, '{"captionsForced":true,"highContrast":true,"fontSize":"md"}');
+  setWriteBlocked(false);
+  const result = api.saveA11yPrefsWithStatus({ reducedMotionForced: true });
+  assert.equal(result.persisted, true);
+  assert.equal(result.prefs.fontSize, 'xl');
+  assert.equal(result.prefs.highContrast, true);
+  assert.equal(result.prefs.captionsForced, true);
+  assert.equal(result.prefs.reducedMotionForced, true);
+  assert.deepEqual(JSON.parse(saved.get(api.A11Y_STORAGE_KEY)), plain(result.prefs));
+});
+
+test('storage events preserve pending local choices and merge actual remote values before retry', () => {
+  const { api, saved, window, storage, setWriteBlocked } = fixture({ writeBlocked: true });
+  api.saveA11yPrefsWithStatus({ fontSize: 'xl' });
+  let notified;
+  api.subscribeA11yPrefs(() => { notified = api.loadA11yPrefs(); });
+  saved.set(api.A11Y_STORAGE_KEY, '{"highContrast":true,"captionsForced":true,"fontSize":"sm"}');
+  const event = new Event('storage'); event.key = api.A11Y_STORAGE_KEY; event.storageArea = storage;
+  event.newValue = '{"fontSize":"md","highContrast":false}'; window.dispatchEvent(event);
+  assert.equal(notified.fontSize, 'xl');
+  assert.equal(notified.highContrast, true);
+  assert.equal(notified.captionsForced, true);
+  setWriteBlocked(false);
+  assert.equal(api.saveA11yPrefsWithStatus({}).persisted, true);
+  // Successful persistence clears local precedence: future remote changes win normally.
+  saved.set(api.A11Y_STORAGE_KEY, '{"fontSize":"lg","highContrast":false}');
+  window.dispatchEvent(event);
+  assert.equal(api.loadA11yPrefs().fontSize, 'lg');
+  assert.equal(api.loadA11yPrefs().highContrast, false);
+});
+
+test('temporary read failure retains the last observed settings without overwriting unknown changes', () => {
+  const { api, saved, setReadBlocked, setWriteBlocked } = fixture({ raw: '{"highContrast":true,"captionsForced":true,"fontSize":"lg"}' });
+  assert.equal(api.loadA11yPrefs().highContrast, true);
+  setReadBlocked(true); setWriteBlocked(true);
+  const temporary = api.saveA11yPrefsWithStatus({ fontSize: 'xl' });
+  assert.equal(temporary.persisted, false);
+  assert.equal(temporary.prefs.highContrast, true);
+  assert.equal(temporary.prefs.captionsForced, true);
+  saved.set(api.A11Y_STORAGE_KEY, '{"captionsForced":true,"highContrast":false,"reducedMotionForced":true}');
+  setReadBlocked(false); setWriteBlocked(false);
+  const recovered = api.saveA11yPrefsWithStatus({});
+  assert.equal(recovered.persisted, true);
+  assert.equal(recovered.prefs.fontSize, 'xl');
+  assert.equal(recovered.prefs.highContrast, false);
+  assert.equal(recovered.prefs.captionsForced, true);
+  assert.equal(recovered.prefs.reducedMotionForced, true);
+});
+
+test('a blocked read prevents a writable store from losing unseen preferences', () => {
+  const original = '{"captionsForced":true,"highContrast":true}';
+  const { api, saved, setReadBlocked } = fixture({ raw: original, readBlocked: true });
+  const temporary = api.saveA11yPrefsWithStatus({ fontSize: 'xl' });
+  assert.equal(temporary.persisted, false);
+  assert.equal(temporary.prefs.fontSize, 'xl');
+  assert.equal(saved.get(api.A11Y_STORAGE_KEY), original);
+  setReadBlocked(false);
+  const recovered = api.saveA11yPrefsWithStatus({});
+  assert.equal(recovered.persisted, true);
+  assert.equal(recovered.prefs.captionsForced, true);
+  assert.equal(recovered.prefs.highContrast, true);
+  assert.equal(recovered.prefs.fontSize, 'xl');
+});
+
+test('invalid patches during blocked writes do not pin default values over another tab', () => {
+  const { api, saved, setWriteBlocked } = fixture({ writeBlocked: true });
+  api.saveA11yPrefsWithStatus({ fontSize: 'unknown', highContrast: 'true' });
+  saved.set(api.A11Y_STORAGE_KEY, '{"fontSize":"lg","highContrast":true}');
+  setWriteBlocked(false);
+  const result = api.saveA11yPrefsWithStatus({});
+  assert.equal(result.persisted, true);
+  assert.equal(result.prefs.fontSize, 'lg');
+  assert.equal(result.prefs.highContrast, true);
+});
+
+test('remote storage clearing resets persisted fields while keeping unsaved local choices', () => {
+  const { api, saved, window, storage } = fixture({ raw: '{"highContrast":true,"captionsForced":true}', writeBlocked: true });
+  api.saveA11yPrefsWithStatus({ fontSize: 'xl' });
+  api.subscribeA11yPrefs(() => {});
+  saved.clear();
+  const event = new Event('storage'); event.key = null; event.storageArea = storage; window.dispatchEvent(event);
+  assert.equal(api.loadA11yPrefs().fontSize, 'xl');
+  assert.equal(api.loadA11yPrefs().highContrast, false);
+  assert.equal(api.loadA11yPrefs().captionsForced, false);
+});
+
+test('an explicit local reset replaces pending changes and can be retried after recovery', () => {
+  const { api, saved, setWriteBlocked } = fixture({ raw: '{"captionsForced":true}', writeBlocked: true });
+  api.saveA11yPrefsWithStatus({ fontSize: 'xl', highContrast: true });
+  assert.equal(api.saveA11yPrefsWithStatus(api.DEFAULT_A11Y_PREFS).persisted, false);
+  assert.deepEqual(plain(api.loadA11yPrefs()), plain(api.DEFAULT_A11Y_PREFS));
+  saved.set(api.A11Y_STORAGE_KEY, '{"captionsForced":true,"fontSize":"lg"}');
+  setWriteBlocked(false);
+  const reset = api.saveA11yPrefsWithStatus({});
+  assert.equal(reset.persisted, true);
+  assert.deepEqual(plain(reset.prefs), plain(api.DEFAULT_A11Y_PREFS));
+  assert.deepEqual(JSON.parse(saved.get(api.A11Y_STORAGE_KEY)), plain(api.DEFAULT_A11Y_PREFS));
 });

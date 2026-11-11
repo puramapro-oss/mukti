@@ -1,5 +1,21 @@
 # Vérification des contrôles d’accessibilité MUKTI
 
+## Résultat courant de la qualification locale — 11 novembre 2026
+
+La reprise sur la base `5cccffae122c7cb07c8681c3ca8fd7e0ae8c4f78` a été vérifiée **avant publication**, sur les sources identifiées dans les reçus ci-dessous. Cet instantané local ne décrit pas l’état actuel de la PR, de sa CI ou d’un déploiement.
+
+| Contrôle | Résultat local |
+| --- | --- |
+| Régressions des préférences avant correction | Six échecs reproduits sur 19 cas, aucun cas ignoré |
+| Préférences et dialogue après correction | **PASS — 26/26**, aucun échec ni cas ignoré |
+| Typage ciblé avec `tsconfig.accessibility.json` | **PASS**, code de sortie 0 |
+| Harnais Chromium 153.0.8010.0 | **PASS — 11 groupes**, dont récupération du stockage avec deux vrais onglets |
+| Axe 4.11.0 sur les thèmes de contraste renforcé clair et sombre | **PASS — aucune violation ni vérification incomplète dans le périmètre analysé** |
+
+Le harnais monte les composants produit réels, compile leurs styles puis vérifie SSR/hydratation, clavier, dialogue et reflow. Il qualifie une **fixture de composants**, pas l’application Next complète. Les pannes de lecture/écriture sont injectées par onglet ; `localStorage` ne devient pas transactionnel et la synchronisation entre domaines, comptes ou appareils reste hors périmètre. Les aides techniques, les appareils et les vibrations physiques restent **NON TESTÉS**.
+
+Les reçus limités sont archivés dans [evidence/storage-recovery-20261111](evidence/storage-recovery-20261111/) : [synthèse et commandes](evidence/storage-recovery-20261111/verification.json), [rapport navigateur](evidence/storage-recovery-20261111/browser-final/browser-report.json), [26 cas réussis](evidence/storage-recovery-20261111/all-unit-green.log) et [régressions initiales](evidence/storage-recovery-20261111/preferences-red.log). Aucun bundle compilé n’est inclus dans cette archive. Les autres chemins de logs cités par la synthèse désignent les preuves temporaires du run d’origine, non recopiées ici.
+
 Cette recette vérifie les composants et fonctions réellement importés depuis `src/`. Elle ne constitue pas une compilation de l’application Next entière, un audit RGAA/WCAG complet, un test de lecteur d’écran, ni une preuve de déploiement.
 
 ## Commandes
@@ -30,7 +46,7 @@ Base de reprise : `2ab63923e1dbc31adac428da0a7754d8092d68aa`, PR MUKTI nº 8. La
 
 Les six nouveaux contrôles DOM ont échoué sur le composant avant correction, puis réussissent après correction. Le dialogue natif est conservé ; il reçoit un nom associé au titre ou un nom de repli, une fermeture toujours disponible et nommée, et une restauration du focus au déclencheur. Échap utilise l'événement `cancel` du dialogue au lieu d'un écouteur global au document. La fermeture ne soumet pas un formulaire parent. Le focus initial est posé après mémorisation du déclencheur : un attribut React `autoFocus` le déplaçait trop tôt et les deux tests de restauration l'ont détecté pendant la correction.
 
-Les preuves locales DOM, typage et SSR ne valent pas un résultat navigateur. Dans l'environnement local de cette reprise, Chromium refuse de démarrer (`socket() failed: Operation not permitted`), avant tout scénario. La qualification du clavier natif reste à exécuter dans le job CI existant sur le commit publié.
+Lors de cette première reprise, les preuves locales DOM, typage et SSR ne valaient pas un résultat navigateur : Chromium refusait alors de démarrer (`socket() failed: Operation not permitted`), avant tout scénario. Cet échec historique n’est pas compté comme une réussite. Le blocage local a depuis été levé avec Chromium 153.0.8010.0 : les scénarios de clavier natif ont été exécutés et réussissent dans le harnais de la reprise du stockage, pour les sources identifiées dans le rapport lié en tête. Cette qualification locale ne vaut pas un résultat de CI distante ni un test de l’application complète.
 
 ### Contenu long et petit écran
 
@@ -38,4 +54,4 @@ La revue du vrai `ShareStoryButton` a identifié un second risque concret : son 
 
 Le même harnais importe le vrai `ShareStoryButton`, avec son image et ses commandes. À 320 × 640 puis 640 × 360 px et avec une police racine à 200 %, les scénarios vérifient les rectangles de la fermeture et de la dernière action, une région de lecture d'au moins 96 px, l'absence de débordement horizontal, le défilement avec Fin, l'accès à la dernière action avec Tab et le retour au déclencheur. Les mesures sont conservées dans `browser-report.json` et les captures dans `mukti-modal-*.png`.
 
-Le chargement `/api/story/share` est intercepté dans Playwright et reçoit des données synthétiques ainsi qu'une image locale en URL de données. Aucun partage n'est déclenché, aucun endpoint produit n'est modifié et aucun service de partage n'est contacté. Ces mesures géométriques restent **NON TESTÉES localement** tant que le navigateur ne peut pas démarrer ; la compilation CSS et les tests DOM ne remplacent pas leur exécution en CI.
+Le chargement `/api/story/share` est intercepté dans Playwright et reçoit des données synthétiques ainsi qu'une image locale en URL de données. Aucun partage n'est déclenché, aucun endpoint produit n'est modifié et aucun service de partage n'est contacté. Ces mesures géométriques étaient **NON TESTÉES localement** lors du blocage initial du navigateur. Elles ont depuis été exécutées et réussissent aux deux dimensions indiquées, avec Chromium 153.0.8010.0 ; leurs résultats figurent dans `modalReflow` du rapport archivé en tête. Elles concernent toujours le harnais local, sans qualification d’un téléphone physique ou du parcours de partage en production.

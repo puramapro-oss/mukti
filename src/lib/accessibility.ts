@@ -16,8 +16,10 @@ export const A11Y_STORAGE_KEY = 'mukti.a11y.prefs'
 export const A11Y_PREFS_EVENT = 'mukti:a11y-prefs-change'
 const BOOLEAN_KEYS = ['silentMode', 'hapticEnabled', 'captionsForced', 'reducedMotionForced', 'highContrast'] as const
 const FONT_SIZES: readonly FontSizePref[] = ['sm', 'md', 'lg', 'xl']
-// An unavailable localStorage must not prevent changing this tab's interface.
-let sessionPrefs: AccessibilityPrefs | null = null
+// Keep only this tab's unsaved choices, so recovery can retain independent
+// changes from another tab. The last readable snapshot covers temporary reads.
+let pendingPrefs: Partial<AccessibilityPrefs> = {}
+let storedPrefs: AccessibilityPrefs = { ...DEFAULT_A11Y_PREFS }
 
 export function normalizeA11yPrefs(value: unknown): AccessibilityPrefs {
   const result = { ...DEFAULT_A11Y_PREFS }
@@ -30,32 +32,45 @@ export function normalizeA11yPrefs(value: unknown): AccessibilityPrefs {
   return result
 }
 
-export function loadA11yPrefs(): AccessibilityPrefs {
-  if (typeof window === 'undefined') return { ...DEFAULT_A11Y_PREFS }
-  if (sessionPrefs) return { ...sessionPrefs }
+function readStoredPrefs(): { prefs: AccessibilityPrefs; readable: boolean } {
   try {
     const raw = window.localStorage.getItem(A11Y_STORAGE_KEY)
-    if (!raw || raw.length > 4096) return { ...DEFAULT_A11Y_PREFS }
-    return normalizeA11yPrefs(JSON.parse(raw))
-  } catch { return { ...DEFAULT_A11Y_PREFS } }
+    let value: unknown = null
+    if (raw && raw.length <= 4096) {
+      try { value = JSON.parse(raw) } catch { /* Invalid stored data uses safe defaults. */ }
+    }
+    storedPrefs = normalizeA11yPrefs(value)
+    return { prefs: storedPrefs, readable: true }
+  } catch { return { prefs: storedPrefs, readable: false } }
+}
+
+export function loadA11yPrefs(): AccessibilityPrefs {
+  if (typeof window === 'undefined') return { ...DEFAULT_A11Y_PREFS }
+  return { ...readStoredPrefs().prefs, ...pendingPrefs }
 }
 
 export function saveA11yPrefsWithStatus(patch: Partial<AccessibilityPrefs>): { prefs: AccessibilityPrefs; persisted: boolean } {
   if (typeof window === 'undefined') return { prefs: { ...DEFAULT_A11Y_PREFS }, persisted: false }
-  const next = { ...loadA11yPrefs() }
   // A bad patch must not reset other valid preferences to their defaults.
   if (patch && typeof patch === 'object' && !Array.isArray(patch)) {
     for (const key of BOOLEAN_KEYS) {
-      if (Object.hasOwn(patch, key) && typeof patch[key] === 'boolean') next[key] = patch[key]
+      if (Object.hasOwn(patch, key) && typeof patch[key] === 'boolean') pendingPrefs[key] = patch[key]
     }
-    if (Object.hasOwn(patch, 'fontSize') && FONT_SIZES.includes(patch.fontSize as FontSizePref)) next.fontSize = patch.fontSize as FontSizePref
+    if (Object.hasOwn(patch, 'fontSize') && FONT_SIZES.includes(patch.fontSize as FontSizePref)) pendingPrefs.fontSize = patch.fontSize as FontSizePref
   }
+  const snapshot = readStoredPrefs()
+  const next = { ...snapshot.prefs, ...pendingPrefs }
   let persisted = false
-  try {
-    window.localStorage.setItem(A11Y_STORAGE_KEY, JSON.stringify(next))
-    persisted = true
-    sessionPrefs = null
-  } catch { sessionPrefs = next }
+  // Never replace unreadable storage with defaults: it may contain newer
+  // choices from another tab. Retrying any patch re-reads before it writes.
+  if (snapshot.readable) {
+    try {
+      window.localStorage.setItem(A11Y_STORAGE_KEY, JSON.stringify(next))
+      storedPrefs = next
+      pendingPrefs = {}
+      persisted = true
+    } catch { /* Keep the validated local patch for an explicit retry. */ }
+  }
   // Stop an already-running vibration when the user disables it.
   if ((next.silentMode || !next.hapticEnabled) && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
     try { navigator.vibrate(0) } catch { /* Hardware feedback remains optional. */ }
@@ -75,7 +90,6 @@ export function subscribeA11yPrefs(listener: () => void): () => void {
   const onStorage = (event: StorageEvent) => {
     try {
       if (event.storageArea !== window.localStorage || (event.key !== A11Y_STORAGE_KEY && event.key !== null)) return
-      sessionPrefs = null
       listener()
     } catch { /* A blocked storage area cannot supply a new preference. */ }
   }

@@ -1,0 +1,523 @@
+{
+  "sourceBase": "5cccffae122c7cb07c8681c3ca8fd7e0ae8c4f78",
+  "testedCommit": null,
+  "scope": "Actual AccessibilityPage, shared native Modal, preference components and hooks, compiled application styles, SSR/hydration in a local browser fixture. Dashboard layout, next/font, complete Next route, physical hardware and production are not qualified.",
+  "stylesheets": {
+    "status": "PASS_COMPILED",
+    "scope": "Actual page and stylesheet sources; Tailwind compiled with the application PostCSS configuration. Dashboard layout and next/font are not rendered.",
+    "sources": {
+      "src/app/(dashboard)/dashboard/profile/accessibility/page.tsx": "46e6efeb29ec862d1a63264860d7b1cb836c1ad01054ca1992d701dfe77028b5",
+      "src/lib/accessibility.ts": "d3f46cc1c6a249002b98c2c092e0d7f17b1beecf262e0dc3ccc1bd17c0bdd32c",
+      "src/hooks/useAccessibilityPrefs.ts": "c2958fbb1096ff5de93254fd73a03b9fafce54a79913a1419014fce85147d1e3",
+      "src/components/ui/Modal.tsx": "6e101ccceb655bfd8880099e6f84eab842c57ad89811b6f0ad8d7f21128aa2f5",
+      "src/components/shared/ShareStoryButton.tsx": "aa8cc689211218191a757b7fe1bbcb200021b1e57244b2839be2a2294ef70b8e",
+      "tests/accessibility/Fixture.tsx": "ac20f1a17656e15d13bf7ad31445d784593aedc2c001f01b2766fcd3e545f913",
+      "tests/accessibility/server.tsx": "262ef6197947602161936e903bb34e29bc2169e4a0d20bb2dda33beb24e42888",
+      "tests/accessibility/client.tsx": "8f840ef3c51a19b6c64442c037aa297c7392c3b806932cd648d7cac3e4204503",
+      "tests/accessibility/storage-recovery.mjs": "6f7bd00a53ec8ba60c52b07b58b658e513ddefda1e75b2698548489f08a5b46c",
+      "src/app/globals.css": "6063bdc36c1caddcf60a8f98339fc3746782c007de6d9b3332fd73f8b5bcef4d",
+      "src/app/accessibility.css": "d280fffaf6eaef1b0725ccf52f809617e94271110b3ec8cfdeb32c8657fec816",
+      "postcss.config.mjs": "dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde"
+    },
+    "runtime": {
+      "postcss": "8.5.23",
+      "tailwindcss": "4.2.2",
+      "tailwindPostcss": "4.2.2"
+    },
+    "compiledBytes": 247159,
+    "compiledSha256": "6572f72ac76653d9bc1609d745d56da03fb7e6b50867661c14ef47e5e154ecdc",
+    "warnings": []
+  },
+  "runtime": {
+    "node": "v24.22.1",
+    "react": "19.2.4",
+    "typescript": "5.7.2",
+    "playwright": "1.62.1",
+    "axe": "4.11.0",
+    "chromium": "153.0.8010.0"
+  },
+  "checks": [
+    "Native shared modal: accessible title and fallback, named 44px close target, initial focus, Tab containment, Escape exactly once, return focus, repeated opening and no accidental form submission.",
+    "Saved legacy settings hydrate without mismatch; previous silence remains effective.",
+    "Native radio arrow navigation, persistence and second-tab synchronization; legacy captions field retained.",
+    "Keyboard switch enables requested haptics; disabling cancels current vibration. Hardware is stubbed.",
+    "Forced motion preference affects shared hook and CSS; OS reduced motion stays active when the app switch is off.",
+    "Contrast tokens work in light and dark themes without filtering images.",
+    "The actual page supplies the sole h1; its Tailwind title and wrapper utilities are applied at 320px/200%. No fixture heading or wrapping rule.",
+    "320px/200%: no global or text overflow, headings visible, full-width switch labels, button text scales and targets are at least 44px. Enhanced-contrast themes checked by axe with incomplete details preserved.",
+    "Real ShareStoryButton with intercepted synthetic loading: 320×640 and 640×360 at 200% text, visible close action, bounded reading region, End scrolling, final action reachable by Tab and focus returned without activating any share endpoint.",
+    "Blocked persistence still changes this tab and announces the exact limitation.",
+    "Two real tabs: blocked writes keep local size while remote contrast arrives; recovery persists both, releases local precedence, and failed reads never overwrite unseen remote settings."
+  ],
+  "errors": [],
+  "styleReadiness": {
+    "status": "PASS",
+    "timeoutMs": 5000,
+    "pollingMs": 100,
+    "requiredConsecutiveMatches": 2,
+    "scope": "Observe the complete text-scale precondition; this does not establish a browser cause for an earlier inconsistent sample.",
+    "initial": {
+      "elapsedMs": 0.10000000149011612,
+      "headingCount": 1,
+      "title": "Accessibilité",
+      "rootFontSize": 32,
+      "headingFontSize": 24,
+      "headingLineHeight": "32px",
+      "headingFontWeight": "600",
+      "headingOverflowWrap": "anywhere",
+      "headingWordBreak": "normal",
+      "wrapperPaddingLeft": 16,
+      "wrapperPaddingRight": 16,
+      "wrapperWidth": 320,
+      "bodyFontFamily": "Satoshi, \"DM Sans\", system-ui, sans-serif",
+      "rootText2xl": "1.5rem",
+      "rootSpacing": "0.25rem"
+    },
+    "final": {
+      "elapsedMs": 201,
+      "headingCount": 1,
+      "title": "Accessibilité",
+      "rootFontSize": 32,
+      "headingFontSize": 48,
+      "headingLineHeight": "64px",
+      "headingFontWeight": "600",
+      "headingOverflowWrap": "anywhere",
+      "headingWordBreak": "normal",
+      "wrapperPaddingLeft": 32,
+      "wrapperPaddingRight": 32,
+      "wrapperWidth": 320,
+      "bodyFontFamily": "Satoshi, \"DM Sans\", system-ui, sans-serif",
+      "rootText2xl": "1.5rem",
+      "rootSpacing": "0.25rem"
+    },
+    "samples": [
+      {
+        "elapsedMs": 0.10000000149011612,
+        "headingCount": 1,
+        "title": "Accessibilité",
+        "rootFontSize": 32,
+        "headingFontSize": 24,
+        "headingLineHeight": "32px",
+        "headingFontWeight": "600",
+        "headingOverflowWrap": "anywhere",
+        "headingWordBreak": "normal",
+        "wrapperPaddingLeft": 16,
+        "wrapperPaddingRight": 16,
+        "wrapperWidth": 320,
+        "bodyFontFamily": "Satoshi, \"DM Sans\", system-ui, sans-serif",
+        "rootText2xl": "1.5rem",
+        "rootSpacing": "0.25rem"
+      },
+      {
+        "elapsedMs": 100.60000000149012,
+        "headingCount": 1,
+        "title": "Accessibilité",
+        "rootFontSize": 32,
+        "headingFontSize": 48,
+        "headingLineHeight": "64px",
+        "headingFontWeight": "600",
+        "headingOverflowWrap": "anywhere",
+        "headingWordBreak": "normal",
+        "wrapperPaddingLeft": 32,
+        "wrapperPaddingRight": 32,
+        "wrapperWidth": 320,
+        "bodyFontFamily": "Satoshi, \"DM Sans\", system-ui, sans-serif",
+        "rootText2xl": "1.5rem",
+        "rootSpacing": "0.25rem"
+      },
+      {
+        "elapsedMs": 201,
+        "headingCount": 1,
+        "title": "Accessibilité",
+        "rootFontSize": 32,
+        "headingFontSize": 48,
+        "headingLineHeight": "64px",
+        "headingFontWeight": "600",
+        "headingOverflowWrap": "anywhere",
+        "headingWordBreak": "normal",
+        "wrapperPaddingLeft": 32,
+        "wrapperPaddingRight": 32,
+        "wrapperWidth": 320,
+        "bodyFontFamily": "Satoshi, \"DM Sans\", system-ui, sans-serif",
+        "rootText2xl": "1.5rem",
+        "rootSpacing": "0.25rem"
+      }
+    ],
+    "elapsedMs": 204.60000000149012,
+    "consecutiveMatches": 2
+  },
+  "pageStyles": {
+    "elapsedMs": 201,
+    "headingCount": 1,
+    "title": "Accessibilité",
+    "rootFontSize": 32,
+    "headingFontSize": 48,
+    "headingLineHeight": "64px",
+    "headingFontWeight": "600",
+    "headingOverflowWrap": "anywhere",
+    "headingWordBreak": "normal",
+    "wrapperPaddingLeft": 32,
+    "wrapperPaddingRight": 32,
+    "wrapperWidth": 320,
+    "bodyFontFamily": "Satoshi, \"DM Sans\", system-ui, sans-serif",
+    "rootText2xl": "1.5rem",
+    "rootSpacing": "0.25rem"
+  },
+  "reflow": {
+    "viewport": 320,
+    "documentWidth": 320,
+    "bodyWidth": 320,
+    "elementOverflows": [],
+    "textOverflows": [],
+    "headings": [
+      {
+        "element": "h1.text-2xl.font-semibold.text-[var(--text-primary)].wrap-anywhere",
+        "text": "Accessibilité",
+        "width": 256
+      },
+      {
+        "element": "#_R_26_-comfort",
+        "text": "Votre confort",
+        "width": 234.8125
+      },
+      {
+        "element": "legend",
+        "text": "Taille du texte",
+        "width": 224.875
+      },
+      {
+        "element": "#_R_26_-test",
+        "text": "Essayer les vibrations",
+        "width": 234.8125
+      },
+      {
+        "element": "#modal-test-title",
+        "text": "Contrôle de la fenêtre partagée",
+        "width": 320
+      },
+      {
+        "element": "#full-share-title",
+        "text": "Contenu complet de partage",
+        "width": 288
+      }
+    ],
+    "switchRows": [
+      {
+        "text": "Vibrations des pratiques",
+        "labelWidth": 234.8125,
+        "textWidth": 234.8125,
+        "textBottom": 784.15625,
+        "controlTop": 800.15625
+      },
+      {
+        "text": "Réduire les animations",
+        "labelWidth": 234.8125,
+        "textWidth": 234.8125,
+        "textBottom": 1425.03125,
+        "controlTop": 1441.03125
+      },
+      {
+        "text": "Renforcer les contrastes du thème",
+        "labelWidth": 234.8125,
+        "textWidth": 234.8125,
+        "textBottom": 2117.09375,
+        "controlTop": 2133.09375
+      }
+    ],
+    "rootFontSize": 32,
+    "buttonFontSize": 32,
+    "targetHeights": [
+      166.375,
+      166.375,
+      217.5625,
+      69.1875,
+      69.1875,
+      69.1875,
+      69.1875,
+      123.59375,
+      123.59375,
+      78.796875
+    ]
+  },
+  "axe": {
+    "themes": [
+      {
+        "theme": "dark",
+        "violations": [],
+        "incomplete": [],
+        "passes": 23,
+        "bodyBackgroundImage": "none",
+        "bodyBackgroundColor": "rgb(3, 4, 10)"
+      },
+      {
+        "theme": "light",
+        "violations": [],
+        "incomplete": [],
+        "passes": 23,
+        "bodyBackgroundImage": "none",
+        "bodyBackgroundColor": "rgb(248, 250, 252)"
+      }
+    ],
+    "status": "PASS"
+  },
+  "modalReflow": [
+    {
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "before": {
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "rootFontSize": 32,
+        "close": {
+          "x": 227,
+          "y": 29,
+          "width": 64,
+          "height": 64,
+          "right": 291,
+          "bottom": 93
+        },
+        "content": {
+          "x": 29,
+          "y": 209,
+          "width": 262,
+          "height": 402,
+          "right": 291,
+          "bottom": 611
+        },
+        "lastAction": {
+          "x": 29,
+          "y": 3027,
+          "width": 262,
+          "height": 64,
+          "right": 291,
+          "bottom": 3091
+        },
+        "scrollTop": 0,
+        "scrollHeight": 2882,
+        "clientHeight": 402,
+        "clientWidth": 262,
+        "scrollWidth": 262
+      },
+      "afterEnd": {
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "rootFontSize": 32,
+        "close": {
+          "x": 227,
+          "y": 29,
+          "width": 64,
+          "height": 64,
+          "right": 291,
+          "bottom": 93
+        },
+        "content": {
+          "x": 29,
+          "y": 209,
+          "width": 262,
+          "height": 402,
+          "right": 291,
+          "bottom": 611
+        },
+        "lastAction": {
+          "x": 29,
+          "y": 547,
+          "width": 262,
+          "height": 64,
+          "right": 291,
+          "bottom": 611
+        },
+        "scrollTop": 2480,
+        "scrollHeight": 2882,
+        "clientHeight": 402,
+        "clientWidth": 262,
+        "scrollWidth": 262
+      },
+      "afterTab": {
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "rootFontSize": 32,
+        "close": {
+          "x": 227,
+          "y": 29,
+          "width": 64,
+          "height": 64,
+          "right": 291,
+          "bottom": 93
+        },
+        "content": {
+          "x": 29,
+          "y": 209,
+          "width": 262,
+          "height": 402,
+          "right": 291,
+          "bottom": 611
+        },
+        "lastAction": {
+          "x": 29,
+          "y": 547,
+          "width": 262,
+          "height": 64,
+          "right": 291,
+          "bottom": 611
+        },
+        "scrollTop": 2480,
+        "scrollHeight": 2882,
+        "clientHeight": 402,
+        "clientWidth": 262,
+        "scrollWidth": 262
+      },
+      "returnedFocus": true,
+      "syntheticShareRequests": 1
+    },
+    {
+      "viewport": {
+        "width": 640,
+        "height": 360
+      },
+      "before": {
+        "viewport": {
+          "width": 640,
+          "height": 360
+        },
+        "rootFontSize": 32,
+        "close": {
+          "x": 535,
+          "y": 41,
+          "width": 64,
+          "height": 64,
+          "right": 599,
+          "bottom": 105
+        },
+        "content": {
+          "x": 41,
+          "y": 117,
+          "width": 558,
+          "height": 202,
+          "right": 599,
+          "bottom": 319
+        },
+        "lastAction": {
+          "x": 41,
+          "y": 1565,
+          "width": 558,
+          "height": 32,
+          "right": 599,
+          "bottom": 1597
+        },
+        "scrollTop": 0,
+        "scrollHeight": 1480,
+        "clientHeight": 202,
+        "clientWidth": 558,
+        "scrollWidth": 558
+      },
+      "afterEnd": {
+        "viewport": {
+          "width": 640,
+          "height": 360
+        },
+        "rootFontSize": 32,
+        "close": {
+          "x": 535,
+          "y": 41,
+          "width": 64,
+          "height": 64,
+          "right": 599,
+          "bottom": 105
+        },
+        "content": {
+          "x": 41,
+          "y": 117,
+          "width": 558,
+          "height": 202,
+          "right": 599,
+          "bottom": 319
+        },
+        "lastAction": {
+          "x": 41,
+          "y": 289,
+          "width": 558,
+          "height": 32,
+          "right": 599,
+          "bottom": 321
+        },
+        "scrollTop": 1276,
+        "scrollHeight": 1480,
+        "clientHeight": 202,
+        "clientWidth": 558,
+        "scrollWidth": 558
+      },
+      "afterTab": {
+        "viewport": {
+          "width": 640,
+          "height": 360
+        },
+        "rootFontSize": 32,
+        "close": {
+          "x": 535,
+          "y": 41,
+          "width": 64,
+          "height": 64,
+          "right": 599,
+          "bottom": 105
+        },
+        "content": {
+          "x": 41,
+          "y": 117,
+          "width": 558,
+          "height": 202,
+          "right": 599,
+          "bottom": 319
+        },
+        "lastAction": {
+          "x": 41,
+          "y": 287,
+          "width": 558,
+          "height": 32,
+          "right": 599,
+          "bottom": 319
+        },
+        "scrollTop": 1278,
+        "scrollHeight": 1480,
+        "clientHeight": 202,
+        "clientWidth": 558,
+        "scrollWidth": 558
+      },
+      "returnedFocus": true,
+      "syntheticShareRequests": 1
+    }
+  ],
+  "storageRecovery": {
+    "status": "PASS",
+    "contexts": 1,
+    "tabs": 2,
+    "writeRecovery": {
+      "silentMode": false,
+      "hapticEnabled": true,
+      "captionsForced": false,
+      "reducedMotionForced": true,
+      "highContrast": true,
+      "fontSize": "xl"
+    },
+    "readRecovery": {
+      "silentMode": false,
+      "hapticEnabled": true,
+      "captionsForced": false,
+      "reducedMotionForced": false,
+      "highContrast": false,
+      "fontSize": "xl"
+    },
+    "scope": "Real UI and browser localStorage/storage events; read/write failures injected per tab. No cross-origin or account synchronization."
+  },
+  "status": "PASS",
+  "record_phase": "local_verification_before_publication",
+  "source_receipt_sha256": "313c6012583bd711f6e64c1d96db1d94deac793d564cb15322328ff5bde63ef9",
+  "publication_note": "Local source-hash qualification before publication; testedCommit remains null because this run tested uncommitted local source. No current remote CI or deployment status is inferred."
+}
