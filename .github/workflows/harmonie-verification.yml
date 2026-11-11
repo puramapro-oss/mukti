@@ -1,0 +1,164 @@
+name: Harmonie software verification
+
+on:
+  pull_request:
+    paths:
+      - 'prototypes/harmonie/**'
+      - 'tools/harmonie/**'
+      - 'scripts/ci/verify-harmonie.py'
+      - '.github/workflows/harmonie-verification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'prototypes/harmonie/**'
+      - 'tools/harmonie/**'
+      - 'scripts/ci/verify-harmonie.py'
+      - '.github/workflows/harmonie-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harmonie-software-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  software:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.22.1'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the versioned FFmpeg tools for isolated CI
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import tarfile
+          import tempfile
+
+          def file_sha256(path):
+              with path.open("rb") as stream:
+                  return hashlib.file_digest(stream, "sha256").hexdigest()
+
+          def verify_archive(path, size, digest):
+              observed = {"size_bytes": path.stat().st_size, "sha256": file_sha256(path)}
+              if observed["size_bytes"] != size or observed["sha256"] != digest:
+                  raise ValueError("FFmpeg archive size or SHA-256 does not match the reviewed pin")
+              return observed
+
+          def extract_tools(archive, destination, archive_root):
+              expected = {
+                  f"{archive_root}/bin/ffmpeg": ("bin/ffmpeg", 512 * 1024 * 1024, 0o755),
+                  f"{archive_root}/bin/ffprobe": ("bin/ffprobe", 512 * 1024 * 1024, 0o755),
+                  f"{archive_root}/LICENSE.txt": ("LICENSE.txt", 1024 * 1024, 0o644),
+              }
+              destination.mkdir()
+              (destination / "bin").mkdir()
+              extracted = {}
+              with tarfile.open(archive, "r|xz") as bundle:
+                  for member in bundle:
+                      if member.name not in expected:
+                          continue
+                      relative, limit, mode = expected[member.name]
+                      if (member.name in extracted or not member.isfile() or member.sparse
+                              or not 0 < member.size <= limit):
+                          raise ValueError(f"Unexpected FFmpeg archive member: {member.name}")
+                      target = destination / relative
+                      with bundle.extractfile(member) as source, target.open("xb") as output:
+                          shutil.copyfileobj(source, output, length=1024 * 1024)
+                      if target.stat().st_size != member.size:
+                          raise ValueError(f"Incomplete FFmpeg archive member: {member.name}")
+                      target.chmod(mode)
+                      extracted[member.name] = {"bytes": member.size, "sha256": file_sha256(target)}
+              if set(extracted) != set(expected):
+                  raise ValueError("FFmpeg archive lacks a required binary or licence")
+              licence = (destination / "LICENSE.txt").read_text(encoding="utf-8")
+              if "GNU GENERAL PUBLIC LICENSE" not in licence or "Version 3" not in licence:
+                  raise ValueError("FFmpeg archive licence does not match the reviewed GPLv3 variant")
+              return extracted
+
+          pin = {
+              "repository": "FFmpeg-Builds/FFmpeg-Builds",
+              "tag": "autobuild-2026-10-31-12-59",
+              "asset_id": 695398022,
+              "name": "ffmpeg-n8.1.3-27-g8dca1586f4-linux64-gpl-8.1.tar.xz",
+              "size_bytes": 152246308,
+              "sha256": "41e9c565594c390622cf968d82fa4135d9e9a11d06c1515644288cbc844e3380",
+              "recipe_commit": "5031c6f1082414e53688d39e521849905071070d",
+              "ffmpeg_commit": "8dca1586f468bfcbb78ae3ed618af1361d9f140a",
+              "producer_job_id": 124536872170,
+              "build_attestation_verified": False,
+              "maintenance_review_before": "2028-09-30",
+              "scope": "Temporary CI tools only; no production binary redistribution",
+          }
+          url = f"https://github.com/{pin['repository']}/releases/download/{pin['tag']}/{pin['name']}"
+          evidence = {"status": "FAIL", "pin": pin, "download_url": url,
+                      "archive_verified": False, "extracted": {}}
+          temporary = Path(os.environ["RUNNER_TEMP"])
+          work = Path(tempfile.mkdtemp(prefix="harmonie-ffmpeg-", dir=temporary))
+          archive, destination = work / pin["name"], work / "tools"
+          try:
+              command = ["curl", "--fail", "--location", "--silent", "--show-error",
+                         "--proto", "=https", "--proto-redir", "=https",
+                         "--connect-timeout", "20", "--max-time", "180", "--retry", "1",
+                         "--retry-max-time", "200", "--max-filesize", str(pin["size_bytes"]),
+                         "--output", str(archive), url]
+              evidence["download_command"] = command
+              subprocess.run(command, check=True, timeout=240)
+              evidence["archive_observed"] = verify_archive(archive, pin["size_bytes"], pin["sha256"])
+              evidence["archive_verified"] = True
+              evidence["extracted"] = extract_tools(archive, destination, pin["name"][:-7])
+              shutil.copyfile(destination / "LICENSE.txt", temporary / "harmonie-ffmpeg-LICENSE.txt")
+              with Path(os.environ["GITHUB_PATH"]).open("a") as path_file:
+                  path_file.write(str(destination / "bin") + "\n")
+              evidence["status"] = "PASS"
+          except Exception as error:
+              evidence["error"] = str(error)
+              raise
+          finally:
+              (temporary / "harmonie-ffmpeg-provenance.json").write_text(
+                  json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Install only the numerical test dependencies
+        run: |
+          python -m pip --isolated install --disable-pip-version-check --only-binary=:all: \
+            --index-url https://pypi.org/simple \
+            --report "$RUNNER_TEMP/harmonie-dependencies.json" \
+            'numpy==2.3.5' 'scipy==1.17.0'
+
+      - name: Verify the existing Harmonie software checks without skips
+        run: |
+          python scripts/ci/verify-harmonie.py \
+            --output "$RUNNER_TEMP/harmonie-software-evidence"
+
+      - name: Preserve commands, reports and source fingerprints
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: harmonie-software-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/harmonie-ffmpeg-provenance.json
+            ${{ runner.temp }}/harmonie-ffmpeg-LICENSE.txt
+            ${{ runner.temp }}/harmonie-dependencies.json
+            ${{ runner.temp }}/harmonie-software-evidence/*.json
+            ${{ runner.temp }}/harmonie-software-evidence/*.log
+          if-no-files-found: warn
+          retention-days: 7
