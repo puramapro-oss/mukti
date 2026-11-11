@@ -5,7 +5,8 @@
       "codex/mukti-aurora-lifecycle-20261011": false,
       "codex/mukti-wellbeing-continuity-20261110": false,
       "codex/aurora-intention-musique-20261110": false,
-      "codex/aurora-timing-reliability-20261110": false
+      "codex/aurora-timing-reliability-20261110": false,
+      "audit/mukti-harmonie-composition-20261111": false
     }
   },
   "buildCommand": "npm run build",
