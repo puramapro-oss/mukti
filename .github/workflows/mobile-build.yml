@@ -1,6 +1,6 @@
 name: Mobile Wrapper Build (Capacitor)
 
-# Enveloppement mobile du site web live (kaia.purama.dev) — AUCUNE réécriture.
+# Enveloppement mobile du site web live (mukti.purama.dev) — AUCUNE réécriture.
 # ios/ et android/ ne sont jamais commit (gitignore) : régénérés à chaque run
 # depuis capacitor.config.ts + resources/ (source unique de vérité).
 # Recette générique documentée dans ~/purama/MOBILE.md — reproductible sur
@@ -12,6 +12,9 @@ on:
     paths:
       - 'capacitor.config.ts'
       - 'resources/**'
+      - 'native/affirmations/android/**'
+      - 'native/affirmations/ios/**'
+      - 'scripts/widgets/**'
       - '.github/workflows/mobile-build.yml'
   workflow_dispatch: {}
 
@@ -20,9 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -49,6 +52,11 @@ jobs:
         run: |
           npx cap add android
           npx cap sync android
+
+      - name: Install native affirmation widget
+        run: |
+          python3 scripts/widgets/apply-android.py
+          python3 scripts/widgets/apply-android.py --check
 
       - name: Generate icons + splash
         run: |
@@ -118,9 +126,9 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -138,6 +146,11 @@ jobs:
         run: |
           npx cap add ios --packagemanager CocoaPods
           npx cap sync ios
+
+      - name: Install native affirmation widget
+        run: |
+          ruby -e 'require "xcodeproj"'
+          ruby scripts/widgets/apply-ios.rb
 
       - name: Generate icons + splash
         run: |
