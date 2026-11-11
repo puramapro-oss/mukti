@@ -45,7 +45,9 @@ jobs:
         run: |
           # Isolate indices from the runner's mirrorlist, whose HTTP Azure mirror
           # failed DNS resolution in run 43050012078. Keep Ubuntu signatures/TLS.
-          apt_dir="$RUNNER_TEMP/harmonie-apt"
+          # /tmp is traversable by APT's unprivileged acquisition user.
+          apt_dir=$(mktemp -d /tmp/harmonie-apt.XXXXXX)
+          chmod 755 "$apt_dir"
           mkdir -p "$apt_dir/lists/partial" "$apt_dir/sourceparts"
           test -r /usr/share/keyrings/ubuntu-archive-keyring.gpg
           cat > "$apt_dir/ubuntu.sources" <<'SOURCES'
