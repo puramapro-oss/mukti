@@ -43,8 +43,37 @@ jobs:
 
       - name: Install only the numerical test dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends --yes ffmpeg
+          # Isolate indices from the runner's mirrorlist, whose HTTP Azure mirror
+          # failed DNS resolution in run 43050012078. Keep Ubuntu signatures/TLS.
+          apt_dir="$RUNNER_TEMP/harmonie-apt"
+          mkdir -p "$apt_dir/lists/partial" "$apt_dir/sourceparts"
+          test -r /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          cat > "$apt_dir/ubuntu.sources" <<'SOURCES'
+          Types: deb
+          URIs: https://archive.ubuntu.com/ubuntu
+          Suites: noble noble-updates
+          Components: main universe restricted multiverse
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+          Types: deb
+          URIs: https://security.ubuntu.com/ubuntu
+          Suites: noble-security
+          Components: main universe restricted multiverse
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          SOURCES
+          apt_options=(
+            -o "Dir::Etc::sourcelist=$apt_dir/ubuntu.sources"
+            -o "Dir::Etc::sourceparts=$apt_dir/sourceparts"
+            -o "Dir::State::lists=$apt_dir/lists"
+            -o Acquire::Retries=1
+            -o Acquire::https::Timeout=20
+            -o APT::Update::Error-Mode=any
+          )
+          sudo timeout --kill-after=10s 180s apt-get "${apt_options[@]}" update \
+            2>&1 | tee "$RUNNER_TEMP/harmonie-apt-update.log"
+          sudo timeout --kill-after=10s 180s apt-get "${apt_options[@]}" install \
+            --no-install-recommends --yes ffmpeg \
+            2>&1 | tee "$RUNNER_TEMP/harmonie-apt-install.log"
           python -m pip --isolated install --disable-pip-version-check --only-binary=:all: \
             --index-url https://pypi.org/simple \
             --report "$RUNNER_TEMP/harmonie-dependencies.json" \
@@ -61,6 +90,7 @@ jobs:
         with:
           name: harmonie-software-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            ${{ runner.temp }}/harmonie-apt-*.log
             ${{ runner.temp }}/harmonie-dependencies.json
             ${{ runner.temp }}/harmonie-software-evidence/*.json
             ${{ runner.temp }}/harmonie-software-evidence/*.log
