@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Moon, Sun, ArrowRight, Sparkles } from 'lucide-react'
+import { Moon, Sun, ArrowRight, Sparkles, Smartphone } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase'
 import { REPROG_CATEGORIES } from '@/lib/constants'
@@ -178,6 +178,16 @@ export default async function SubconscientHubPage() {
             <ArrowRight className="h-4 w-4 text-white/40 transition-all group-hover:translate-x-0.5 group-hover:text-white" />
           </Link>
         </div>
+      </section>
+
+      {/* Affirmations sur le téléphone, dans le parcours existant. */}
+      <section className="mx-auto mt-6 max-w-5xl px-6">
+        <Link href="/dashboard/subconscient/ecran-verrouille" className="group flex min-h-24 items-center gap-4 rounded-2xl border border-[#d5e6bf]/25 bg-[#d5e6bf]/5 px-5 py-5 transition-colors hover:bg-[#d5e6bf]/10">
+          <Smartphone className="h-6 w-6 shrink-0 text-[#d5e6bf]" aria-hidden="true" />
+          <div className="flex-1"><h2 className="text-sm font-medium text-[#e6eddf]">Mes affirmations sur mon écran</h2>
+            <p className="mt-1 text-xs leading-relaxed text-white/60">Un mot doux, chaque jour ou à trois moments de la journée. Prépare ton widget.</p></div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[#d5e6bf]" aria-hidden="true" />
+        </Link>
       </section>
 
       {/* 9 catégories */}

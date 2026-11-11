@@ -1,0 +1,154 @@
+name: Affirmation widget native qualification
+
+on:
+  pull_request:
+    paths:
+      - 'native/affirmations/**'
+      - 'scripts/widgets/**'
+      - '.github/workflows/affirmation-widget-native.yml'
+      - '.github/workflows/mobile-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: affirmation-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: native/affirmations/harness/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          # The retired SDK "tools" package is no longer published by Google.
+          packages: platform-tools
+
+      - name: Install isolated Capacitor dependencies
+        working-directory: native/affirmations/harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify real Java model and Android installer
+        run: |
+          sh native/affirmations/android/tests/run-model-tests.sh
+          python3 native/affirmations/android/tests/test_apply_android.py
+
+      - name: Generate Android host
+        working-directory: native/affirmations/harness
+        run: |
+          npx --no-install cap add android
+          npx --no-install cap sync android
+
+      - name: Apply widget and verify repeat installation
+        run: |
+          python3 scripts/widgets/apply-android.py --project native/affirmations/harness/android
+          python3 scripts/widgets/apply-android.py --project native/affirmations/harness/android
+          python3 scripts/widgets/apply-android.py --project native/affirmations/harness/android --check
+
+      - name: Compile host and widget into debug APK
+        working-directory: native/affirmations/harness/android
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace | tee "$RUNNER_TEMP/mukti-affirmations-android-build.log"
+          test -f app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Preserve Android qualification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mukti-affirmations-android-debug
+          path: |
+            native/affirmations/harness/android/app/build/outputs/apk/debug/app-debug.apk
+            ${{ runner.temp }}/mukti-affirmations-android-build.log
+          if-no-files-found: warn
+          retention-days: 3
+
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: native/affirmations/harness/package-lock.json
+
+      - name: Check CocoaPods and Xcodeproj from the runner
+        run: |
+          pod --version
+          ruby -e 'require "xcodeproj"; puts Xcodeproj::VERSION'
+
+      - name: Install isolated Capacitor dependencies
+        working-directory: native/affirmations/harness
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify real Foundation model and Xcode installer
+        run: |
+          swiftc native/affirmations/ios/Shared/*.swift native/affirmations/ios/tests/main.swift -o "$RUNNER_TEMP/mukti-affirmations-tests"
+          "$RUNNER_TEMP/mukti-affirmations-tests"
+          ruby native/affirmations/ios/tests/installer_test.rb
+
+      - name: Generate iOS host with CocoaPods
+        working-directory: native/affirmations/harness
+        run: |
+          npx --no-install cap add ios --packagemanager CocoaPods
+          npx --no-install cap sync ios
+
+      - name: Apply widget and verify repeat installation
+        run: |
+          ruby scripts/widgets/apply-ios.rb native/affirmations/harness/ios/App
+          shasum -a 256 native/affirmations/harness/ios/App/App.xcodeproj/project.pbxproj native/affirmations/harness/ios/App/App/Info.plist native/affirmations/harness/ios/App/App/Base.lproj/Main.storyboard > "$RUNNER_TEMP/mukti-affirmations-ios-project.sha256"
+          ruby scripts/widgets/apply-ios.rb native/affirmations/harness/ios/App
+          shasum -a 256 -c "$RUNNER_TEMP/mukti-affirmations-ios-project.sha256"
+
+      - name: Install final CocoaPods workspace dependencies
+        working-directory: native/affirmations/harness/ios/App
+        run: pod install
+
+      - name: Compile host and embedded WidgetKit extension without signing
+        working-directory: native/affirmations/harness/ios/App
+        run: |
+          xcodebuild build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/mukti-affirmations-derived" \
+            CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/mukti-affirmations-ios-build.log"
+          test -d "$RUNNER_TEMP/mukti-affirmations-derived/Build/Products/Debug-iphonesimulator/App.app/PlugIns/MuktiAffirmationWidget.appex"
+
+      - name: Package simulator application with its widget
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/mukti-affirmations-derived/Build/Products/Debug-iphonesimulator/App.app" \
+            "$RUNNER_TEMP/mukti-affirmations-ios-simulator.zip"
+
+      - name: Preserve iOS qualification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mukti-affirmations-ios-unsigned
+          path: |
+            ${{ runner.temp }}/mukti-affirmations-ios-build.log
+            ${{ runner.temp }}/mukti-affirmations-ios-simulator.zip
+          if-no-files-found: warn
+          retention-days: 3

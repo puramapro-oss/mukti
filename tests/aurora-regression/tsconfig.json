@@ -64,6 +64,12 @@
       ],
       "@anthropic-ai/sdk": [
         "node_modules/@anthropic-ai/sdk"
+      ],
+      "@capacitor/core": [
+        "node_modules/@capacitor/core"
+      ],
+      "@capacitor/app": [
+        "node_modules/@capacitor/app"
       ]
     }
   },
@@ -82,6 +88,11 @@
     "../../src/app/(dashboard)/dashboard/recompenses/page.tsx",
     "../../src/app/(dashboard)/dashboard/rituel-minimaliste/page.tsx",
     "browser/*.ts",
-    "browser/*.tsx"
+    "browser/*.tsx",
+    "../../src/components/reprogrammation/*Widget*.tsx",
+    "../../src/hooks/useAffirmationWidget.ts",
+    "../../src/lib/affirmation-widget*.ts",
+    "../../src/app/api/affirmations/widget/route.ts",
+    "../../src/app/(dashboard)/dashboard/subconscient/ecran-verrouille/page.tsx"
   ]
 }

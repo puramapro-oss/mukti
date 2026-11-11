@@ -7,7 +7,7 @@ if (!Array.isArray(extraArgs) || !extraArgs.every(value => typeof value === 'str
   throw new Error('MUKTI_TEST_CHROMIUM_ARGS must be a JSON array of Chromium arguments.')
 }
 export default defineConfig({
-  testDir: here('.'), testMatch: ['ui.spec.ts', 'ritual.browser.spec.ts'], fullyParallel: false, workers: 1, retries: 0,
+  testDir: here('.'), testMatch: ['ui.spec.ts', 'ritual.browser.spec.ts', 'widget.browser.spec.ts'], fullyParallel: false, workers: 1, retries: 0,
   timeout: 45_000, expect: { timeout: 10_000 },
   outputDir: here('./test-results'),
   reporter: [['list'], ['json', { outputFile: here('./test-results/results.json') }]],

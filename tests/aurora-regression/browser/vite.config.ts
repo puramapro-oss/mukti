@@ -11,7 +11,7 @@ export default defineConfig({
       { find: '@', replacement: here('../../../src') },
       { find: 'next/link', replacement: here('./next-link.tsx') },
       { find: 'tailwindcss', replacement: here('../node_modules/tailwindcss/index.css') },
-      ...['react', 'react-dom', 'sonner', 'lucide-react', 'zod'].map(name => ({
+      ...['react', 'react-dom', 'sonner', 'lucide-react', 'zod', '@capacitor/core', '@capacitor/app'].map(name => ({
         find: new RegExp(`^${name}(/.*)?$`), replacement: `${here(`../node_modules/${name}`)}$1`,
       })),
     ],
