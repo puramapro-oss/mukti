@@ -2,6 +2,7 @@
   "framework": "nextjs",
   "git": {
     "deploymentEnabled": {
+      "fix/accessibility-storage-status-20261112": false,
       "codex/mukti-aurora-lifecycle-20261011": false,
       "codex/mukti-wellbeing-continuity-20261110": false,
       "codex/aurora-intention-musique-20261110": false,
