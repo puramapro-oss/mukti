@@ -98,8 +98,12 @@ test('existing accessibility preferences apply to widget controls with 200 perce
   await expect(page.locator('html')).toHaveAttribute('data-mukti-reduced-motion', 'true')
   await page.getByText('Comment l’ajouter à mon écran ?').click()
   const text = page.getByTestId('widget-preview-text')
+  // Preference styles can finish on a later frame, even with reduced motion.
+  // Measure each settled size; keep the exact 200% requirement below.
+  await expect(text).toHaveCSS('font-size', '22px')
   const preferredSize = await text.evaluate(element => parseFloat(getComputedStyle(element).fontSize))
   await page.evaluate(() => { document.documentElement.style.fontSize = '100%' })
+  await expect(text).toHaveCSS('font-size', '16px')
   const defaultSize = await text.evaluate(element => parseFloat(getComputedStyle(element).fontSize))
   expect(preferredSize).toBeGreaterThan(defaultSize)
   await page.evaluate(() => {
@@ -107,7 +111,7 @@ test('existing accessibility preferences apply to widget controls with 200 perce
     // The dashboard's p-4 parent also scales with the user's root font size.
     document.getElementById('root')!.style.padding = '1rem'
   })
-  expect(await text.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeCloseTo(defaultSize * 2)
+  await expect(text).toHaveCSS('font-size', `${defaultSize * 2}px`)
   for (const theme of ['dark', 'light']) {
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
     for (const width of [320, 640]) {
