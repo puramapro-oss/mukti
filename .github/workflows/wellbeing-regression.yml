@@ -40,3 +40,13 @@ jobs:
       - run: npx --no-install playwright install --with-deps --only-shell chromium
       - run: npx --no-install playwright test --config browser/playwright.config.ts
 
+
+      - name: Retain synthetic browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wellbeing-browser-${{ github.run_id }}
+          path: tests/aurora-regression/browser/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+

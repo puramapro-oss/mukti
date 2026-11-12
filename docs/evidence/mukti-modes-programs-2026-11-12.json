@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-12",
+  "scope": "Contrôle local du candidat avant publication de sa PR",
+  "base": {
+    "repository": "puramapro-oss/mukti",
+    "pull_request": 8,
+    "branch": "audit/mukti-integrated-accessibility-20261111",
+    "commit": "6b863eb9476819fb55b19e2db408a8b6dec89ca9"
+  },
+  "candidate_branch": "audit/mukti-modes-programs-20261112",
+  "unit": {
+    "status": "PASS",
+    "command": "NODE_OPTIONS=--max-old-space-size=384 npm test -- mode-frame.test.tsx mode-session-route.test.ts multisensoriel.test.tsx micro-meditation.test.tsx program-validation.test.ts",
+    "working_directory": "tests/aurora-regression",
+    "files": 5,
+    "tests": 127,
+    "exit_code": 0,
+    "duration_seconds": 6.73,
+    "boundaries": "Vrais composants, helpers, routes et fonctions de programme ; services, navigation, base et composants annexes explicitement simulés."
+  },
+  "types": {
+    "status": "PASS",
+    "command": "NODE_OPTIONS=--max-old-space-size=384 npm run typecheck",
+    "working_directory": "tests/aurora-regression",
+    "exit_code": 0,
+    "scope": "Périmètre importé par les fichiers matérialisés du banc ; le dépôt complet est vérifié séparément en CI."
+  },
+  "regressions": {
+    "baseline_session_failures": 13,
+    "navigation_before_fix_failures": 7,
+    "expected_exit_code": 1,
+    "scope": "Copies isolées avant correction ; aucune erreur attendue comptée comme réussite fonctionnelle."
+  },
+  "browser_local": {
+    "status": "BLOQUÉ",
+    "runner": "Playwright 1.59.1",
+    "browser": "Chromium système 156.0.8078.79",
+    "scenarios": 4,
+    "assertions_executed": 0,
+    "reason": "Lancement refusé par le sandbox : socket() failed: Operation not permitted. Qualification CI prévue avec le navigateur standard du banc."
+  },
+  "independent_review": {
+    "status": "PASS",
+    "finding_count": 3,
+    "all_findings_corrected": true,
+    "scope": "Lecture des deltas et consommateurs ; ne constitue pas une seconde exécution des tests."
+  },
+  "ci": {
+    "status": "NON TESTÉ dans ce reçu",
+    "instruction": "Consulter les workflows du commit de la PR pour la suite entière, le navigateur et l'audit de dépendances."
+  },
+  "production_build": {
+    "status": "NON TESTÉ sur ce candidat"
+  },
+  "live_services": {
+    "status": "NON TESTÉ",
+    "items": [
+      "Supabase distant et concurrence",
+      "Anthropic réel",
+      "appareils Spooky2, Dream Machine, Kasina",
+      "téléphones physiques"
+    ]
+  },
+  "clinical_validation": {
+    "status": "NON TESTÉ",
+    "note": "Validation de structure, signal numérique et bonne exécution du logiciel ne prouvent pas l'efficacité thérapeutique."
+  },
+  "inherited_limitations": [
+    "Versionnement de programme non transactionnel : désactivation puis insertion séparées.",
+    "Anciennes branches de compatibilité matérielle non fusionnées implicitement.",
+    "Lecteur d'hypnose et contenu clinique non qualifiés."
+  ],
+  "deployment": {
+    "status": "NON EFFECTUÉ",
+    "candidate_vercel_deployment_enabled": false
+  },
+  "source_sha256": {
+    "src/components/modes/Mode2MultisensorielUltime.tsx": "ca8dad1d057899fe4fbb1a4758e828f7a2657d4e354dd39e3edd6adda61cd962",
+    "src/components/modes/Mode3MicroMeditation.tsx": "0a4b97a237245b8d4b5c5d7ed36d362495ac0baea66c5d15b46c7d2b3221355a",
+    "src/components/modes/ModeFrame.tsx": "b422ec5df9f5c99fd6b9b037a3e82672afac703ac2af618935718ade54b77cb7",
+    "src/app/api/mode-sessions/log/route.ts": "be9355736f9b627306149e449fdb1ca6e187b462b7a3621873e14620570cc6d8",
+    "src/lib/programs.ts": "f5fc0b93f8cd36b621db6d9f8deb74231054107bd1a61d23eee8f6b87fa60752",
+    "src/lib/programs-schema.ts": "bf1231131f646ea29e5448eeb5b9571fbb8155b51d40cc48292c5ef8fa2a243c",
+    "src/lib/programs-types.ts": "9bd153c665c91a4462d7eaa70a40f2af057763fa1e2168f6d8a8b4997428443e",
+    "src/app/api/program/generate/route.ts": "67ab7471d509d29ea8449daf66f73db5b5aa0f2bd3ff0b456ca381c59a5e3e85",
+    "src/app/(dashboard)/dashboard/liberation/[addictionId]/page.tsx": "48dba83c22c7cf8970497b3d838de0db469ac5fa7851140fcea3caef0ba42a42",
+    "tests/aurora-regression/multisensoriel.test.tsx": "4d3f42311623d3c6aff87a4a0fbcb5815027f5c6d8c6438e9085d55426ad2b1b",
+    "tests/aurora-regression/micro-meditation.test.tsx": "eac2ede0419ed2156a99dd8a057a30c989237e0a16427cec749d389b8c5c6a3c",
+    "tests/aurora-regression/mode-frame.test.tsx": "babb43d9d11bd80db0120cbb97d9c78cf7c7b6676c71c35b8da1145bee4e1026",
+    "tests/aurora-regression/mode-session-route.test.ts": "5ce0c7d1706dd5f4f607c44f8d72c0771a53815e7955b884615686b29ad0f0e5",
+    "tests/aurora-regression/program-validation.test.ts": "83e128d98bb5f3077bf963a37333635ba75a6ee2155c243d58d95c1b9709a5c4",
+    "tests/aurora-regression/browser/vite.config.ts": "c0d775fa79bc8b652d92395f418f441cc3a6a45fb9e12b162b8cd30418092dc2",
+    "tests/aurora-regression/browser/playwright.config.ts": "01e5039b73d5229706c4b32bc290ace3a4388a127b976d50c14503b344325430",
+    "tests/aurora-regression/browser/styles.css": "a1413c194416a87137bd1d107071b93dcc143377bb5fe6d5a4092f7dd3709e2b",
+    "tests/aurora-regression/browser/modes.html": "f968a461df22ce690fe79aace02cdb36e8958cf154579eed233d8d240ca2dbfb",
+    "tests/aurora-regression/browser/modes-navigation.ts": "8cf350ab22f417e1cadd5818a45a27584e01e5ed99cdb7dac469c895a4e30f9c",
+    "tests/aurora-regression/browser/modes-main.tsx": "5d6f74d97ecf10bdb36c905519638f7585b034e98738d2d781de658fac6bd743",
+    "tests/aurora-regression/browser/modes.browser.spec.ts": "6ddf1e5659dec847b4e8f900f5ec215aa2e781c59f6b6c93e8a763104ec88350",
+    "tests/aurora-regression/browser/README.md": "e283674bb6fa881f6c264861b39aa0a68f70415e7620a397cee618df0efaaf55",
+    "tests/aurora-regression/tsconfig.json": "67c1135b953587983dc58a7258dd8b073c0e70057de6435b8fc9abfcb74d0434",
+    "tests/aurora-regression/vitest.config.ts": "8cec41bc58262fe883ba3e84fab5b9f2c937be1ccdd446dd3f2716076b4167c8",
+    "tests/aurora-regression/package.json": "8a6a62b37f5740a94573fc4a6ca93ff5731feaa237145d7a8f3725053b66bd82",
+    "tests/aurora-regression/package-lock.json": "1a78bcf65a64a3be023f330c9da484b093e0538a72a612224771721f931ae15b",
+    "docs/MUKTI_WELLBEING_2026-11-10.md": "06da58a76f273ea966b95df5975552fb72710dfe575879a56cd3f02c81d9eeb5",
+    "docs/HARMONIE_DEVICE_QUALIFICATION.md": "cf262c5b1ceefe741eb76b00e0bef94fff5f29969b64e0571f453fcc0db3ddb7",
+    "vercel.json": "79c8a5711df07143100529526ea2e56037ba88ce211e7ba04519e1919d54b169",
+    ".github/workflows/wellbeing-regression.yml": "6f28a8ec1af19c6ff2cc79f27ab9143f58bbd28581bed05416bfe425af4179f6"
+  }
+}

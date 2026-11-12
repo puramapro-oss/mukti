@@ -1,56 +1,13 @@
-import type { AddictionId } from './constants'
+import type { z } from 'zod'
+import type { PROGRAM_STRUCTURE_SCHEMA } from './programs-schema'
 
-export interface ProgramPhase {
-  name: string
-  days_range: string
-  intent: string
-  daily_rituals: { moment: 'reveil' | 'midi' | 'soir' | 'nuit'; title: string; duration_sec: number; description: string }[]
-  recommended_modes: string[]
-  affirmations: string[]
-}
-
-export interface MicroMeditation {
-  trigger: 'reveil' | 'midi' | 'soir' | 'pulsion' | 'stress' | 'fatigue'
-  title: string
-  script: string
-  duration_sec: number
-}
-
-export interface PlantInfo {
-  name: string
-  latin_name: string | null
-  benefits: string
-  disclaimer: string
-}
-
-export interface AntiPulsionAction {
-  situation: string
-  action: string
-  duration_sec: number
-}
-
-export interface HypnoseScript {
-  title: string
-  duration_min: number
-  script: string
-}
-
-export interface ProgramStructure {
-  addiction_type: AddictionId
-  severity: number
-  intention: string
-  phases: ProgramPhase[]
-  micro_meditations: MicroMeditation[]
-  affirmations: string[]
-  recommended_modes: string[]
-  plants_info: PlantInfo[]
-  anti_pulsion_actions: AntiPulsionAction[]
-  breathing_protocols: { name: string; pattern: string; description: string }[]
-  hypnose_scripts: HypnoseScript[]
-  risk_triggers: string[]
-  success_markers: string[]
-  emergency_message: string
-}
+// Les types sont dérivés du contrat réellement exécuté, sans preuve clinique implicite.
+export type ProgramStructure = z.infer<typeof PROGRAM_STRUCTURE_SCHEMA>
+export type ProgramPhase = ProgramStructure['phases'][number]
+export type MicroMeditation = ProgramStructure['micro_meditations'][number]
+export type PlantInfo = ProgramStructure['plants_info'][number]
+export type AntiPulsionAction = ProgramStructure['anti_pulsion_actions'][number]
+export type HypnoseScript = ProgramStructure['hypnose_scripts'][number]
 
 export interface StoredProgram extends ProgramStructure {
   id: string
@@ -61,3 +18,4 @@ export interface StoredProgram extends ProgramStructure {
   generated_at: string
   is_current: boolean
 }
+

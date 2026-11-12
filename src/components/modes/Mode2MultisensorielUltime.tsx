@@ -1,26 +1,24 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ModeFrame from './ModeFrame'
 import { type ModeId } from '@/lib/constants'
-import { safeVibrate } from '@/lib/accessibility'
+import { AURORA_PHASES } from '@/lib/constants/aurora'
+import { createAuroraAudio, type AuroraAudioHandle } from '@/lib/aurora-audio'
+import { AURORA_MELODY_REFERENCE_HZ } from '@/lib/aurora-melody'
+import { loadA11yPrefs, safeVibrate } from '@/lib/accessibility'
+import { useAccessibilityPrefs } from '@/hooks/useAccessibilityPrefs'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 const MODE_ID: ModeId = 'multisensoriel'
-const DURATION = 180 // 3 minutes
+const DURATION = 180
+// Reuse the existing AURORA Focus rhythm, with no hold or top-up phase.
+const SOFT_BREATH = AURORA_PHASES.focus[2].breath
+const BREATH_SECONDS = SOFT_BREATH.in + SOFT_BREATH.out
+type Outcome = 'completed' | 'interrupted'
+type AudioState = 'off' | 'starting' | 'playing' | 'unavailable' | 'error'
 
-// Respiration 4-7-8 (Dr Weil) : inspire 4s, retiens 7s, expire 8s → 19s par cycle
-const BREATH_CYCLE = [
-  { phase: 'Inspire', duration: 4, color: '#06B6D4' },
-  { phase: 'Retiens', duration: 7, color: '#7C3AED' },
-  { phase: 'Expire', duration: 8, color: '#10B981' },
-]
-
-interface Props {
-  addictionId: string
-}
-
-export default function Mode2MultisensorielUltime({ addictionId }: Props) {
+export default function Mode2MultisensorielUltime({ addictionId }: { addictionId: string }) {
   return (
     <ModeFrame modeId={MODE_ID} addictionId={addictionId} durationSec={DURATION}>
       {({ onCompleted }) => <MultisensorielActive onCompleted={onCompleted} />}
@@ -28,130 +26,204 @@ export default function Mode2MultisensorielUltime({ addictionId }: Props) {
   )
 }
 
-function MultisensorielActive({ onCompleted }: { onCompleted: (outcome?: 'resisted' | 'completed') => void }) {
-  const [elapsed, setElapsed] = useState(0)
-  const [cycleSec, setCycleSec] = useState(0)
-  const audioCtxRef = useRef<AudioContext | null>(null)
+function cancelVibration() {
+  try {
+    if (typeof navigator.vibrate === 'function') navigator.vibrate(0)
+  } catch { /* An optional output must not prevent the session from stopping. */ }
+}
 
-  useEffect(() => {
-    try {
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-      if (!AC) return
-      const ctx = new AC()
-      audioCtxRef.current = ctx
-      const gain = ctx.createGain()
-      gain.gain.value = 0.035
-      gain.connect(ctx.destination)
-      // Drone 528Hz (fréquence miracle / amour) + 3ème harmonique faible
-      const osc1 = ctx.createOscillator()
-      osc1.type = 'sine'
-      osc1.frequency.value = 528
-      const osc2 = ctx.createOscillator()
-      osc2.type = 'sine'
-      osc2.frequency.value = 174
-      osc1.connect(gain)
-      osc2.connect(gain)
-      osc1.start()
-      osc2.start()
-      return () => {
-        try {
-          osc1.stop()
-          osc2.stop()
-          ctx.close()
-        } catch {
-          /* ignore */
-        }
-      }
-    } catch {
-      return
-    }
+function releaseHandle(audio: AuroraAudioHandle | null) {
+  if (!audio) return
+  try { audio.stop() } catch { /* Still attempt disposal independently. */ }
+  try { audio.dispose() } catch { /* The interface remains stopped. */ }
+}
+
+function MultisensorielActive({ onCompleted }: { onCompleted: (outcome?: Outcome) => void }) {
+  const { prefs } = useAccessibilityPrefs()
+  const reducedMotion = useReducedMotion()
+  const [elapsed, setElapsed] = useState(0)
+  const [guided, setGuided] = useState(false)
+  const [haptics, setHaptics] = useState(false)
+  const [hapticSupported, setHapticSupported] = useState(false)
+  const [audioState, setAudioState] = useState<AudioState>('off')
+  const audioRef = useRef<AuroraAudioHandle | null>(null)
+  const audioGenerationRef = useRef(0)
+  const mountedRef = useRef(false)
+  const finishedRef = useRef(false)
+  const completedRef = useRef(onCompleted)
+  const finishRef = useRef<(outcome: Outcome) => void>(() => undefined)
+
+  useEffect(() => { completedRef.current = onCompleted }, [onCompleted])
+
+  const releaseAudio = useCallback(() => {
+    audioGenerationRef.current += 1
+    const current = audioRef.current
+    audioRef.current = null
+    releaseHandle(current)
   }, [])
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsed(e => {
-        const next = e + 1
-        if (next >= DURATION) {
-          clearInterval(timer)
-          setTimeout(() => onCompleted('resisted'), 300)
-          return DURATION
-        }
-        return next
-      })
-      setCycleSec(c => (c + 1) % 19)
-      // Vibration sur chaque transition de phase (G8.7.6 safeVibrate)
-      const c = cycleSec
-      if (c === 0 || c === 4 || c === 11) void safeVibrate(60)
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [onCompleted, cycleSec])
-
-  // Détermine la phase courante
-  let phaseIdx = 0
-  let phaseElapsed = cycleSec
-  for (let i = 0; i < BREATH_CYCLE.length; i++) {
-    if (phaseElapsed < BREATH_CYCLE[i].duration) {
-      phaseIdx = i
-      break
+    if (finishedRef.current) return
+    mountedRef.current = true
+    let live = true
+    let timer: ReturnType<typeof setInterval> | undefined
+    const startedAt = performance.now()
+    const finish = (outcome: Outcome) => {
+      if (!live || finishedRef.current) return
+      finishedRef.current = true
+      clearInterval(timer)
+      releaseAudio()
+      cancelVibration()
+      completedRef.current(outcome)
     }
-    phaseElapsed -= BREATH_CYCLE[i].duration
-  }
-  const phase = BREATH_CYCLE[phaseIdx]
-  const phaseProgress = phaseElapsed / phase.duration
+    finishRef.current = finish
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') finish('interrupted')
+    }
+    const onPageHide = () => finish('interrupted')
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', onPageHide)
+    setHapticSupported(typeof navigator.vibrate === 'function')
+    if (document.visibilityState !== 'visible') finish('interrupted')
+    else {
+      timer = setInterval(() => {
+        if (!live || finishedRef.current) return
+        const seconds = Math.min(DURATION, Math.max(0, Math.floor((performance.now() - startedAt) / 1000)))
+        setElapsed(seconds)
+        if (seconds >= DURATION) finish('completed')
+      }, 250)
+    }
+    return () => {
+      live = false
+      mountedRef.current = false
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', onPageHide)
+      releaseAudio()
+      cancelVibration()
+    }
+  }, [releaseAudio])
 
-  // Scale : inspire→1.2, retiens→1.2, expire→0.8
-  const targetScale = phaseIdx === 0 ? 0.8 + 0.4 * phaseProgress : phaseIdx === 1 ? 1.2 : 1.2 - 0.4 * phaseProgress
+  useEffect(() => {
+    if (prefs.silentMode) {
+      releaseAudio()
+      setAudioState('off')
+    }
+    if (prefs.silentMode || !prefs.hapticEnabled) {
+      setHaptics(false)
+      cancelVibration()
+    }
+  }, [prefs.silentMode, prefs.hapticEnabled, releaseAudio])
+
+  const cycleSecond = elapsed % BREATH_SECONDS
+  const inspiring = cycleSecond < SOFT_BREATH.in
+  const phase = inspiring ? 'Inspire sans forcer' : 'Expire sans forcer'
+  const phaseKey = `${Math.floor(elapsed / BREATH_SECONDS)}:${inspiring ? 'in' : 'out'}`
+  const progress = inspiring ? cycleSecond / SOFT_BREATH.in : (cycleSecond - SOFT_BREATH.in) / SOFT_BREATH.out
+  const scale = inspiring ? 0.9 + 0.2 * progress : 1.1 - 0.2 * progress
+
+  useEffect(() => {
+    if (!guided || !haptics || prefs.silentMode || !prefs.hapticEnabled || finishedRef.current) return
+    if (!safeVibrate(60)) {
+      setHapticSupported(false)
+      setHaptics(false)
+    }
+  }, [guided, haptics, phaseKey, prefs.silentMode, prefs.hapticEnabled])
+
+  const toggleAudio = async () => {
+    if (!mountedRef.current || finishedRef.current) return
+    if (audioRef.current) {
+      releaseAudio()
+      setAudioState('off')
+      return
+    }
+    // Read synchronously as well: the preference hook hydrates after mount.
+    if (loadA11yPrefs().silentMode || document.visibilityState !== 'visible') return
+    const ticket = ++audioGenerationRef.current
+    let audio: AuroraAudioHandle | null = null
+    const current = () => mountedRef.current && !finishedRef.current && ticket === audioGenerationRef.current
+    try {
+      audio = createAuroraAudio({ masterGain: 0.2 })
+      audioRef.current = audio
+      if (!audio.getCapabilities?.().audio || !audio.setRitualMix) {
+        releaseAudio()
+        setAudioState('unavailable')
+        return
+      }
+      audio.setVoiceGuidance(false)
+      audio.setRitualMix({ voice: 0, music: 0, tone: 0.25 })
+      audio.setEnabled(true)
+      setAudioState('starting')
+      await audio.start()
+      if (!current() || loadA11yPrefs().silentMode || document.visibilityState !== 'visible') {
+        if (current()) {
+          releaseAudio()
+          setAudioState('off')
+          if (document.visibilityState !== 'visible') finishRef.current('interrupted')
+        } else releaseHandle(audio)
+        return
+      }
+      setAudioState('playing')
+    } catch {
+      if (!current()) { releaseHandle(audio); return }
+      releaseAudio()
+      setAudioState('error')
+    }
+  }
 
   const remaining = DURATION - elapsed
-  const mins = Math.floor(remaining / 60)
-  const secs = remaining % 60
+  const timeLabel = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
+  const audioOn = audioState === 'playing' || audioState === 'starting'
 
   return (
-    <div className="relative flex h-full w-full flex-col items-center justify-center gap-12 overflow-hidden">
-      {/* Spirales de fond */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        {[1, 2, 3, 4].map(i => (
-          <motion.div
-            key={i}
-            animate={{ rotate: 360 * (i % 2 === 0 ? 1 : -1) }}
-            transition={{ duration: 30 / i, repeat: Infinity, ease: 'linear' }}
-            className="absolute rounded-full border"
-            style={{
-              width: `${200 * i}px`,
-              height: `${200 * i}px`,
-              borderColor: `${phase.color}${i === 1 ? '60' : i === 2 ? '30' : i === 3 ? '15' : '08'}`,
-              borderStyle: 'dashed',
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Bulle respiration centrale */}
-      <motion.div
-        animate={{ scale: targetScale }}
-        transition={{ duration: 1, ease: 'easeInOut' }}
-        className="relative flex h-48 w-48 items-center justify-center rounded-full"
-        style={{
-          background: `radial-gradient(circle, ${phase.color}40 0%, ${phase.color}10 70%, transparent 100%)`,
-          boxShadow: `0 0 80px ${phase.color}60`,
-        }}
+    <section className="flex w-full max-w-lg flex-col items-center gap-6 text-center" aria-label="Pause multisensorielle">
+      <div
+        aria-hidden="true"
+        data-testid="multisensoriel-breath"
+        className="flex h-36 w-36 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-500/10"
+        style={{ transform: guided && !reducedMotion ? `scale(${scale})` : 'none', transition: reducedMotion ? 'none' : 'transform 1s ease-in-out' }}
       >
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-xl font-semibold text-[var(--text-primary)]">{phase.phase}</p>
-          <p className="text-xs uppercase tracking-widest" style={{ color: phase.color }}>
-            {Math.max(1, phase.duration - Math.floor(phaseElapsed))}s
-          </p>
-        </div>
-      </motion.div>
-
-      <div className="relative z-10 flex flex-col items-center gap-2">
-        <p className="text-lg text-[var(--text-primary)]">
-          {mins}:{secs.toString().padStart(2, '0')}
-        </p>
-        <p className="text-xs uppercase tracking-widest text-[var(--text-muted)]">
-          4-7-8 · 528 Hz · vibrations douces
-        </p>
+        <span className="text-3xl" aria-hidden="true">◌</span>
       </div>
-    </div>
+      <div>
+        <p className="text-xl font-semibold text-[var(--text-primary)]" role="status" aria-live="polite">
+          {guided ? phase : 'Respire librement, à ton rythme'}
+        </p>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">Tu peux arrêter la séance à tout moment.</p>
+      </div>
+      <p role="timer" aria-label="Temps restant" aria-live="off" className="text-lg text-[var(--text-primary)]">{timeLabel}</p>
+      <div className="flex w-full flex-col gap-4 rounded-2xl border border-white/10 p-4 text-left">
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input type="checkbox" checked={guided} onChange={event => { setGuided(event.target.checked); if (!event.target.checked) cancelVibration() }} />
+          Guidage respiratoire doux, sans rétention
+        </label>
+        {guided && <p className="text-xs text-[var(--text-muted)]">Inspiration {SOFT_BREATH.in} s, expiration {SOFT_BREATH.out} s. Reviens à ton rythme si ce guidage ne te convient pas.</p>}
+        <button
+          type="button"
+          onClick={() => { void toggleAudio() }}
+          disabled={prefs.silentMode}
+          aria-pressed={audioOn}
+          className="min-h-11 rounded-xl border border-white/20 px-4 py-2 text-sm disabled:opacity-50"
+        >
+          {audioState === 'starting' ? 'Annuler le démarrage du son' : audioState === 'playing' ? 'Couper le son' : `Activer le son ${AURORA_MELODY_REFERENCE_HZ} Hz`}
+        </button>
+        {prefs.silentMode && <p className="text-xs text-[var(--text-muted)]">Le mode silencieux est activé dans tes préférences.</p>}
+        {audioState === 'unavailable' && <p role="status" className="text-sm">Le son n’est pas disponible ici. La séance reste utilisable en silence.</p>}
+        {audioState === 'error' && <p role="alert" className="text-sm">Le son n’a pas démarré. Tu peux réessayer ou continuer en silence.</p>}
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={haptics}
+            disabled={!guided || !hapticSupported || prefs.silentMode || !prefs.hapticEnabled}
+            onChange={event => { setHaptics(event.target.checked); if (!event.target.checked) cancelVibration() }}
+          />
+          Vibrations pendant le guidage
+        </label>
+        {!hapticSupported && <p className="text-xs text-[var(--text-muted)]">Vibrations indisponibles dans ce navigateur.</p>}
+      </div>
+      <button type="button" onClick={() => finishRef.current('interrupted')} className="min-h-11 rounded-xl border border-white/20 px-6 py-3 text-sm">
+        Arrêter la séance
+      </button>
+    </section>
   )
 }
