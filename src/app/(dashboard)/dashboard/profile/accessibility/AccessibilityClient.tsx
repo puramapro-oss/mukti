@@ -8,6 +8,13 @@ const FONT_SIZES: Array<{ value: FontSizePref; label: string }> = [
   { value: 'sm', label: 'Petit' }, { value: 'md', label: 'Standard' },
   { value: 'lg', label: 'Grand' }, { value: 'xl', label: 'Très grand' },
 ]
+const PERSISTENCE_MESSAGES = {
+  pending: '',
+  ready: 'Réglages actuels appliqués.',
+  saved: 'Préférence enregistrée dans ce navigateur.',
+  temporary: 'Préférences appliquées dans cet onglet. Le navigateur ne permet pas de les conserver après sa fermeture.',
+  unavailable: 'Le stockage du navigateur est indisponible. Les réglages visibles restent appliqués dans cet onglet ; leur enregistrement ne peut pas être vérifié.',
+}
 
 function PreferenceSwitch({ label, description, value, onChange }: {
   label: string; description: string; value: boolean; onChange: (value: boolean) => void
@@ -23,20 +30,18 @@ function PreferenceSwitch({ label, description, value, onChange }: {
 }
 
 export default function AccessibilityClient() {
-  const { prefs, setPrefs } = useAccessibilityPrefs()
-  const [message, setMessage] = useState('')
+  const { prefs, persistence, setPrefs } = useAccessibilityPrefs()
+  const [feedback, setFeedback] = useState('')
   const radioName = useId()
   const hapticsEnabled = prefs.hapticEnabled && !prefs.silentMode
 
   function update(patch: Partial<AccessibilityPrefs>) {
-    const persisted = setPrefs(patch)
-    setMessage(persisted
-      ? 'Préférence enregistrée sur cet appareil.'
-      : 'Préférence appliquée dans cet onglet. Le navigateur ne permet pas de la conserver après sa fermeture.')
+    setPrefs(patch)
+    setFeedback('')
   }
   function testHaptic() {
     const accepted = safeVibrate(VIBRATE_PATTERNS.SUCCESS)
-    setMessage(accepted
+    setFeedback(accepted
       ? 'Test demandé à l’appareil. Vérifiez si vous ressentez la vibration.'
       : 'Le test de vibration est indisponible ou refusé sur cet appareil.')
   }
@@ -73,7 +78,7 @@ export default function AccessibilityClient() {
       <button type="button" onClick={testHaptic} disabled={!hapticsEnabled}>Tester une vibration</button>
       {!hapticsEnabled && <p>Activez les vibrations des pratiques pour essayer.</p>}
     </section>
-    <p role="status" aria-live="polite" aria-atomic="true" className="mukti-a11y-status">{message}</p>
+    <p role="status" aria-live="polite" aria-atomic="true" className="mukti-a11y-status">{[PERSISTENCE_MESSAGES[persistence], feedback].filter(Boolean).join(' ')}</p>
     <p>Ces préférences restent dans ce navigateur. Elles ne sont pas envoyées sur nos serveurs.</p>
   </div>
 }
