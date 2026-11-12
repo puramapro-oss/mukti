@@ -10,6 +10,7 @@ export default defineConfig({
       { find: './AuroraCanvas', replacement: here('./CanvasPlaceholder.tsx') },
       { find: '@', replacement: here('../../../src') },
       { find: 'next/link', replacement: here('./next-link.tsx') },
+      { find: 'next/navigation', replacement: here('./modes-navigation.ts') },
       { find: 'tailwindcss', replacement: here('../node_modules/tailwindcss/index.css') },
       ...['react', 'react-dom', 'sonner', 'lucide-react', 'zod', '@capacitor/core', '@capacitor/app'].map(name => ({
         find: new RegExp(`^${name}(/.*)?$`), replacement: `${here(`../node_modules/${name}`)}$1`,
@@ -26,3 +27,4 @@ export default defineConfig({
     fs: { allow: [here('../../..')], deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**'] },
   },
 })
+

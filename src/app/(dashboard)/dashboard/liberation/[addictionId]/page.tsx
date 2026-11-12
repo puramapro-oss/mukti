@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { ADDICTION_TYPES, MILESTONES, MODES_G2, type MilestoneId } from '@/lib/constants'
 import { canRegenerateProgram, getLatestProgram } from '@/lib/programs'
+import { ProgramStructureError } from '@/lib/programs-schema'
 import { getStreakState } from '@/lib/streaks'
 import StreakCounter from '@/components/liberation/StreakCounter'
 import MilestonePanel, { type MilestoneSnapshot } from '@/components/liberation/MilestonePanel'
@@ -49,15 +50,19 @@ export default async function AddictionDetailPage({
   if (!addictionRow) notFound()
   const addiction = addictionRow as Addiction
 
-  const [state, currentProgram, regen, { data: milestoneRows }] = await Promise.all([
+  const [state, [programRead, regenRead], { data: milestoneRows }] = await Promise.all([
     getStreakState(addictionId),
-    getLatestProgram(addictionId),
-    canRegenerateProgram(addictionId),
+    Promise.allSettled([getLatestProgram(addictionId), canRegenerateProgram(addictionId)]),
     sb
       .from('payment_milestones')
       .select('milestone, status, amount_cents, credited_at, locked_until, unlocked_at')
       .eq('addiction_id', addictionId),
   ])
+
+  const currentProgram = programRead.status === 'fulfilled' ? programRead.value : null
+  const invalidProgram = programRead.status === 'rejected' && programRead.reason instanceof ProgramStructureError
+  const unavailable = regenRead.status === 'rejected' || (programRead.status === 'rejected' && !invalidProgram)
+  const regen = regenRead.status === 'fulfilled' ? regenRead.value : null
 
   const milestones = (milestoneRows ?? []) as PaymentMilestoneRow[]
   const meta = ADDICTION_TYPES.find(t => t.id === addiction.type)
@@ -159,12 +164,36 @@ export default async function AddictionDetailPage({
         </div>
       </section>
 
-      <ProgramView
-        addictionId={addictionId}
-        currentProgram={currentProgram}
-        canRegenerate={regen.allowed}
-        nextRegenAt={regen.next_available_at ?? null}
-      />
+      {unavailable || !regen ? (
+        <section role="status" className="rounded-2xl border border-[var(--border)] p-5">
+          <h2 className="font-semibold">Programme temporairement indisponible</h2>
+          <p className="mt-2">La lecture ou la vérification du délai n’a pas abouti. Réessaie dans un instant.</p>
+          <a href={`/dashboard/liberation/${addictionId}`} className="mt-3 inline-block underline">Réessayer</a>
+        </section>
+      ) : (
+        <>
+          {invalidProgram && (
+            <p role="status">L’ancien programme ne peut pas être affiché. {regen.allowed
+              ? 'Tu peux en générer un nouveau ci-dessous.'
+              : 'Le délai habituel de régénération est conservé.'}</p>
+          )}
+          {currentProgram || regen.allowed ? (
+            <ProgramView
+              addictionId={addictionId}
+              currentProgram={currentProgram}
+              canRegenerate={regen.allowed}
+              nextRegenAt={regen.next_available_at ?? null}
+            />
+          ) : (
+            <section role="status" className="rounded-2xl border border-[var(--border)] p-5">
+              <p>Une nouvelle génération sera disponible {regen.next_available_at
+                ? `le ${new Date(regen.next_available_at).toLocaleDateString('fr-FR')}`
+                : 'après le délai habituel'}.</p>
+              <a href={`/dashboard/liberation/${addictionId}`} className="mt-3 inline-block underline">Réessayer</a>
+            </section>
+          )}
+        </>
+      )}
 
       {addiction.triggers.length > 0 && (
         <section className="flex flex-col gap-3">

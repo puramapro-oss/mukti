@@ -91,6 +91,76 @@ Le [rapport des dépendances](DEPENDENCIES_SECURITY_2026-11-10.md) conserve les 
 
 Le banc déclare PostCSS 8.5.29 pour partager les types attendus par Vite et Tailwind ; Next conserve sa version 8.5.23 dans son propre graphe. Le contrôle TypeScript a détecté cette incompatibilité avant sa correction. Aucune exclusion du fichier de configuration ni conversion de type non vérifiée n'a été ajoutée pour la masquer.
 
+## Complément du 12 novembre 2026 — continuité des séances et des programmes
+
+### Existant retrouvé et choix d'intégration
+
+Cette contribution part de la PR #8, `audit/mukti-integrated-accessibility-20261111`, à `6b863eb9476819fb55b19e2db408a8b6dec89ca9`. Elle prolonge la composition AURORA, Harmonie, widget et accessibilité existante. Elle ne recrée ni application de santé, ni moteur audio, ni compte, ni table de séances.
+
+La recherche de continuité a recoupé les dépôts autorisés, le document utilisateur « PURAMA_Coque_Extension_Spooky_Dream.md » du 13 septembre 2026 et les sections MUKTI du canon utilisateur. Elle est limitée aux sources accessibles ; elle ne constitue pas une lecture exhaustive de tous les anciens échanges.
+
+| Élément retrouvé | État vérifié | Décision pour ce lot |
+| --- | --- | --- |
+| MUKTI / AURORA | Séances, texte de rituel, voix locale facultative, musique et moteur audio existants | Réutiliser `createAuroraAudio`, les préférences et les tables existantes. |
+| Harmonie et /frequences | Branche historique `audit/mukti-hardware-compat-20261023`, tête inspectée `701dd778655e087893fb7d7e02661c63718e07f6` ; le lecteur /frequences n'est pas dans la base PR #8 | Garder cette dépendance visible ; ne pas recopier un troisième générateur ou déclarer sa fusion acquise. |
+| SANGHA V2 | Intention historique de méditation, hypnose et rituels ; SANGHA actuel comprend aussi les cercles | Ne pas assimiler le nom historique à une fonction actuellement livrée. |
+| SOMA / ancien VIDA PULSE | Continuité respiration/AETHER et code audio retrouvés | Garder une identité distincte ; aucun renommage ni second moteur dans ce lot. |
+| VIDA Spirit | Expériences visuelles/spirituelles dans la continuité retrouvée | Aucun statut thérapeutique ni fusion implicite. |
+| Spooky / Dream Machine / Kasina | Conception d'extensions dans le document de septembre ; pas de pilote matériel qualifié retrouvé dans le périmètre inspecté | Qualification par modèle exact dans le document appareils existant. |
+| PURAMA ONE santé / Quantiq | PR ONE #11 désormais fusionnée ; le cadrage santé existe séparément | Continuer ce socle et relier MUKTI, sans lui attribuer les mesures ou autorisations d'un autre produit. |
+
+La présence de `hypnose_scripts` dans le contrat de programme est distincte d'un lecteur d'hypnose opérationnel : le `ProgramView` inspecté ne les affiche pas. Un script généré ou accepté par un schéma n'est pas un protocole clinique validé.
+
+### Défauts traités dans les fonctions existantes
+
+**Séance multisensorielle et micro-méditation.** La respiration libre devient le défaut ; le guidage doux existant est facultatif, sans rétention. Le son est déclenché explicitement, réutilise AURORA et suit la préférence de silence. Le repère de 432 Hz est un choix sonore, sans propriété curative attribuée. Les vibrations sont facultatives et liées aux capacités disponibles. Les préférences de mouvement réduit s'appliquent au guide visuel. L'arrêt, le démontage, le masquage et `pagehide` invalident les actions tardives ; aucune reprise automatique n'est demandée au retour.
+
+La minuterie utilise une horloge monotone. Une fin de minuterie devient `completed`, et non `resisted` : le temps écoulé ne démontre ni résistance à une pulsion, ni amélioration de santé. Le ressenti après séance reste facultatif. Le son produit numériquement, le niveau acoustique physique et l'effet sur une personne restent trois observations distinctes.
+
+**Cadre de séance et reçu.** La durée est figée à la fin de l'activité ; le temps passé dans le formulaire ne s'y ajoute pas. La première tentative fige les réponses et un UUID cryptographique. En cas d'incertitude, le formulaire reste visible et la reprise renvoie le même payload. Le composant attend un reçu correspondant à la séance avant d'annoncer son enregistrement. La sortie utilise une destination locale déterministe vers la fiche concernée, y compris lorsque le mode a été ouvert sans historique. Aucune sauvegarde locale n'est inventée et aucune donnée de séance n'est ajoutée au stockage local du navigateur.
+
+La route réutilise la clé primaire de `mode_sessions` : nouvelle insertion 201 ; même séance, même propriétaire et mêmes données 200 ; identifiant réutilisé avec d'autres données ou propriétaire 409 générique. Une panne de lecture ne devient pas un succès. Le score existant est recalculé après une nouvelle insertion, pas après un replay. Les appels historiques sans identifiant client restent compatibles. Les horodatages civils viennent du client ; ils ne sont pas des attestations serveur.
+
+**Structure des programmes.** Un schéma Zod unique fournit les types, le JSON Schema de l'outil et les contrôles après génération, avant toute écriture et à la lecture. Les plantes peuvent être absentes et sont normalisées à une liste vide ; le nom latin absent devient `null`. Les champs inconnus ne sont pas propagés. Le prompt autorise le relais vers un médecin, n'impose plus de plantes et exclut prescription et protocole universel de sevrage.
+
+Ces contrôles n'évaluent pas la pertinence clinique du contenu libre. L'authentification réelle, les prestataires réels, la migration des anciens programmes et la qualification des scripts restent des travaux distincts.
+
+Le résumé de génération utilise le programme normalisé effectivement retourné par le stockage. Un ancien contenu invalide ne fait plus disparaître le reste de la fiche. Le délai de régénération est contrôlé à partir de la date du dernier programme, indépendamment du contenu et de la présence d'une version courante. Une erreur de lecture ou une date invalide ne devient pas une autorisation de générer. Les actions de reprise rechargent la page pour refaire la lecture.
+
+### Extension fonctionnelle cohérente
+
+La poursuite du produit doit garder un parcours court : choisir une intention et une durée, consulter le contenu et ses options, commencer volontairement, arrêter simplement, puis enregistrer un ressenti facultatif. La liste de technologies n'est pas l'écran d'accueil.
+
+Les composants existants peuvent accueillir un catalogue de contenus avec auteur, version, langue, durée, sources et état de revue. Une séance de relaxation, une pratique spirituelle, un contenu d'éducation à la santé et un protocole thérapeutique doivent conserver leurs destinations et leurs preuves propres. La formation PURAMA doit être importée à partir de ses contenus réels et de ses droits, sans inventer les rituels manquants.
+
+Avant d'ouvrir une recommandation personnalisée de plante ou de produit, la fiche doit identifier sa composition exacte, sa forme, sa traçabilité, ses contre-indications documentées et les interactions connues. Les produits vendus par PURAMA doivent être signalés comme tels ; un classement ou une proposition d'achat ne constitue pas une validation thérapeutique. Aucune liste universelle de produits « les plus puissants » n'est créée à partir de leurs noms commerciaux.
+
+L'expansion à l'ensemble de la santé doit être suivie par domaine et par destination d'usage : information, prévention, suivi déclaré, mesure avec appareil qualifié, orientation, puis éventuelle fonction médicale selon ses preuves et obligations propres. La caméra, l'audio ou la fréquence ne deviennent pas un diagnostic général.
+
+### Recherche et décisions de preuve
+
+- **Hypnose :** le [NCCIH](https://www.nccih.nih.gov/health/hypnosis) décrit des résultats variables selon les indications, notamment douleur et syndrome de l'intestin irritable. Cela ne permet pas de garantir un effet pour tous ni de valider les scripts générés par MUKTI.
+- **Méditation :** la [synthèse NCCIH](https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety) rappelle que les résultats et effets indésirables dépendent de la pratique et de la personne. Le produit doit permettre de réduire, arrêter ou choisir du texte seul.
+- **432 Hz :** le [petit essai pilote publié](https://pubmed.ncbi.nlm.nih.gov/31031095/) ne démontre pas de guérison universelle ni de toxicité de l'accordage 440 Hz. Le repère musical reste une préférence.
+- **Battements binauraux :** la [revue systématique PLOS](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0286023) rapporte des résultats hétérogènes sur l'entraînement des oscillations cérébrales ; une différence numérique de fréquence ne prouve pas un état mental obtenu.
+- **Spooky2 :** son [avis légal officiel](https://www.spooky2.com/legal/) présente des appareils expérimentaux et ne revendique pas une destination de diagnostic ou traitement ; la mention FDA ne doit pas être transformée en conclusion réglementaire sur tous les pays.
+- **Lumière pulsée :** les [précautions de Dream Machine Technology](https://dream-machine.tech/pages/risques-medicaux) sont propres à son dispositif. La [publication PLOS de 2026](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0359958) ne transforme pas un questionnaire en garantie individuelle de sécurité.
+- **Produits naturels :** le [NCCIH](https://www.nccih.nih.gov/health/safety) décrit des interactions et des contaminations possibles. « Naturel », « pur » et « quantique » ne remplacent pas l'identification du produit et ses preuves.
+- **Contrat technique :** la [documentation Zod](https://zod.dev/json-schema) décrit la génération de JSON Schema ; elle ne qualifie pas la vérité du contenu généré.
+
+### État de la vérification de ce complément
+
+Le passage final local a exécuté **127 tests ciblés, cinq fichiers, code de sortie 0**, sur le banc autonome après corrections et revue indépendante. Le contrôle TypeScript du périmètre importé termine également avec le code 0. Une exécution contre l'ancien cadre et l'ancienne route exacts de PR #8 reproduit 13 échecs attendus : durée gonflée par le formulaire, perte de la possibilité de reprendre et idempotence absente. Sept autres cas reproduisent le défaut de navigation avant sa correction. Ces essais utilisent des frontières externes explicitement simulées.
+
+La revue indépendante a identifié puis relu les corrections de trois consommateurs : résumé SSE après normalisation, lecture d'un ancien programme invalide et sortie d'un mode ouvert sans historique. La qualification de l'ensemble du dépôt, du navigateur et des dépendances doit être lue dans les workflows attachés au commit de la PR candidate. Les dépendances directes Framer Motion 12.38.0, clsx 2.1.1 et tailwind-merge 3.5.0, déjà utilisées en production, sont verrouillées dans le banc pour vérifier les imports réels de la fiche ; aucune dépendance de production n'est changée.
+
+Le navigateur local a été bloqué avant chargement par une restriction de sockets. Quatre scénarios navigateur supplémentaires sont fournis pour la chaîne CI standard, avec vrais composants et graphe Web Audio, API et navigation explicitement simulées. La présence de ces scénarios n'est pas une preuve de réussite.
+
+Le [reçu local avant publication](evidence/mukti-modes-programs-2026-11-12.json) conserve le périmètre, les résultats, les limites et les empreintes des fichiers de contrôle. Les workflows de la PR fournissent séparément la qualification distante de son commit.
+
+Limites conservées : versionnement des programmes non transactionnel hérité ; pas d'essai Supabase réel ou de charge concurrente ; pas d'appel réel à un modèle ; pas de lecteur d'hypnose qualifié ; pas d'appareil Spooky, Dream Machine ou Kasina testé ; pas de validation clinique ; pas de mise en production dans ce lot. Les résultats historiques du 10 novembre ci-dessus ne sont pas automatiquement transférés au nouveau code.
+
+
 ## Limites fonctionnelles conservées
 
 - Le temps déclaré filtre chaque proposition. Il ne constitue pas encore un budget cumulé décrémenté entre toutes les activités de l'écosystème.
@@ -117,3 +187,4 @@ Le banc déclare PostCSS 8.5.29 pour partager les types attendus par Vite et Tai
 - [PGlite — API](https://pglite.dev/docs/api) : exécution locale des requêtes et migrations PostgreSQL.
 - [OpenAI — transcription audio](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) : contrat `whisper-1` et retour `verbose_json` avec durée. Aucun appel prestataire réel n'a été utilisé pour la qualification.
 - [Tailwind — styles de base](https://tailwindcss.com/docs/preflight#extending-preflight) : les valeurs par défaut s'ajoutent dans la couche `base` pour préserver le fonctionnement des classes utilitaires.
+

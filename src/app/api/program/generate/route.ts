@@ -1,7 +1,7 @@
 // POST /api/program/generate
 // Génère un programme Opus 4.7 en streaming SSE. Rate-limit 3/jour/user (Opus cher).
 // Persiste via storeProgram à la fin + marque anciennes versions is_current=false.
-// Wording non-médical garanti dans le system prompt (lib/programs.ts).
+// Le prompt et la validation de structure ne constituent pas une revue clinique.
 
 import { z } from 'zod'
 import {
@@ -9,8 +9,8 @@ import {
   createOpusProgramStream,
   getOpusModelName,
   storeProgram,
-  type ProgramStructure,
 } from '@/lib/programs'
+import { parseProgramStructure } from '@/lib/programs-schema'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -34,6 +34,14 @@ function jsonError(message: string, status = 400): Response {
 }
 
 export async function POST(req: Request) {
+  try {
+    return await generateResponse(req)
+  } catch {
+    return jsonError('Vérification du programme indisponible. Réessaie.', 503)
+  }
+}
+
+async function generateResponse(req: Request) {
   const sb = await createServerSupabaseClient()
   const {
     data: { user },
@@ -57,12 +65,13 @@ export async function POST(req: Request) {
   }
 
   // Owner-check via RLS — si pas le sien, maybeSingle retourne null
-  const { data: addiction } = await sb
+  const { data: addiction, error: addictionError } = await sb
     .from('addictions')
     .select('id, user_id, type, severity, frequency_daily, started_ago_months, triggers, goal, status, custom_label, declared_at, liberated_at, created_at, updated_at')
     .eq('id', parsed.data.addiction_id)
     .maybeSingle()
 
+  if (addictionError) return jsonError('Vérification du programme indisponible. Réessaie.', 503)
   if (!addiction) return jsonError('Addiction introuvable ou non autorisée.', 404)
   if (addiction.status !== 'active') {
     return jsonError(
@@ -136,7 +145,7 @@ export async function POST(req: Request) {
           return
         }
 
-        const program = toolUse.input as ProgramStructure
+        const program = parseProgramStructure(toolUse.input)
 
         send('status', { phase: 'persisting', message: 'Je sauvegarde ton programme…' })
 
@@ -154,14 +163,14 @@ export async function POST(req: Request) {
           version: stored.version,
           model: stored.model_used,
           summary: {
-            phases: program.phases.length,
-            micro_meditations: program.micro_meditations.length,
-            affirmations: program.affirmations.length,
-            plants: program.plants_info.length,
-            anti_pulsion_actions: program.anti_pulsion_actions.length,
-            hypnose_scripts: program.hypnose_scripts.length,
+            phases: stored.phases.length,
+            micro_meditations: stored.micro_meditations.length,
+            affirmations: stored.affirmations.length,
+            plants: stored.plants_info.length,
+            anti_pulsion_actions: stored.anti_pulsion_actions.length,
+            hypnose_scripts: stored.hypnose_scripts.length,
           },
-          intention: program.intention,
+          intention: stored.intention,
           tokens: {
             input: finalMessage.usage.input_tokens,
             output: finalMessage.usage.output_tokens,
@@ -172,7 +181,7 @@ export async function POST(req: Request) {
           err instanceof Error
             ? err.message.includes('rate_limit')
               ? 'Service IA saturé — réessaie dans 30 secondes.'
-              : `Génération interrompue : ${err.message}`
+              : 'Génération non confirmée. Vérifie la page avant de réessayer.'
             : 'Erreur inconnue pendant la génération.'
         try {
           controller.enqueue(sseChunk('error', { message: msg }))

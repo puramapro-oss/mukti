@@ -7,7 +7,8 @@
       "codex/aurora-intention-musique-20261110": false,
       "codex/aurora-timing-reliability-20261110": false,
       "audit/mukti-harmonie-composition-20261111": false,
-      "audit/mukti-integrated-accessibility-20261111": false
+      "audit/mukti-integrated-accessibility-20261111": false,
+      "audit/mukti-modes-programs-20261112": false
     }
   },
   "buildCommand": "npm run build",
@@ -88,3 +89,4 @@
   ],
   "installCommand": "git config --global url.\"https://${SMARANA_GIT_TOKEN}@github.com/\".insteadOf \"ssh://git@github.com/\" && npm install"
 }
+

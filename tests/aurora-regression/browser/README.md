@@ -2,7 +2,7 @@
 
 Ce harness importe les vrais composants Journal, MinimalHabitsList, MysteryChest, WellbeingCheckin, WellbeingFeedback et AURORA ainsi que les styles du produit. Il adapte `next/link` en lien HTML, car il ne lance pas le routeur Next.js. Pour les quatre scénarios de rituel repris de la PR #3, le canvas WebGL de respiration est remplacé par un fond neutre ; le texte, l'horloge et le graphe Web Audio restent réels.
 
-Les dix scénarios Playwright utilisent un vrai Chromium, un contexte neuf et des données synthétiques. Toutes les API sont interceptées. Toute requête HTTP vers un hôte non local, ou une API non prévue, fait échouer le scénario. Le scénario audio utilise le faux périphérique audio fourni par Chromium et le vrai MediaRecorder du navigateur ; aucun microphone utilisateur n'est sollicité. L'instrumentation du rituel observe le gain audio réel avec un analyseur, sans remplacer la génération sonore ni l'horloge.
+Les scénarios Playwright utilisent un vrai Chromium, un contexte neuf et des données synthétiques. Toutes les API sont interceptées. Toute requête HTTP vers un hôte non local, ou une API non prévue, fait échouer le scénario. Le scénario audio utilise le faux périphérique audio fourni par Chromium et le vrai MediaRecorder du navigateur ; aucun microphone utilisateur n'est sollicité. L'instrumentation du rituel observe le gain audio réel avec un analyseur, sans remplacer la génération sonore ni l'horloge.
 
 ## Exécution autonome
 
@@ -33,6 +33,23 @@ Le serveur Vite écoute uniquement `127.0.0.1:4173`. La vue `?view=aurora` réut
 
 ## Moteur de qualification locale
 
+### Complément du 12 novembre 2026 : modes existants
+
+`modes.html` importe les vrais `ModeFrame`, `Mode2MultisensorielUltime` et `Mode3MicroMeditation` sous `StrictMode`, avec le vrai moteur audio AURORA et les préférences d'accessibilité existantes. `next/navigation` est une doublure explicite : un retour demandé démonte la séance et rend un reçu de navigation dans la fixture. Le routeur Next.js et la base ne sont pas lancés par ce banc.
+
+Les quatre scénarios de `modes.browser.spec.ts` ajoutent les vérifications suivantes :
+
+- Affichage mobile, mouvement réduit, silence, arrêt puis erreur HTTP et reprise du même payload/UUID ; sortie seulement après un reçu correspondant à la séance.
+- Fin de minuterie déclarée `completed`, sans amélioration de santé déduite ni enregistrement automatique.
+- Démarrage volontaire du vrai graphe Web Audio, signal observé, arrêt après activation du silence puis après `pagehide`, absence de reprise à `pageshow`.
+- Micro-méditation avec affirmation visible, animation supprimée, retour en fin de séance et choix explicite de quitter sans enregistrer.
+
+La route HTTP est simulée avec le contrat de reçu réel. Son idempotence et la validation des réponses sont aussi testées séparément par les tests de route et de composant, avec Supabase explicitement simulé. Le scénario Web Audio ne mesure ni une sortie acoustique physique, ni la sécurité d'un appareil. `pagehide` est injecté ; un verrouillage réel de téléphone reste à qualifier.
+
+La tentative locale du 12 novembre avec Playwright 1.59.1 et Chromium système 156.0.8078.79 a été **BLOQUÉE au lancement**, avant toute assertion, par `socket() failed: Operation not permitted`. Les quatre échecs de lancement ne sont pas des résultats fonctionnels. La qualification suivante utilise le navigateur standard installé par le workflow GitHub ; ses résultats et son commit doivent être consultés séparément. Le workflow conserve pendant sept jours les rapports, traces d'échec et captures synthétiques présents dans `browser/test-results/`.
+
+### Qualification historique du 10 novembre 2026
+
 Le 10 novembre 2026, le téléchargement officiel Playwright a renvoyé une page HTML « Site Unavailable » de 195 octets à la place du ZIP, après cinq essais. Pour débloquer la qualification locale, le package publié `@sparticuz/chromium@147.0.2` a été installé dans un cache extérieur au dépôt. Son binaire annonce `Chromium 147.0.7727.0`, alors que Playwright 1.59.1 attend la révision `147.0.7727.15`.
 
 L'extraction utilise les fichiers Brotli officiels du package et sa dépendance `tar-fs`, avec `chown: false` pour conserver le propriétaire local : le conteneur refuse les changements de propriétaire d'archive. Elle vérifie la signature ELF et une taille non nulle avant `--version`. Aucun paquet système ni navigateur de l'utilisateur n'est utilisé. La distribution, l'intégrité npm, les arguments de lancement, les versions des dépendances testées, la commande et son code retour sont enregistrés dans le rapport local `runtime.json`. Ce moteur constitue une qualification locale distincte du moteur Playwright par défaut prévu en CI ; ses arguments serveur ne qualifient pas les protections du navigateur ou la politique CSP.
@@ -40,3 +57,4 @@ L'extraction utilise les fichiers Brotli officiels du package et sa dépendance 
 Le flag serveur `--single-process` est retiré pour cette qualification : le premier contexte fonctionnait, puis l'ouverture du deuxième fermait le navigateur. Deux contextes locaux successifs ont été vérifiés après son retrait avant de relancer les scénarios. Les autres arguments de la distribution sont conservés, avec WebGL désactivé ; ce choix correspond au périmètre qui exclut le canvas de respiration.
 
 Cette qualification ne prouve pas l'authentification réelle, les droits PostgreSQL/RLS, les prestataires IA, la qualité médicale, un téléphone physique, le routage complet Next.js ou un déploiement. Les résultats d'exécution doivent être rapportés séparément ; la présence de ces fichiers ne signifie pas que les tests ont passé.
+
