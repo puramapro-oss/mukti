@@ -39,4 +39,12 @@ jobs:
       - run: npm run typecheck
       - run: npx --no-install playwright install --with-deps --only-shell chromium
       - run: npx --no-install playwright test --config browser/playwright.config.ts
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mukti-wellbeing-regression-${{ github.sha }}
+          path: tests/aurora-regression/browser/test-results/
+          if-no-files-found: warn
+          retention-days: 3
 

@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const native = vi.hoisted(() => ({
   isNativePlatform: vi.fn(), isPluginAvailable: vi.fn(), getPlatform: vi.fn(),
-  getState: vi.fn(), configure: vi.fn(), clear: vi.fn(),
+  getState: vi.fn(), configure: vi.fn(), clear: vi.fn(), requestPin: vi.fn(),
 }))
 vi.mock('@capacitor/core', () => ({
   Capacitor: native,
-  registerPlugin: () => ({ getState: native.getState, configure: native.configure, clear: native.clear }),
+  registerPlugin: () => ({ getState: native.getState, configure: native.configure, clear: native.clear, requestPin: native.requestPin }),
 }))
-import { clearNativeWidget, readNativeWidget, saveNativeWidget, widgetPlatform } from '../../src/lib/affirmation-widget-native'
+import { clearNativeWidget, readNativeWidget, requestNativeWidgetPin, saveNativeWidget, widgetPlatform } from '../../src/lib/affirmation-widget-native'
 import type { WidgetPayload } from '../../src/lib/affirmation-widget'
 
 const payload: WidgetPayload = {
@@ -23,6 +23,7 @@ beforeEach(() => {
   native.getState.mockResolvedValue({ supported: true, configured: false })
   native.configure.mockResolvedValue({ saved: true })
   native.clear.mockResolvedValue({ cleared: true })
+  native.requestPin.mockResolvedValue({ requested: false })
 })
 
 describe('truthful native acknowledgement', () => {
@@ -84,6 +85,31 @@ describe('truthful native acknowledgement', () => {
     await expect(readNativeWidget()).rejects.toThrow()
   })
 
+  it.each([null, 'false', 0])('rejects a malformed optional installation flag (%j)', async installed => {
+    native.getState.mockResolvedValue({ supported: true, configured: false, installed })
+    await expect(readNativeWidget()).rejects.toThrow('État du widget illisible')
+  })
+
+  it.each([
+    { supported: false, configured: true, payload: JSON.stringify(payload) },
+    { supported: false, configured: false, installed: true },
+  ])('rejects configuration or installation on an unsupported device (%j)', async state => {
+    native.getState.mockResolvedValue(state)
+    await expect(readNativeWidget()).rejects.toThrow('État du widget incohérent')
+  })
+
+  it('accepts an unsupported device without an installed widget', async () => {
+    const state = { supported: false, configured: false, installed: false }
+    native.getState.mockResolvedValue(state)
+    await expect(readNativeWidget()).resolves.toEqual(state)
+  })
+
+  it('preserves installed presence after clearing the selection', async () => {
+    const state = { supported: true, configured: false, installed: true }
+    native.getState.mockResolvedValue(state)
+    await expect(clearNativeWidget()).resolves.toEqual(state)
+  })
+
   it('confirms removal only when acknowledgement and readback agree', async () => {
     expect(await clearNativeWidget()).toEqual({ supported: true, configured: false })
     native.clear.mockResolvedValueOnce({ cleared: false })
@@ -98,6 +124,66 @@ describe('truthful native acknowledgement', () => {
     const result = expect(saveNativeWidget(payload)).rejects.toThrow('État non confirmé')
     await vi.advanceTimersByTimeAsync(10_000)
     await result
+    expect(native.getState).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('Android widget pin request', () => {
+  beforeEach(() => { native.getPlatform.mockReturnValue('android') })
+
+  it.each([true, false])('returns the request acknowledgement without inferring installation (%j)', async requested => {
+    native.requestPin.mockResolvedValue({ requested })
+    await expect(requestNativeWidgetPin()).resolves.toEqual({ requested })
+    expect(native.requestPin).toHaveBeenCalledTimes(1)
+    expect(native.getState).not.toHaveBeenCalled()
+    expect(native.configure).not.toHaveBeenCalled()
+    expect(native.clear).not.toHaveBeenCalled()
+  })
+
+  it('does not propagate an installation claim from a pin acknowledgement', async () => {
+    native.requestPin.mockResolvedValue({ requested: true, installed: true })
+    await expect(requestNativeWidgetPin()).resolves.toEqual({ requested: true })
+    expect(native.getState).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    null, undefined, {}, { requested: 'true' }, { requested: 1 }, { installed: true },
+  ])('rejects a malformed pin acknowledgement (%j)', async result => {
+    native.requestPin.mockResolvedValue(result)
+    await expect(requestNativeWidgetPin()).rejects.toThrow('Demande d’ajout non confirmée')
+    expect(native.getState).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { platform: 'ios', isNative: true, plugin: true },
+    { platform: 'web', isNative: false, plugin: true },
+    { platform: 'android', isNative: false, plugin: true },
+    { platform: 'android', isNative: true, plugin: false },
+    { platform: 'desktop', isNative: true, plugin: true },
+  ])('avoids native requests in an unsupported environment (%j)', async ({ platform, isNative, plugin }) => {
+    native.getPlatform.mockReturnValue(platform)
+    native.isNativePlatform.mockReturnValue(isNative)
+    native.isPluginAvailable.mockReturnValue(plugin)
+    await expect(requestNativeWidgetPin()).resolves.toEqual({ requested: false })
+    expect(native.requestPin).not.toHaveBeenCalled()
+    expect(native.getState).not.toHaveBeenCalled()
+  })
+
+  it('preserves a native request failure without presenting success', async () => {
+    const failure = new Error('Demande refusée par le lanceur.')
+    native.requestPin.mockRejectedValue(failure)
+    await expect(requestNativeWidgetPin()).rejects.toBe(failure)
+    expect(native.getState).not.toHaveBeenCalled()
+  })
+
+  it('bounds an unresponsive pin request without claiming that it was cancelled', async () => {
+    vi.useFakeTimers()
+    native.requestPin.mockReturnValue(new Promise(() => undefined))
+    const result = expect(requestNativeWidgetPin()).rejects.toThrow('État non confirmé')
+    await vi.advanceTimersByTimeAsync(10_000)
+    await result
+    expect(native.requestPin).toHaveBeenCalledTimes(1)
     expect(native.getState).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
