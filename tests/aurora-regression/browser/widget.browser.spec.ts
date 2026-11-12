@@ -116,15 +116,26 @@ test('existing accessibility preferences apply to widget controls with 200 perce
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
     for (const width of [320, 640]) {
       await page.setViewportSize({ width, height: width === 320 ? 640 : 360 })
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-      const metrics = await page.locator('button, a, select, summary, label:has(input)').evaluateAll(elements => elements.map(element => {
-        const rect = element.getBoundingClientRect()
-        return { name: element.textContent?.trim(), width: rect.width, height: rect.height }
-      }))
-      expect(metrics.filter(rect => rect.width < 44 || rect.height < 44)).toEqual([])
-      const phrase = await text.boundingBox()
-      const caption = await page.locator('figcaption').boundingBox()
-      expect(phrase && caption && phrase.y + phrase.height <= caption.y).toBe(true)
+      // Sample one layout: separate protocol calls can straddle reflow or scrolling.
+      await expect(async () => {
+        const geometry = await text.evaluate(element => {
+          const phrase = element.getBoundingClientRect()
+          const caption = document.querySelector('figcaption')!.getBoundingClientRect()
+          const targets = [...document.querySelectorAll('button, a, select, summary, label:has(input)')].map(target => {
+            const rect = target.getBoundingClientRect()
+            return { name: target.textContent?.trim(), width: rect.width, height: rect.height }
+          })
+          return { viewport: window.innerWidth, scrollWidth: document.documentElement.scrollWidth,
+            fontSize: getComputedStyle(element).fontSize, phraseBottom: phrase.bottom, captionTop: caption.top,
+            undersizedTargets: targets.filter(rect => rect.width < 44 || rect.height < 44) }
+        })
+        const context = `${theme}/${width}: ${JSON.stringify(geometry)}`
+        expect(geometry.viewport, context).toBe(width)
+        expect(geometry.fontSize, context).toBe(`${defaultSize * 2}px`)
+        expect(geometry.scrollWidth, context).toBeLessThanOrEqual(width)
+        expect(geometry.undersizedTargets, context).toEqual([])
+        expect(geometry.phraseBottom, context).toBeLessThanOrEqual(geometry.captionTop)
+      }).toPass({ timeout: 10_000 })
       await page.screenshot({ path: `browser/test-results/widget-${theme}-${width}-text200.png`, fullPage: true })
     }
   }
