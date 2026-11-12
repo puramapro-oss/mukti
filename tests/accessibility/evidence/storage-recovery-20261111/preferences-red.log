@@ -1,0 +1,155 @@
+✔ SSR returns independent defaults and never touches storage (3.004908ms)
+✔ stored values are restricted to the existing six preference fields (2.263045ms)
+✔ null arrays strings malformed and oversized storage use safe defaults (3.846207ms)
+✔ inherited preference properties are ignored (0.825477ms)
+✔ patch preserves legacy silent and captions choices and ignores invalid values (0.901198ms)
+✔ blocked writes apply only in this tab and report persistence failure (1.0313ms)
+✔ read and write failures do not prevent a session preference (0.931072ms)
+✔ local listeners re-read storage and do not trust event payloads (0.947717ms)
+✔ only relevant localStorage cross-tab events refresh preferences (0.972603ms)
+✔ legacy silence and disabled haptics prevent new vibration (1.458059ms)
+✔ disabling haptics also cancels a running vibration (0.890962ms)
+✔ hardware errors and invalid vibration patterns return false (1.469635ms)
+✖ storage recovery merges only local changes with another tab without needing an event (1.836356ms)
+✖ storage events preserve pending local choices and merge actual remote values before retry (1.154311ms)
+✖ temporary read failure retains the last observed settings without overwriting unknown changes (0.919245ms)
+✖ a blocked read prevents a writable store from losing unseen preferences (0.880998ms)
+✖ invalid patches during blocked writes do not pin default values over another tab (0.986264ms)
+✖ remote storage clearing resets persisted fields while keeping unsaved local choices (0.88935ms)
+✔ an explicit local reset replaces pending changes and can be retried after recovery (0.88915ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 13
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 362.376537
+
+✖ failing tests:
+
+test at tests/accessibility/preferences.test.mjs:100:1
+✖ storage recovery merges only local changes with another tab without needing an event (1.836356ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/105cd9664a5e/mukti/tests/accessibility/preferences.test.mjs:108:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accessibility/preferences.test.mjs:114:1
+✖ storage events preserve pending local choices and merge actual remote values before retry (1.154311ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'sm' !== 'xl'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/105cd9664a5e/mukti/tests/accessibility/preferences.test.mjs:122:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'sm',
+    expected: 'xl',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accessibility/preferences.test.mjs:134:1
+✖ temporary read failure retains the last observed settings without overwriting unknown changes (0.919245ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/105cd9664a5e/mukti/tests/accessibility/preferences.test.mjs:140:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accessibility/preferences.test.mjs:152:1
+✖ a blocked read prevents a writable store from losing unseen preferences (0.880998ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/105cd9664a5e/mukti/tests/accessibility/preferences.test.mjs:156:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accessibility/preferences.test.mjs:167:1
+✖ invalid patches during blocked writes do not pin default values over another tab (0.986264ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'md' !== 'lg'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/105cd9664a5e/mukti/tests/accessibility/preferences.test.mjs:174:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'md',
+    expected: 'lg',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accessibility/preferences.test.mjs:178:1
+✖ remote storage clearing resets persisted fields while keeping unsaved local choices (0.88935ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'md' !== 'xl'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/105cd9664a5e/mukti/tests/accessibility/preferences.test.mjs:184:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'md',
+    expected: 'xl',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
