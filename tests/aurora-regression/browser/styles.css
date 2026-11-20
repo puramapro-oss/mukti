@@ -5,3 +5,6 @@
 @source "../../../src/components/wellbeing";
 @source "../../../src/components/aurora";
 @source "./main.tsx";
+@source "../../../src/components/modes";
+@source "./modes-main.tsx";
+

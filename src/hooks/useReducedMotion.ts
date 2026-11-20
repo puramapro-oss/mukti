@@ -5,10 +5,13 @@
 // Usage : const reduced = useReducedMotion(); if (reduced) return <Static />
 
 import { useEffect, useState } from 'react'
+import { useAccessibilityPrefs } from '@/hooks/useAccessibilityPrefs'
+import { loadA11yPrefs } from '@/lib/accessibility'
 
 const QUERY = '(prefers-reduced-motion: reduce)'
 
 export function useReducedMotion(): boolean {
+  const { prefs } = useAccessibilityPrefs()
   const [reduced, setReduced] = useState(false)
 
   useEffect(() => {
@@ -25,11 +28,12 @@ export function useReducedMotion(): boolean {
     return () => mql.removeListener(onChange)
   }, [])
 
-  return reduced
+  return reduced || prefs.reducedMotionForced
 }
 
 // Helper synchrone (utilisable hors composants — typescript-safe SSR)
 export function prefersReducedMotionSync(): boolean {
+  if (loadA11yPrefs().reducedMotionForced) return true
   if (typeof window === 'undefined' || !window.matchMedia) return false
   return window.matchMedia(QUERY).matches
 }
