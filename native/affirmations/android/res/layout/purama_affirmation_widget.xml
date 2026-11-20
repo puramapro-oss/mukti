@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/purama_affirmation_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/purama_affirmation_widget_background"
+    android:importantForAccessibility="yes">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/purama_affirmation_widget_brand"
+        android:textColor="#D7C7A7"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.12"
+        android:importantForAccessibility="no" />
+    <TextView
+        android:id="@+id/purama_affirmation_text"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:text="@string/purama_affirmation_widget_empty"
+        android:textColor="#FFF9EE"
+        android:textSize="19sp"
+        android:fontFamily="sans-serif"
+        android:maxLines="6"
+        android:ellipsize="end"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="14sp"
+        android:autoSizeMaxTextSize="22sp"
+        android:autoSizeStepGranularity="1sp"
+        android:importantForAccessibility="no" />
+    <TextView
+        android:id="@+id/purama_affirmation_action"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/purama_affirmation_widget_configure"
+        android:textColor="#D7C7A7"
+        android:textSize="11sp"
+        android:importantForAccessibility="no" />
+</LinearLayout>

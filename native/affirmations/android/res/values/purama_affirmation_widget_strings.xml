@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="purama_affirmation_widget_name">MUKTI · Affirmations</string>
+    <string name="purama_affirmation_widget_description">Tes phrases choisies, à ton rythme. Disponibilité de l\'écran verrouillé selon l\'appareil.</string>
+    <string name="purama_affirmation_widget_brand">PURAMA · MUKTI</string>
+    <string name="purama_affirmation_widget_empty">Choisis les phrases qui t’accompagnent.</string>
+    <string name="purama_affirmation_widget_configure">Ouvrir MUKTI pour choisir</string>
+    <string name="purama_affirmation_widget_open">Retrouver mes affirmations</string>
+</resources>

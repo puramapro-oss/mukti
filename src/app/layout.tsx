@@ -7,7 +7,10 @@ import ErrorBoundary from '@/components/shared/ErrorBoundary'
 import CookieBanner from '@/components/shared/CookieBanner'
 import SkipToContent from '@/components/shared/SkipToContent'
 import SOSButton from '@/components/shared/SOSButton'
+import NativeWidgetLink from '@/components/reprogrammation/NativeWidgetLink'
+import AccessibilityPreferencesRoot from '@/components/shared/AccessibilityPreferencesRoot'
 import './globals.css'
+import './accessibility.css'
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -82,7 +85,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className="min-h-screen bg-[var(--bg-void)] font-[family-name:var(--font-body)] text-[var(--text-primary)] antialiased">
+        <AccessibilityPreferencesRoot />
         <SkipToContent />
+        <NativeWidgetLink />
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ErrorBoundary>
             <main id="main-content" tabIndex={-1} className="outline-none">
