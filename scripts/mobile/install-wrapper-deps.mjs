@@ -22,8 +22,17 @@ const dependencies = Object.fromEntries([...nativePackages, 'typescript'].map(na
 const nativeManifest = { name: manifest.name, version: manifest.version, private: true, dependencies }
 const stage = await mkdtemp(join(process.env.RUNNER_TEMP || tmpdir(), 'mukti-wrapper-'))
 const lockPath = join(stage, 'package-lock.json')
+// npm 10 can retain a sibling workspace link even when its package is unused.
+// The candidate lock contains registry artifacts only, before npm sees it.
+const registryPackages = Object.fromEntries(Object.entries(lock.packages).filter(([, entry]) =>
+  entry.integrity && entry.resolved?.startsWith('https://registry.npmjs.org/'),
+))
+for (const path of Object.keys(registryPackages).sort()) {
+  const parentBoundary = path.lastIndexOf('/node_modules/')
+  if (parentBoundary >= 0 && !registryPackages[path.slice(0, parentBoundary)]) delete registryPackages[path]
+}
 await writeFile(join(stage, 'package.json'), JSON.stringify(nativeManifest))
-await writeFile(lockPath, JSON.stringify({ ...lock, packages: { ...lock.packages, '': nativeManifest } }))
+await writeFile(lockPath, JSON.stringify({ ...lock, packages: { ...registryPackages, '': nativeManifest } }))
 
 // Let npm select its own transitive tree using the application's existing lock.
 // This step cannot contact a registry or the private web dependency.
@@ -39,4 +48,4 @@ for (const [path, dep] of Object.entries(selected.packages)) {
 }
 npm(['ci', ...options])
 await symlink(join(stage, 'node_modules'), modules, 'dir')
-console.log(`Installed ${Object.keys(selected.packages).length - 1} locked native packages for ${manifest.name}`)
+console.log(`Verified ${Object.keys(selected.packages).length - 1} packages in the native lock for ${manifest.name}`)
