@@ -76,6 +76,11 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           install -D tests/android-wrapper/WrapperInstrumentedTest.java android/app/src/androidTest/java/dev/purama/mukti/WrapperInstrumentedTest.java
+          # Capacitor's example test retains its template package when the host is generated.
+          template_test=android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java
+          if test -f "$template_test"; then
+            sed -i 's/"com\.getcapacitor\.app"/"dev.purama.mukti"/' "$template_test"
+          fi
           android/gradlew -p android :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
           python3 tests/android-wrapper/verify-apk.py android/app/build/outputs/apk/release/app-release-unsigned.apk
           python3 tests/android-wrapper/verify-apk.py android/app/build/outputs/apk/debug/app-debug.apk
@@ -100,7 +105,7 @@ jobs:
             adb shell svc wifi disable
             adb shell svc data disable
             adb shell settings get global airplane_mode_on | tr -d '\r' | grep -qx 1
-            android/gradlew -p android :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.purama.mukti.WrapperInstrumentedTest --no-daemon
+            android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon
 
       - name: Retain emulator test reports
         if: always() && github.event_name == 'pull_request'

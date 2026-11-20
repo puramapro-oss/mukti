@@ -30,7 +30,6 @@ public class WrapperInstrumentedTest {
     @Test public void startsProductActivityWithItsWebViewAndRegisteredPlugins() {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> {
-                assertEquals("dev.purama.mukti", activity.getPackageName());
                 assertEquals(1, Settings.Global.getInt(activity.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0));
                 Bridge bridge = activity.getBridge();
                 assertNotNull(bridge.getWebView());
