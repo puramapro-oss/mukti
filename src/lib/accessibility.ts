@@ -8,6 +8,10 @@ export interface AccessibilityPrefs {
   highContrast: boolean
   fontSize: FontSizePref
 }
+export interface AccessibilityPrefsSnapshot {
+  prefs: AccessibilityPrefs
+  persistence: 'pending' | 'ready' | 'temporary' | 'unavailable'
+}
 export const DEFAULT_A11Y_PREFS: Readonly<AccessibilityPrefs> = Object.freeze({
   silentMode: false, hapticEnabled: true, captionsForced: false,
   reducedMotionForced: false, highContrast: false, fontSize: 'md',
@@ -44,9 +48,18 @@ function readStoredPrefs(): { prefs: AccessibilityPrefs; readable: boolean } {
   } catch { return { prefs: storedPrefs, readable: false } }
 }
 
+export function loadA11yPrefsSnapshot(): AccessibilityPrefsSnapshot {
+  if (typeof window === 'undefined') return { prefs: { ...DEFAULT_A11Y_PREFS }, persistence: 'pending' }
+  const snapshot = readStoredPrefs()
+  return {
+    prefs: { ...snapshot.prefs, ...pendingPrefs },
+    // Reading storage cannot prove that this tab's pending patch was saved.
+    persistence: Object.keys(pendingPrefs).length > 0 ? 'temporary' : snapshot.readable ? 'ready' : 'unavailable',
+  }
+}
+
 export function loadA11yPrefs(): AccessibilityPrefs {
-  if (typeof window === 'undefined') return { ...DEFAULT_A11Y_PREFS }
-  return { ...readStoredPrefs().prefs, ...pendingPrefs }
+  return loadA11yPrefsSnapshot().prefs
 }
 
 export function saveA11yPrefsWithStatus(patch: Partial<AccessibilityPrefs>): { prefs: AccessibilityPrefs; persisted: boolean } {
