@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: here('../../src') },
-      ...['react', 'react-dom', 'sonner', 'lucide-react', '@react-three/fiber'].map((name) => ({
+      ...['react', 'react-dom', 'sonner', 'lucide-react', 'framer-motion', 'clsx', 'tailwind-merge', '@react-three/fiber', 'next', 'zod', '@supabase/ssr', '@supabase/supabase-js', '@anthropic-ai/sdk', '@capacitor/core', '@capacitor/app'].map((name) => ({
         find: new RegExp(`^${name}(/.*)?$`),
         replacement: `${here(`node_modules/${name}`)}$1`,
       })),
@@ -20,5 +20,9 @@ export default defineConfig({
     setupFiles: ['./setup.ts'],
     restoreMocks: true,
     maxWorkers: 1,
+    // PGlite compiles PostgreSQL WASM. Bound its compiler parallelism in the
+    // actual test worker: Vitest does not forward arbitrary parent V8 flags.
+    execArgv: ['--wasm-num-compilation-tasks=1', '--max-old-space-size=512'],
   },
 })
+

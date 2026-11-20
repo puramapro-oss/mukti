@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     user_id: profileId,
     variant: parsed.data.variant as AuroraVariant,
     voice_guidance: parsed.data.voice_guidance ?? false,
-    power_switch: parsed.data.power_switch ?? 'core',
+    power_switch: parsed.data.power_switch ?? 'soft',
   })
 
   if (error || !id) {

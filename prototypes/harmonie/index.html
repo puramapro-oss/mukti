@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Prototype local MUKTI Harmonie : réaccordage musical vers 432 Hz et générateur de tonalités.">
+  <title>MUKTI · Harmonie</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./vendor/SignalsmithStretch-1.3.2.js" defer></script>
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <main>
+    <header class="topbar">
+      <div class="brand"><span class="mark" aria-hidden="true">∿</span><span>MUKTI <span class="muted">/</span> Harmonie</span></div>
+      <span class="prototype">PROTOTYPE LOCAL</span>
+    </header>
+    <section class="intro" aria-labelledby="title">
+      <p class="eyebrow">UN RÉGLAGE, TROIS FAÇONS D’ÉCOUTER</p>
+      <h1 id="title">Votre musique.<br><span>Accordée à 432 Hz.</span></h1>
+      <p class="lead">Réaccordez un fichier audio en gardant son tempo, écoutez une tonalité seule ou une mélodie générée sur cet appareil.</p>
+      <p class="privacy"><span aria-hidden="true">●</span> Sans compte · Aucun fichier envoyé · Aucun microphone</p>
+    </section>
+
+    <section class="player" aria-label="Lecteur Harmonie">
+      <div class="modes" role="group" aria-label="Mode d’écoute">
+        <button type="button" class="mode active" data-mode="music" aria-pressed="true"><span>01</span> Ma musique</button>
+        <button type="button" class="mode" data-mode="tone" aria-pressed="false"><span>02</span> Fréquence seule</button>
+        <button type="button" class="mode" data-mode="melody" aria-pressed="false"><span>03</span> Mélodie</button>
+      </div>
+
+      <div class="player-main">
+        <div class="visual" aria-hidden="true">
+          <svg viewBox="0 0 440 116" fill="none"><path d="M0 58H440" stroke="currentColor" opacity=".12"/><path d="M0 58C14 58 14 23 28 23S42 93 56 93 70 23 84 23 98 93 112 93 126 23 140 23 154 93 168 93 182 23 196 23 210 93 224 93 238 23 252 23 266 93 280 93 294 23 308 23 322 93 336 93 350 23 364 23 378 93 392 93 406 23 420 23 434 58 440 58" stroke="currentColor" stroke-width="2"/></svg>
+          <div class="frequency"><span id="frequency-display">432</span><span class="unit">Hz</span></div>
+          <p id="frequency-caption">La de référence visé</p>
+        </div>
+
+        <div class="settings">
+          <section data-panel="music" aria-labelledby="music-title">
+            <h2 id="music-title">Un morceau, un nouvel accordage</h2>
+            <label class="file-zone" for="audio-file"><span class="file-icon" aria-hidden="true">↥</span><strong id="file-label">Choisir un fichier audio</strong><span id="file-detail">Mono ou stéréo · 25 Mo et 5 min maximum</span></label>
+            <input id="audio-file" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.flac" class="file-input">
+            <div class="reference-row">
+              <label for="source-hz">La du fichier <span class="muted">(déclaré)</span><span class="number-wrap"><input id="source-hz" type="number" min="400" max="480" step="0.1" value="440" inputmode="decimal"><span>Hz</span></span></label>
+              <div class="reference-target"><span>La visé</span><strong>432 <small>Hz</small></strong></div>
+            </div>
+            <p class="detail" id="ratio-detail">Source supposée : 440 Hz, non détectée. Décalage : −31,77 cents. Tempo : × 1.</p>
+            <p class="detail">Réaccordage musical expérimental. Retard du traitement : environ 320 ms, auquel s’ajoute celui de la sortie choisie. La fréquence obtenue n’est pas une mesure acoustique.</p>
+            <label class="check"><input type="checkbox" id="original"><span>Comparer avec la hauteur d’origine</span></label>
+          </section>
+
+          <section data-panel="tone" aria-labelledby="tone-title" hidden>
+            <h2 id="tone-title">Une fréquence précise, sans mélodie</h2>
+            <p class="detail">Sinusoïde générée localement. Le nombre affiché est le réglage numérique ; la sortie acoustique n’est pas mesurée.</p>
+            <label class="tone-label" for="tone-hz">Fréquence<span class="number-wrap"><input id="tone-hz" type="number" min="100" max="2000" step="0.1" value="432" inputmode="decimal"><span>Hz</span></span></label>
+            <p class="detail">Plage de cette version : 100 à 2 000 Hz.</p>
+          </section>
+
+          <section data-panel="melody" aria-labelledby="melody-title" hidden>
+            <h2 id="melody-title">Une mélodie au la 432 Hz</h2>
+            <p class="detail">Une courte composition originale, jouée en boucle à 72 battements par minute. Les notes changent ; leur accordage prend le la 432 Hz pour référence.</p>
+            <div class="melody-tag"><span aria-hidden="true">♪</span><span>Harmonie — thème de démonstration<br><small>8 notes · synthèse locale · aucun enregistrement tiers</small></span></div>
+          </section>
+
+          <div id="duration-panel" hidden>
+            <label class="duration-label" for="duration">Arrêt automatique<select id="duration"><option value="60">1 minute</option><option value="180" selected>3 minutes</option><option value="300">5 minutes</option><option value="600">10 minutes</option></select></label>
+          </div>
+
+          <div id="overlay-panel" class="overlay-panel">
+            <label class="check"><input type="checkbox" id="overlay"><span>Ajouter une tonalité continue à 432 Hz</span></label>
+            <p class="detail">Option distincte du réaccordage, désactivée par défaut.</p>
+            <label for="overlay-level" id="overlay-level-label" hidden>Niveau relatif de la tonalité <output id="overlay-level-value">20 %</output><input id="overlay-level" type="range" min="0" max="40" step="1" value="20"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <div class="progress-meta"><span id="status" role="status" aria-live="polite">Prêt. Aucun son n’est émis.</span><span id="time">0:00 / 0:00</span></div>
+        <progress id="progress" value="0" max="1" aria-label="Progression de la lecture"></progress>
+        <div class="transport-controls">
+          <div class="buttons"><button id="play" type="button" class="primary">Écouter</button><button id="pause" type="button" disabled>Pause</button><button id="stop" type="button" disabled>Arrêter</button></div>
+          <label class="volume" for="volume">Niveau <output id="volume-value">12 %</output><input id="volume" type="range" min="0" max="25" step="1" value="12"></label>
+        </div>
+        <p class="quiet">Commencez avec un volume faible sur l’appareil. Le niveau affiché n’est pas une mesure en décibels acoustiques.</p>
+        <p id="error" class="error" role="alert" hidden></p>
+      </div>
+    </section>
+
+    <section class="scope" aria-label="Compatibilité de ce prototype">
+      <article><h2>Sortie de votre appareil</h2><p>Choisissez votre enceinte ou votre casque dans les réglages de l’appareil, en Bluetooth ou en filaire. Le lecteur utilise cette sortie. Les marques et modèles restent à tester.</p></article>
+      <article><h2>Ce que cette version traite</h2><p>Le fichier audio choisi et les sons générés ici. Spotify, les autres applications et les vidéos ne passent pas par ce lecteur. L’écoute s’arrête lorsque la page passe en arrière-plan.</p></article>
+    </section>
+    <footer>Module expérimental de MUKTI · Traitement local avec Signalsmith Stretch 1.3.2 · <a href="./README.md">Fonctionnement et limites</a> · <a href="./vendor/SignalsmithStretch-LICENSE.txt">Licence du moteur</a></footer>
+    <noscript>JavaScript est nécessaire pour le traitement audio. Aucun son ne sera produit.</noscript>
+  </main>
+</body>
+</html>

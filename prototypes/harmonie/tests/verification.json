@@ -1,0 +1,160 @@
+{
+  "scope": "Node VM minimal AudioWorklet host; real vendored WebAssembly DSP",
+  "browser_validation": "NON TESTÉ — no installed browser executable in this environment",
+  "physical_output_validation": "NON TESTÉ — no microphone, phone, tablet, speaker or headphones connected",
+  "vendor": "Signalsmith Stretch Web 1.3.2",
+  "pitch_ratio": 0.9818181818181818,
+  "pitch_cents": -31.766653633429282,
+  "sample_rate_hz": 48000,
+  "live_configuration": {
+    "block_ms": 320,
+    "interval_ms": 80,
+    "latency_seconds": 0.32,
+    "tonality_hz": 0,
+    "rate": 1,
+    "formant_compensation": false
+  },
+  "acceptance_criteria": {
+    "musical_frequency_error_cents_max": 1,
+    "a432_error_hz_max": 0.1,
+    "note": "A musical pitch shifter is approximate. This is not a laboratory 432 Hz tone generator."
+  },
+  "rejected_design": {
+    "configuration": "Vendor buffer mode, default 120 ms block",
+    "expected_hz": 432,
+    "measured_hz": 432.5078681785671,
+    "status": "FAIL — rejected, not counted as passed",
+    "reason": "Buffer seek introduced a repeatable pitch error; current prototype uses live input and a 320 ms block. No empirical pitch-ratio correction."
+  },
+  "all_passed": true,
+  "checks": [
+    {
+      "test": "a440-to-a432",
+      "status": "PASS",
+      "expected_hz": [
+        432,
+        432
+      ],
+      "measured_hz": [
+        432.04492877044174,
+        432.0449287709544
+      ],
+      "error_hz": [
+        0.04492877044174293,
+        0.04492877095441372
+      ],
+      "error_cents": [
+        0.18004206645187343,
+        0.18004206850633755
+      ]
+    },
+    {
+      "test": "a880-to-a864",
+      "status": "PASS",
+      "expected_hz": [
+        864,
+        864
+      ],
+      "measured_hz": [
+        864.4552622052234,
+        864.4552622034107
+      ],
+      "error_hz": [
+        0.4552622052234483,
+        0.45526220341071166
+      ],
+      "error_cents": [
+        0.911988254942765,
+        0.9119882513123767
+      ]
+    },
+    {
+      "test": "high-12000-strict-ratio",
+      "status": "PASS",
+      "expected_hz": [
+        11781.818181818182,
+        11781.818181818182
+      ],
+      "measured_hz": [
+        11782.224617380512,
+        11782.224617380556
+      ],
+      "error_hz": [
+        0.40643556233044364,
+        0.4064355623740994
+      ],
+      "error_cents": [
+        0.05972108354433483,
+        0.059721083550869594
+      ]
+    },
+    {
+      "test": "stereo-440-660",
+      "status": "PASS",
+      "expected_hz": [
+        432,
+        648
+      ],
+      "measured_hz": [
+        432.0453995855346,
+        648.2108574643535
+      ],
+      "error_hz": [
+        0.045399585534596554,
+        0.21085746435346664
+      ],
+      "error_cents": [
+        0.18192865421436363,
+        0.5632472879029408
+      ],
+      "channel_correlation": -0.00023069276310031962
+    },
+    {
+      "test": "already-432-no-double-shift",
+      "status": "PASS",
+      "expected_hz": [
+        432,
+        432
+      ],
+      "measured_hz": [
+        432.00000116475627,
+        432.0000011639083
+      ],
+      "error_hz": [
+        1.1647562701000425e-06,
+        1.163908279977477e-06
+      ],
+      "error_cents": [
+        4.66774465854412e-06,
+        4.664346463718032e-06
+      ]
+    },
+    {
+      "test": "silence",
+      "status": "PASS",
+      "maximum_abs_sample": 0.0
+    },
+    {
+      "test": "tempo-pulses",
+      "status": "PASS",
+      "pulse_positions_seconds": [
+        0.5002499999999999,
+        0.9996458333333333,
+        1.4996666666666665,
+        2.0000625000000003,
+        2.5002500000000003,
+        2.999645833333333
+      ],
+      "max_interval_error_seconds": 0.000604166666667183,
+      "max_position_error_seconds": 0.00035416666666687746
+    },
+    {
+      "test": "stop-flush",
+      "status": "PASS",
+      "stop_at_seconds": 1.2506666666666666,
+      "raw_dsp_flush_wait_seconds": 0.74,
+      "maximum_after_flush": 0.0,
+      "note": "Raw DSP tail only; browser stop/fade remains to validate on a real browser."
+    }
+  ]
+}

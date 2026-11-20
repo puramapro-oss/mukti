@@ -1,197 +1,212 @@
 'use client'
 
-// MUKTI — Mode 18 Récompenses Mystères : coffre quotidien avec animation ouverture.
-
-import { useState, useTransition } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Gift, Loader2, Sparkles } from 'lucide-react'
-import { toast } from 'sonner'
-
-interface Reward {
-  id: string
-  tier: 'common' | 'rare' | 'legendary' | 'jackpot'
-  reward_type: 'points' | 'coupon' | 'booster' | 'coin' | 'xp' | 'nothing'
-  reward_amount: number
-  streak_day: number
-  claim_date: string
-}
+// The route/component name is retained for existing links. No chest or draw remains.
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Check, Leaf, Loader2, RefreshCw } from 'lucide-react'
+import {
+  LEGACY_REWARD_LABELS,
+  RECOGNITION_FORMAT,
+  RECOGNITION_MESSAGE,
+  RECOGNITION_TIME_ZONE,
+  isDailyRecognition,
+  isRecognitionOverview,
+  mergeRecognitionHistory,
+  utcRecognitionDate,
+  type RecognitionOverview,
+} from '@/lib/daily-recognition'
 
 interface Props {
-  initialToday: Reward | null
-  initialHistory: Reward[]
+  initialOverview: RecognitionOverview | null
+  initialError?: string | null
 }
 
-const TIER_STYLE: Record<Reward['tier'], { label: string; gradient: string; color: string }> = {
-  common: { label: 'Commun', gradient: 'from-slate-500 to-slate-700', color: '#94a3b8' },
-  rare: { label: 'Rare', gradient: 'from-[#06b6d4] to-[#3b82f6]', color: '#06b6d4' },
-  legendary: { label: 'Légendaire', gradient: 'from-[#a855f7] to-[#ec4899]', color: '#a855f7' },
-  jackpot: { label: 'JACKPOT', gradient: 'from-[#F59E0B] to-[#ec4899]', color: '#F59E0B' },
-}
+const dayFormatter = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+})
+const formatDay = (day: string) => dayFormatter.format(new Date(`${day}T12:00:00.000Z`))
 
-const TYPE_LABEL: Record<Reward['reward_type'], string> = {
-  points: 'Points MUKTI',
-  coupon: 'Coupon réduction',
-  booster: 'Booster',
-  coin: 'Coin rare',
-  xp: 'XP',
-  nothing: 'À demain…',
-}
+export default function MysteryChest({ initialOverview, initialError = null }: Props) {
+  const [overview, setOverview] = useState(initialOverview)
+  const [historyLoaded, setHistoryLoaded] = useState(initialOverview !== null)
+  const [error, setError] = useState(initialError)
+  const [busy, setBusy] = useState<'record' | 'refresh' | null>(null)
+  const mounted = useRef(true)
+  const active = useRef<{ controller: AbortController; timeout: ReturnType<typeof setTimeout> } | null>(null)
 
-export default function MysteryChest({ initialToday, initialHistory }: Props) {
-  const [reward, setReward] = useState<Reward | null>(initialToday)
-  const [revealing, setRevealing] = useState(false)
-  const [history, setHistory] = useState<Reward[]>(initialHistory)
-  const [pending, startTransition] = useTransition()
-
-  function claim() {
-    if (reward) return
-    startTransition(async () => {
-      try {
-        const res = await fetch('/api/mystery-rewards/claim-daily', { method: 'POST' })
-        const json = await res.json()
-        if (!res.ok) {
-          toast.error(json.error ?? 'Coffre indisponible.')
-          return
-        }
-        setRevealing(true)
-        setTimeout(() => {
-          setReward(json.reward as Reward)
-          setHistory(prev => [json.reward as Reward, ...prev].slice(0, 14))
-          setRevealing(false)
-        }, 2400)
-      } catch {
-        toast.error('Connexion interrompue.')
+  const request = useCallback(async (action: 'record' | 'refresh') => {
+    // This synchronous guard also covers double clicks before React re-renders.
+    if (active.current) return
+    const controller = new AbortController()
+    const current = { controller, timeout: setTimeout(() => controller.abort(), 10_000) }
+    active.current = current
+    setBusy(action)
+    try {
+      const response = await fetch(action === 'record'
+        ? '/api/mystery-rewards/claim-daily'
+        : '/api/mystery-rewards/history', {
+        method: action === 'record' ? 'POST' : 'GET',
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+      const body: unknown = await response.json()
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+      if (!mounted.current) return
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new Error('Réponse non confirmée. Actualise pour vérifier.')
       }
-    })
-  }
+      const data = body as Record<string, unknown>
+      if (!response.ok || data.ok !== true) {
+        throw new Error(typeof data.error === 'string' ? data.error : 'Enregistrement non confirmé. Réessaie.')
+      }
+      if (action === 'record') {
+        if (data.format !== RECOGNITION_FORMAT || data.time_zone !== RECOGNITION_TIME_ZONE
+          || data.financial_value !== false || typeof data.already_recorded !== 'boolean'
+          || !isDailyRecognition(data.recognition)) {
+          throw new Error('Réponse non confirmée. Actualise pour vérifier.')
+        }
+        const recognition = data.recognition
+        setOverview(previous => ({
+          format: RECOGNITION_FORMAT,
+          time_zone: RECOGNITION_TIME_ZONE,
+          today: recognition.recognition_date,
+          recognition,
+          recognitions: mergeRecognitionHistory(previous?.recognitions ?? [], recognition),
+          legacy_rewards: previous?.legacy_rewards ?? [],
+        }))
+      } else {
+        if (!isRecognitionOverview(data)) throw new Error('Historique non confirmé. Réessaie.')
+        setOverview(data)
+        setHistoryLoaded(true)
+      }
+      setError(null)
+    } catch (cause) {
+      if (mounted.current) {
+        setError(cause instanceof Error && cause.name !== 'AbortError'
+          ? cause.message
+          : 'Pas de confirmation reçue. Actualise avant de réessayer.')
+      }
+    } finally {
+      clearTimeout(current.timeout)
+      if (active.current === current) active.current = null
+      if (mounted.current) setBusy(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      if (active.current) {
+        clearTimeout(active.current.timeout)
+        active.current.controller.abort()
+        active.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    // Refresh after a day boundary or return from another tab; never mutate in the background.
+    const today = overview?.today ?? utcRecognitionDate()
+    const tomorrow = new Date(`${today}T00:00:00.000Z`).getTime() + 86_400_000
+    const timer = setTimeout(() => { void request('refresh') }, Math.max(1_000, tomorrow - Date.now() + 250))
+    const visible = () => { if (document.visibilityState === 'visible') void request('refresh') }
+    const focused = () => { void request('refresh') }
+    document.addEventListener('visibilitychange', visible)
+    window.addEventListener('focus', focused)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', visible)
+      window.removeEventListener('focus', focused)
+    }
+  }, [overview?.today, request])
+
+  const recorded = !!overview?.recognition
 
   return (
-    <div className="space-y-6">
-      <div
-        data-testid="mystery-chest-card"
-        className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl"
-      >
-        <AnimatePresence mode="wait">
-          {!reward && !revealing && (
-            <motion.button
-              key="closed"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={claim}
-              disabled={pending}
-              data-testid="mystery-chest-claim"
-              className="mx-auto flex w-full max-w-xs flex-col items-center gap-4 disabled:opacity-60"
-            >
-              <motion.div
-                animate={{ y: [0, -8, 0], rotate: [-3, 3, -3] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="flex h-40 w-40 items-center justify-center rounded-3xl bg-gradient-to-br from-[#F59E0B] to-[#ec4899] shadow-[0_20px_80px_-20px_rgba(245,158,11,0.6)]"
-              >
-                <Gift className="h-20 w-20 text-white" />
-              </motion.div>
-              <div className="text-center">
-                <div className="text-base font-medium text-white">Ton coffre du jour</div>
-                <div className="text-xs text-white/55">Clique pour ouvrir</div>
-              </div>
-            </motion.button>
-          )}
+    <div className="space-y-6" data-testid="daily-recognition">
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8" aria-labelledby="recognition-title">
+        <Leaf className="h-9 w-9 text-emerald-300" aria-hidden="true" />
+        <h2 id="recognition-title" className="mt-4 text-xl font-medium text-white">{RECOGNITION_MESSAGE}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-white/70">
+          Une pratique, du repos ou une journée sans activité : tu peux simplement reconnaître
+          ce que tu as traversé. Aucun exercice ni résultat à prouver.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-white/70">
+          Cette reconnaissance est gratuite, sans valeur financière. Elle ne modifie pas tes
+          points, ton argent ou tes quotas. Tu peux revenir quand tu le souhaites.
+        </p>
 
-          {revealing && (
-            <motion.div
-              key="revealing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-4"
-              data-testid="mystery-chest-revealing"
-            >
-              <motion.div
-                animate={{
-                  rotate: 360,
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{ duration: 2.4, ease: 'easeInOut' }}
-                className="flex h-40 w-40 items-center justify-center rounded-3xl bg-gradient-to-br from-[#F59E0B] to-[#ec4899] shadow-[0_20px_100px_-10px_rgba(245,158,11,0.8)]"
-              >
-                <Loader2 className="h-20 w-20 animate-spin text-white" />
-              </motion.div>
-              <div className="text-sm uppercase tracking-widest text-white/60">
-                Révélation en cours…
-              </div>
-            </motion.div>
+        <div className="mt-6" role="status" aria-live="polite">
+          {recorded && (
+            <p className="mb-4 flex items-center gap-2 text-sm text-emerald-200">
+              <Check className="h-4 w-4" aria-hidden="true" />
+              Journée du {formatDay(overview!.recognition!.recognition_date)} enregistrée.
+            </p>
           )}
-
-          {reward && !revealing && (
-            <motion.div
-              key="revealed"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="flex flex-col items-center gap-4"
-              data-testid="mystery-chest-revealed"
-            >
-              <div
-                className={`flex h-40 w-40 items-center justify-center rounded-3xl bg-gradient-to-br ${TIER_STYLE[reward.tier].gradient} shadow-[0_20px_80px_-20px_rgba(0,0,0,0.6)]`}
-              >
-                {reward.reward_type === 'nothing' ? (
-                  <Sparkles className="h-20 w-20 text-white/80" />
-                ) : (
-                  <div className="text-center text-white">
-                    <div className="text-5xl font-light">{reward.reward_amount}</div>
-                    <div className="mt-1 text-[10px] uppercase tracking-widest opacity-80">
-                      {TYPE_LABEL[reward.reward_type]}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="text-center">
-                <div
-                  className="inline-block rounded-full border px-3 py-0.5 text-[10px] uppercase tracking-widest"
-                  style={{
-                    borderColor: `${TIER_STYLE[reward.tier].color}55`,
-                    color: TIER_STYLE[reward.tier].color,
-                  }}
-                >
-                  {TIER_STYLE[reward.tier].label}
-                </div>
-                <div className="mt-2 text-sm text-white/70">
-                  Jour {reward.streak_day} de streak
-                </div>
-              </div>
-              <div className="text-xs text-white/50">Reviens demain pour ton prochain coffre.</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {history.length > 0 && (
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-xs font-medium uppercase tracking-[0.25em] text-white/55">
-            Historique 14 derniers jours
-          </div>
-          <div className="mt-4 grid grid-cols-7 gap-2">
-            {history.map(r => (
-              <div
-                key={r.id}
-                className={`flex aspect-square flex-col items-center justify-center rounded-lg border text-center ${
-                  r.reward_type === 'nothing'
-                    ? 'border-white/10 bg-white/[0.02]'
-                    : 'border-[#7c3aed]/30 bg-[#7c3aed]/5'
-                }`}
-                title={`${r.claim_date} — ${r.reward_type} ${r.reward_amount}`}
-              >
-                <div className="text-xs font-medium text-white">
-                  {r.reward_type === 'nothing' ? '—' : r.reward_amount}
-                </div>
-                <div
-                  className="mt-0.5 h-1 w-1 rounded-full"
-                  style={{ background: TIER_STYLE[r.tier].color }}
-                />
-              </div>
-            ))}
-          </div>
         </div>
+        <button
+          type="button"
+          onClick={() => { void request('record') }}
+          disabled={recorded || busy !== null}
+          data-testid="daily-recognition-record"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-300 px-5 py-3 text-sm font-medium text-slate-950 disabled:cursor-default disabled:opacity-60"
+        >
+          {busy === 'record' && <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+          {recorded ? 'Journée enregistrée' : busy === 'record' ? 'Enregistrement…' : 'Reconnaître ma journée'}
+        </button>
+        <p className="mt-3 text-xs leading-relaxed text-white/50">
+          Une entrée par journée UTC, de 00 h à 24 h. Les journées absentes ne retirent aucun acquis.
+        </p>
+      </section>
+
+      {error && <p role="alert" className="rounded-xl border border-amber-300/30 bg-amber-300/5 p-4 text-sm text-amber-100">{error}</p>}
+
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5" aria-labelledby="recognition-history-title">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="recognition-history-title" className="text-sm font-medium text-white">Journées enregistrées</h2>
+          <button type="button" onClick={() => { void request('refresh') }} disabled={busy !== null}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs text-white/75 disabled:opacity-50">
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Actualiser
+          </button>
+        </div>
+        {!historyLoaded && <p className="mt-3 text-sm text-white/65">L’historique n’a pas encore pu être chargé.</p>}
+        {historyLoaded && overview?.recognitions.length === 0 && (
+          <p className="mt-3 text-sm text-white/65">Aucune journée enregistrée pour le moment.</p>
+        )}
+        {!!overview?.recognitions.length && (
+          <>
+            <p className="mt-2 text-xs text-white/50">Les 14 dernières entrées, même espacées.</p>
+            <ul className="mt-4 space-y-2" data-testid="daily-recognition-history">
+              {overview.recognitions.map(row => (
+                <li key={row.id} className="flex items-center gap-2 text-sm text-white/75">
+                  <Check className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                  <time dateTime={row.recognition_date}>{formatDay(row.recognition_date)}</time>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      {historyLoaded && !!overview?.legacy_rewards.length && (
+        <details className="rounded-3xl border border-white/10 bg-white/[0.03] p-5" data-testid="legacy-reward-history">
+          <summary className="cursor-pointer text-sm font-medium text-white/80">Historique des anciens reçus</summary>
+          <p className="mt-3 text-sm leading-relaxed text-white/65">
+            Ces reçus restent conservés. Leur présence ne confirme pas la délivrance d’un avantage
+            ou d’un crédit : ce statut n’est pas vérifié ici. Aucun ancien solde n’est modifié.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {overview.legacy_rewards.map(row => (
+              <li key={row.id} className="text-sm text-white/70">
+                <time dateTime={row.claim_date}>{formatDay(row.claim_date)}</time>
+                {' · Type : '}{LEGACY_REWARD_LABELS[row.reward_type]}
+                {row.reward_type !== 'nothing' && <span className="mt-1 block text-xs text-white/60">Valeur enregistrée : {row.reward_amount}</span>}
+                <span className="mt-1 block text-xs text-white/45">Délivrance non vérifiée</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   )

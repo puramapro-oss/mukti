@@ -6,6 +6,9 @@
 // Synthèse locale. La latence et le niveau acoustique dépendent du matériel.
 
 import type { BreathPhase } from '@/components/aurora/types'
+import { createAuroraRitualLayers, normalizeRitualMix, type AuroraRitualMix } from './aurora-melody'
+
+export type { AuroraRitualMix } from './aurora-melody'
 
 type StopFn = () => void
 
@@ -19,6 +22,12 @@ export interface AuroraAudioHandle {
   setVoiceGuidance: (enabled: boolean) => void
   speakPhaseCue: (cue: string) => void
   dispose: () => void
+  /** null restores the original breathing soundscape. Levels are relative 0..1. */
+  setRitualMix?: (mix: AuroraRitualMix | null) => void
+  /** Driven by the existing session clock; no second sequencing timer. */
+  setPosition?: (elapsedSec: number) => void
+  /** Ritual speech requires an explicitly selected French local-service voice. */
+  getCapabilities?: () => { audio: boolean; voice: boolean }
 }
 
 export interface AuroraAudioConfig {
@@ -28,6 +37,8 @@ export interface AuroraAudioConfig {
   subFreqHz?: number
   /** Gain numérique (0-1), sans garantie de niveau acoustique. Défaut 0.35. */
   masterGain?: number
+  /** Ritual only: let the caller keep text/music running and report lost speech. */
+  onVoiceError?: (reason: 'unavailable' | 'playback') => void
 }
 
 export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHandle {
@@ -129,6 +140,92 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   let voiceGuidance = false
   let currentPhase: BreathPhase = 'idle'
   let ramps: StopFn[] = []
+  let ritualMix: AuroraRitualMix | null = null
+  let ritualLayers: ReturnType<typeof createAuroraRitualLayers> | null = null
+  let position = 0
+  let speechGeneration = 0
+  let currentUtterance: SpeechSynthesisUtterance | null = null
+
+  function speechSupported() {
+    return typeof window.speechSynthesis?.speak === 'function' && typeof SpeechSynthesisUtterance !== 'undefined'
+  }
+
+  function localFrenchVoice(): SpeechSynthesisVoice | null {
+    // Ritual cues contain personal goals. Never use an implicit/default voice,
+    // which may send the text to a remote synthesis service.
+    try {
+      const voices = window.speechSynthesis?.getVoices?.()
+      return Array.isArray(voices)
+        ? voices.find((voice) => voice.localService === true && /^fr(?:-|$)/i.test(voice.lang)) ?? null
+        : null
+    } catch { return null }
+  }
+
+  function voiceAvailable() {
+    return speechSupported() && (ritualMix === null || localFrenchVoice() !== null)
+  }
+
+  function cancelVoice() {
+    speechGeneration += 1
+    currentUtterance = null
+    window.speechSynthesis?.cancel()
+    ritualLayers?.setDucked(false)
+  }
+
+  function stopTransients() {
+    for (const node of transients) {
+      node.oscillator.stop()
+      node.oscillator.disconnect()
+      node.gain.disconnect()
+    }
+    transients.clear()
+  }
+
+  function silenceBreathingLayers() {
+    cancelRamps()
+    for (const layer of [nappeGain, subGain, noiseGain]) {
+      layer.gain.cancelScheduledValues(ctx.currentTime)
+      layer.gain.setValueAtTime(0, ctx.currentTime)
+    }
+    stopTransients()
+  }
+
+  function applyMaster(seconds: number) {
+    const audible = started && enabled && (ritualMix === null || ritualMix.music > 0 || ritualMix.tone > 0)
+    if (audible) rampGain(master.gain, targetMasterGain, seconds)
+    else {
+      master.gain.cancelScheduledValues(ctx.currentTime)
+      master.gain.setValueAtTime(0, ctx.currentTime)
+    }
+  }
+
+  function setRitualMix(mix: AuroraRitualMix | null) {
+    if (disposed) return
+    const next = mix === null ? null : normalizeRitualMix(mix)
+    const previous = ritualMix
+    ritualMix = next
+    if (next === null) {
+      ritualLayers?.setRunning(false)
+      cancelVoice()
+      applyMaster(0.3)
+      setPhase(currentPhase)
+      return
+    }
+    silenceBreathingLayers()
+    ritualLayers ??= createAuroraRitualLayers(ctx, master)
+    ritualLayers.setMix(next)
+    ritualLayers.setPosition(position)
+    ritualLayers.setRunning(started && enabled)
+    if (next.voice === 0 || previous === null) cancelVoice()
+    else if (currentUtterance) currentUtterance.volume = next.voice
+    applyMaster(0.3)
+  }
+
+  function setPosition(elapsedSec: number) {
+    if (disposed || !Number.isFinite(elapsedSec) || elapsedSec < 0) return
+    position = elapsedSec
+    ritualLayers?.setPosition(elapsedSec)
+  }
 
   function cancelRamps() {
     ramps.forEach((r) => r())
@@ -153,7 +250,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   function setPhase(phase: BreathPhase) {
     if (disposed) return
     currentPhase = phase
-    if (!started || !enabled) return
+    if (!started || !enabled || ritualMix !== null) return
     cancelRamps()
 
     if (phase === 'inspire') {
@@ -182,12 +279,14 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
 
   async function prepare() {
     if (disposed) return
+    if (ctx.state === 'closed') throw new Error('Audio indisponible. Réessaie.')
     let timeout: ReturnType<typeof setTimeout> | undefined
     // Toujours ordonner resume après un éventuel suspend encore en attente.
     try {
       await Promise.race([ctx.resume(), new Promise<never>((_resolve, reject) => {
         timeout = setTimeout(() => reject(new Error('Audio indisponible. Réessaie.')), 5000)
       })])
+      if (ctx.state !== 'running') throw new Error('Audio indisponible. Réessaie.')
     } finally {
       clearTimeout(timeout)
     }
@@ -196,10 +295,14 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   async function start() {
     if (started || disposed) return
     const ticket = ++generation
-    await prepare()
+    try { await prepare() } catch (error) {
+      if (disposed || ticket !== generation) return
+      throw error
+    }
     if (disposed || ticket !== generation) return
     started = true
-    rampGain(master.gain, enabled ? targetMasterGain : 0, 1.2)
+    applyMaster(1.2)
+    ritualLayers?.setRunning(enabled && ritualMix !== null)
     setPhase(currentPhase)
   }
 
@@ -211,13 +314,9 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
     master.gain.setValueAtTime(0, ctx.currentTime)
     started = false
     currentPhase = 'idle'
-    for (const node of transients) {
-      node.oscillator.stop()
-      node.oscillator.disconnect()
-      node.gain.disconnect()
-    }
-    transients.clear()
-    window.speechSynthesis?.cancel()
+    ritualLayers?.setRunning(false)
+    stopTransients()
+    cancelVoice()
     // Le master est déjà muet, même si le navigateur refuse la suspension.
     void ctx.suspend().catch(() => undefined)
   }
@@ -232,9 +331,11 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
       rampGain(noiseGain.gain, 0, 0.3)
       master.gain.cancelScheduledValues(ctx.currentTime)
       master.gain.setValueAtTime(0, ctx.currentTime)
-      window.speechSynthesis?.cancel()
+      ritualLayers?.setRunning(false)
+      cancelVoice()
     } else if (started) {
-      rampGain(master.gain, targetMasterGain, 0.3)
+      applyMaster(0.3)
+      ritualLayers?.setRunning(ritualMix !== null)
       setPhase(currentPhase)
     }
   }
@@ -242,19 +343,45 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
   function setVoiceGuidance(v: boolean) {
     if (disposed) return
     voiceGuidance = v
-    if (!v) window.speechSynthesis?.cancel()
+    if (!v) cancelVoice()
   }
 
   function speakPhaseCue(cue: string) {
     if (!voiceGuidance || !started || !enabled || disposed) return
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    if (ritualMix?.voice === 0 || !cue.trim()) return
+    // Recheck at speech time: the platform's voice list can change after start.
+    const selectedVoice = ritualMix === null ? null : localFrenchVoice()
+    if (!speechSupported() || (ritualMix !== null && !selectedVoice)) {
+      if (ritualMix !== null) {
+        cancelVoice()
+        config.onVoiceError?.('unavailable')
+      }
+      return
+    }
+    cancelVoice()
+    const ticket = speechGeneration
+    const sessionTicket = generation
     const utter = new SpeechSynthesisUtterance(cue)
-    utter.lang = 'fr-FR'
+    currentUtterance = utter
+    utter.lang = selectedVoice?.lang ?? 'fr-FR'
+    if (selectedVoice) utter.voice = selectedVoice
     utter.rate = 0.9
     utter.pitch = 0.95
-    utter.volume = 0.7
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utter)
+    utter.volume = ritualMix?.voice ?? 0.7
+    const current = () => !disposed && started && enabled && voiceGuidance &&
+      ticket === speechGeneration && sessionTicket === generation && currentUtterance === utter
+    const finish = (failed = false) => {
+      if (!current()) return
+      currentUtterance = null
+      speechGeneration += 1
+      ritualLayers?.setDucked(false)
+      if (failed && ritualMix !== null) config.onVoiceError?.('playback')
+    }
+    utter.onstart = () => { if (current()) ritualLayers?.setDucked(true) }
+    utter.onend = () => finish()
+    utter.onerror = () => finish(true)
+    ritualLayers?.setDucked(true)
+    try { window.speechSynthesis.speak(utter) } catch { finish(true) }
   }
 
   function dispose() {
@@ -266,6 +393,7 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
       nappeOsc.stop()
       subOsc.stop()
       noiseSource.stop()
+      ritualLayers?.dispose()
       window.speechSynthesis?.cancel()
       void ctx.close().catch(() => undefined)
     } catch {
@@ -282,6 +410,9 @@ export function createAuroraAudio(config: AuroraAudioConfig = {}): AuroraAudioHa
     setVoiceGuidance,
     speakPhaseCue,
     dispose,
+    setRitualMix,
+    setPosition,
+    getCapabilities: () => ({ audio: !disposed && ctx.state !== 'closed', voice: !disposed && ctx.state !== 'closed' && voiceAvailable() }),
   }
 }
 
@@ -295,5 +426,8 @@ function noopHandle(): AuroraAudioHandle {
     setVoiceGuidance: () => undefined,
     speakPhaseCue: () => undefined,
     dispose: () => undefined,
+    setRitualMix: () => undefined,
+    setPosition: () => undefined,
+    getCapabilities: () => ({ audio: false, voice: false }),
   }
 }

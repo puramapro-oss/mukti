@@ -1,0 +1,63 @@
+{
+  "distribution": "@sparticuz/chromium",
+  "packageVersion": "147.0.2",
+  "integrity": "sha512-oqXyPAlGQuT9wdZAhcx4nmhehVgEsDc2adL/+FlX8qsLh/YyOgl9GQp8dPMDIBRmktxgA9c1QSNJIQUj2UeHhQ==",
+  "executable": "/workspace/scratch/0aea786cb4d6/dependency-cache/chromium-147.0.2/runtime-147.0.2-owned/chromium",
+  "executableSize": 196676728,
+  "actualVersion": "147.0.7727.0",
+  "nodeVersion": "v24.22.1",
+  "playwrightVersion": "1.59.1",
+  "testedDependencies": {
+    "@playwright/test": "1.59.1",
+    "vite": "8.3.4",
+    "react": "19.2.4",
+    "next": "16.4.6",
+    "zod": "4.6.7",
+    "@anthropic-ai/sdk": "0.91.1",
+    "postcss": "8.5.29"
+  },
+  "graphicsEnabled": false,
+  "extraction": {
+    "method": "Node Brotli stream and bundled tar-fs with chown:false",
+    "reason": "Container rejects archive owner changes (chown EINVAL); preserve the extracting user owner."
+  },
+  "args": [
+    "--ash-no-nudges",
+    "--disable-domain-reliability",
+    "--disable-print-preview",
+    "--disk-cache-size=33554432",
+    "--no-default-browser-check",
+    "--no-pings",
+    "--font-render-hinting=none",
+    "--disable-features=AudioServiceOutOfProcess,IsolateOrigins,site-per-process",
+    "--enable-features=SharedArrayBuffer",
+    "--ignore-gpu-blocklist",
+    "--in-process-gpu",
+    "--disable-webgl",
+    "--allow-running-insecure-content",
+    "--disable-setuid-sandbox",
+    "--disable-site-isolation-trials",
+    "--disable-web-security",
+    "--headless='shell'",
+    "--no-sandbox",
+    "--no-zygote"
+  ],
+  "removedServerlessArgs": [
+    "--single-process"
+  ],
+  "reference": "https://github.com/Sparticuz/chromium#usage-with-playwright",
+  "officialInstall": {
+    "status": "failed",
+    "code": 1,
+    "reason": "cdn.playwright.dev returned a 195-byte HTML Site Unavailable page instead of an archive"
+  },
+  "command": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/node_modules/@playwright/test/cli.js",
+    "test",
+    "--config",
+    "browser/playwright.config.ts"
+  ],
+  "exitCode": 0,
+  "signal": null
+}

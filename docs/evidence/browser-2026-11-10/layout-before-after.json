@@ -1,0 +1,210 @@
+{
+  "scope": "Real components in local Chromium, synthetic data and mocked APIs; no real backend or deployment.",
+  "correction": "Move only the universal margin/padding/box-sizing reset into @layer base so Tailwind utilities can apply.",
+  "finalToolingAdjustment": "PostCSS 8.5.29 is pinned in the final regression harness lock; this report uses the final browser run after that adjustment.",
+  "browser": {
+    "engine": "147.0.7727.0",
+    "distribution": "@sparticuz/chromium",
+    "packageVersion": "147.0.2",
+    "playwrightVersion": "1.59.1",
+    "removedServerlessArgs": [
+      "--single-process"
+    ]
+  },
+  "testedDependencies": {
+    "@playwright/test": "1.59.1",
+    "vite": "8.3.4",
+    "react": "19.2.4",
+    "next": "16.4.6",
+    "zod": "4.6.7",
+    "@anthropic-ai/sdk": "0.91.1",
+    "postcss": "8.5.29"
+  },
+  "baseline": {
+    "stats": {
+      "startTime": "2026-11-10T02:49:25.230Z",
+      "duration": 7804.856,
+      "expected": 0,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "exitCode": 1,
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "browser/playwright.config.ts",
+      "--grep",
+      "mobile : préparation",
+      "--max-failures=1"
+    ],
+    "measurements": {
+      "mobile-layout-preparation.json": {
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0
+        },
+        "header": {
+          "x": 0,
+          "y": -428,
+          "width": 390,
+          "height": 48
+        },
+        "firstContent": {
+          "x": 0,
+          "y": -428,
+          "width": 218.5,
+          "height": 16
+        },
+        "clearance": -48,
+        "buttons": [
+          {
+            "name": "Préparer le texte",
+            "width": 119.203125,
+            "height": 22,
+            "padding": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "name": "Commencer mon rituel",
+            "width": 163.65625,
+            "height": 22,
+            "padding": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "after": {
+    "stats": {
+      "startTime": "2026-11-10T02:55:57.139Z",
+      "duration": 35247.297,
+      "expected": 10,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "exitCode": 0,
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "browser/playwright.config.ts"
+    ],
+    "measurements": {
+      "mobile-layout-preparation.json": {
+        "padding": {
+          "top": 112,
+          "left": 20,
+          "right": 20
+        },
+        "header": {
+          "x": 0,
+          "y": -1134,
+          "width": 390,
+          "height": 68
+        },
+        "firstContent": {
+          "x": 20,
+          "y": -1022,
+          "width": 218.5,
+          "height": 16
+        },
+        "clearance": 44,
+        "buttons": [
+          {
+            "name": "Préparer le texte",
+            "width": 151.203125,
+            "height": 46,
+            "padding": [
+              12,
+              16,
+              12,
+              16
+            ]
+          },
+          {
+            "name": "Commencer mon rituel",
+            "width": 195.65625,
+            "height": 46,
+            "padding": [
+              12,
+              16,
+              12,
+              16
+            ]
+          }
+        ]
+      },
+      "mobile-layout-playback.json": {
+        "padding": {
+          "top": 112,
+          "left": 20,
+          "right": 20
+        },
+        "header": {
+          "x": 0,
+          "y": -929,
+          "width": 390,
+          "height": 68
+        },
+        "firstContent": {
+          "x": 20,
+          "y": -817,
+          "width": 218.5,
+          "height": 16
+        },
+        "clearance": 44,
+        "buttons": [
+          {
+            "name": "Mettre le rituel en pause",
+            "width": 206.28125,
+            "height": 46,
+            "padding": [
+              12,
+              16,
+              12,
+              16
+            ]
+          },
+          {
+            "name": "Arrêter le rituel",
+            "width": 140.921875,
+            "height": 46,
+            "padding": [
+              12,
+              16,
+              12,
+              16
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "captures": [
+    {
+      "file": "ritual-mobile-final.png",
+      "sha256": "9a19cfe2a0109df4f45ac2be7433854c5adaeba86ee9f560f8531f12bf3bcccd",
+      "bytes": 350704
+    },
+    {
+      "file": "ritual-desktop-final.png",
+      "sha256": "701833078f96dab9d6057f1d8394899e1cee12e40c29f12f6e0c75a66692a764",
+      "bytes": 642490
+    }
+  ]
+}

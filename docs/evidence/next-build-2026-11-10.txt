@@ -1,0 +1,276 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> mukti@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.4.6 (webpack)
+✓ Running next.config.ts took 155ms
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+⚠ The Edge Runtime is deprecated. You can use the "nodejs" runtime instead. Learn more: https://nextjs.org/docs/messages/edge-runtime-deprecated
+✓ Compiled successfully in 26.0s
+  Running TypeScript ...
+  Finished TypeScript in 7.7s ...
+  Collecting page data using 1 worker ...
+⚠ Using edge runtime on a page currently disables static generation for that page
+  Generating static pages using 1 worker (0/124) ...
+  Generating static pages using 1 worker (31/124)
+  Generating static pages using 1 worker (62/124)
+  Generating static pages using 1 worker (93/124)
+✓ Generating static pages using 1 worker (124/124) in 2.5s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /aide
+├ ƒ /api/accompagnants/nama-aidant
+├ ƒ /api/accompagnants/profile
+├ ƒ /api/accompagnants/testimonial
+├ ƒ /api/account/delete
+├ ƒ /api/addictions/declare
+├ ƒ /api/admin/audit
+├ ƒ /api/admin/feature-flags
+├ ƒ /api/admin/feature-flags/[flag]
+├ ƒ /api/admin/influenceurs/commissions
+├ ƒ /api/admin/influenceurs/commissions/[id]
+├ ƒ /api/admin/missions
+├ ƒ /api/admin/missions/[id]
+├ ƒ /api/admin/promos
+├ ƒ /api/admin/promos/[id]
+├ ƒ /api/admin/settings
+├ ƒ /api/admin/settings/[key]
+├ ƒ /api/admin/stats-live
+├ ƒ /api/affirmations/custom
+├ ƒ /api/affirmations/custom/[id]
+├ ƒ /api/affirmations/suggest
+├ ƒ /api/alt-reality/project
+├ ƒ /api/ambassadeur/apply
+├ ƒ /api/ambassadeur/leaderboard
+├ ƒ /api/ar/beacons
+├ ƒ /api/ar/calibrate
+├ ƒ /api/ar/ceremonies
+├ ƒ /api/ar/ceremonies/[id]
+├ ƒ /api/ar/ceremonies/[id]/join
+├ ƒ /api/ar/ceremonies/[id]/leave
+├ ƒ /api/ar/ceremonies/live
+├ ƒ /api/ar/sessions
+├ ƒ /api/ar/sessions/[id]/complete
+├ ƒ /api/ar/species
+├ ƒ /api/ar/training/step
+├ ƒ /api/aurora/session
+├ ƒ /api/aurora/session/[id]/complete
+├ ƒ /api/boite-noire/capture
+├ ƒ /api/boite-noire/detect
+├ ƒ /api/boite-noire/entries
+├ ƒ /api/boucle-urgence/complete
+├ ƒ /api/boucle-urgence/start
+├ ƒ /api/boucle-urgence/stats
+├ ƒ /api/chat
+├ ƒ /api/circles
+├ ƒ /api/circles/[id]
+├ ƒ /api/circles/[id]/advance-rotation
+├ ƒ /api/circles/[id]/join
+├ ƒ /api/circles/[id]/leave
+├ ƒ /api/circles/[id]/livekit-token
+├ ƒ /api/circles/[id]/messages
+├ ƒ /api/circles/[id]/report
+├ ƒ /api/circles/follow
+├ ƒ /api/circles/forum
+├ ƒ /api/contact
+├ ƒ /api/core/events
+├ ƒ /api/core/events/[id]
+├ ƒ /api/core/events/[id]/generate-ai
+├ ƒ /api/core/events/[id]/join
+├ ƒ /api/core/events/[id]/leave
+├ ƒ /api/core/events/[id]/moderate
+├ ƒ /api/cron/account-deletion
+├ ƒ /api/cron/ar-ceremony-auto-finish
+├ ƒ /api/cron/ar-ceremony-auto-start
+├ ƒ /api/cron/circles-auto-finish
+├ ƒ /api/cron/circles-replays-purge
+├ ƒ /api/cron/contest-karma-annual-schedule
+├ ƒ /api/cron/contest-karma-monthly-draw
+├ ƒ /api/cron/contest-karma-weekly-close
+├ ƒ /api/cron/contest-weekly
+├ ƒ /api/cron/core-phase-tick
+├ ƒ /api/cron/core-world-radar
+├ ƒ /api/cron/fiscal-annual-pdf
+├ ƒ /api/cron/fiscal-detect-profile
+├ ƒ /api/cron/mental-journal-relapse-scan
+├ ƒ /api/cron/milestones-unlock
+├ ƒ /api/cron/reprogramming-notify-day
+├ ƒ /api/cron/rituel-hebdo-rotate
+├ ƒ /api/cron/trust-recompute
+├ ƒ /api/energy-replacement/session
+├ ƒ /api/exorcisme/affirmation
+├ ƒ /api/exorcisme/complete
+├ ƒ /api/exorcisme/start
+├ ƒ /api/exorcisme/stats
+├ ƒ /api/fiscal/me
+├ ƒ /api/fiscal/override-profile
+├ ƒ /api/fiscal/pdf/[year]
+├ ƒ /api/intention-phrases
+├ ƒ /api/internal/stripe-fulfillment
+├ ƒ /api/legal/accept
+├ ƒ /api/legal/cookie-consent
+├ ƒ /api/legal/my-data
+├ ƒ /api/life-feed/projection
+├ ƒ /api/life-feed/timeline
+├ ƒ /api/life-feed/world
+├ ƒ /api/locale
+├ ƒ /api/mental-journal/analyze
+├ ƒ /api/mental-journal/entries
+├ ƒ /api/minimal-ritual/tick
+├ ƒ /api/minimal-ritual/today
+├ ƒ /api/missions
+├ ƒ /api/missions/complete
+├ ƒ /api/mode-sessions/log
+├ ƒ /api/modes-avances/notify
+├ ƒ /api/mystery-rewards/claim-daily
+├ ƒ /api/mystery-rewards/history
+├ ƒ /api/notifications/mark-read
+├ ƒ /api/og
+├ ƒ /api/og/story
+├ ƒ /api/pricing
+├ ƒ /api/profile/update
+├ ƒ /api/program/generate
+├ ƒ /api/qa/ask
+├ ƒ /api/qa/distress-signal
+├ ƒ /api/referral/claim-lifetime-card
+├ ƒ /api/referral/register
+├ ƒ /api/reprogramming/end
+├ ƒ /api/reprogramming/notifs-preferences
+├ ƒ /api/reprogramming/start
+├ ƒ /api/rituel-7s/complete
+├ ƒ /api/rituel-7s/start
+├ ƒ /api/rituel-7s/streak
+├ ƒ /api/rituel-hebdo/current
+├ ƒ /api/rituel-hebdo/history
+├ ƒ /api/rituel-hebdo/join
+├ ƒ /api/status
+├ ƒ /api/story/share
+├ ƒ /api/streak/checkin
+├ ƒ /api/streak/relapse
+├ ƒ /api/stripe-connect/session
+├ ƒ /api/stripe/cancel-flow
+├ ƒ /api/stripe/checkout
+├ ƒ /api/stripe/portal
+├ ƒ /api/stripe/validate-promo
+├ ƒ /api/subscriptions/current
+├ ƒ /api/subscriptions/invoices
+├ ƒ /api/wallet/history
+├ ƒ /api/wallet/withdraw
+├ ƒ /api/wealth/feed
+├ ƒ /api/wealth/impact-stats
+├ ƒ /api/wellbeing/context
+├ ƒ /api/wellbeing/feedback
+├ ƒ /auth/callback
+├ ƒ /cgu
+├ ƒ /cgv
+├ ƒ /confirmation
+├ ƒ /contact
+├ ƒ /cookies
+├ ƒ /dashboard
+├ ƒ /dashboard/accompagnants
+├ ƒ /dashboard/accompagnants/[section]
+├ ƒ /dashboard/accompagnants/nama-aidant
+├ ƒ /dashboard/admin
+├ ƒ /dashboard/admin/audit
+├ ƒ /dashboard/admin/feature-flags
+├ ƒ /dashboard/admin/influenceurs
+├ ƒ /dashboard/admin/missions
+├ ƒ /dashboard/admin/pricing
+├ ƒ /dashboard/admin/promos
+├ ƒ /dashboard/admin/stats
+├ ƒ /dashboard/admin/system
+├ ƒ /dashboard/admin/vida-angel
+├ ƒ /dashboard/admin/wording
+├ ƒ /dashboard/aide-ia
+├ ƒ /dashboard/ambassadeur
+├ ƒ /dashboard/ambassadeur/apply
+├ ƒ /dashboard/ambassadeur/leaderboard
+├ ƒ /dashboard/ar
+├ ƒ /dashboard/ar/ceremony
+├ ƒ /dashboard/ar/ceremony/[id]
+├ ƒ /dashboard/ar/manifestation
+├ ƒ /dashboard/ar/soin
+├ ƒ /dashboard/ar/test
+├ ƒ /dashboard/ar/training/[mode]
+├ ƒ /dashboard/aurora
+├ ƒ /dashboard/aurora/[variant]
+├ ƒ /dashboard/boite-noire
+├ ƒ /dashboard/boite-noire/[addictionId]
+├ ƒ /dashboard/boucle-urgence
+├ ƒ /dashboard/cercles
+├ ƒ /dashboard/cercles/[category]
+├ ƒ /dashboard/cercles/create
+├ ƒ /dashboard/cercles/forum
+├ ƒ /dashboard/cercles/post-session/[id]
+├ ƒ /dashboard/cercles/room/[id]
+├ ƒ /dashboard/concours
+├ ƒ /dashboard/concours/[period]
+├ ƒ /dashboard/core
+├ ƒ /dashboard/core/[id]
+├ ƒ /dashboard/core/[id]/live
+├ ƒ /dashboard/core/create
+├ ƒ /dashboard/energie-remplacement
+├ ƒ /dashboard/exorcisme
+├ ƒ /dashboard/exorcisme/seance
+├ ƒ /dashboard/fil-de-vie
+├ ƒ /dashboard/fil-de-vie/carte
+├ ƒ /dashboard/fil-de-vie/projection
+├ ƒ /dashboard/fiscal
+├ ƒ /dashboard/flywheel
+├ ƒ /dashboard/influenceur
+├ ƒ /dashboard/journal-mental
+├ ƒ /dashboard/liberation
+├ ƒ /dashboard/liberation/[addictionId]
+├ ƒ /dashboard/liberation/[addictionId]/mode/[modeId]
+├ ƒ /dashboard/liberation/declare
+├ ƒ /dashboard/ma-memoire
+├ ƒ /dashboard/missions
+├ ƒ /dashboard/modes-avances
+├ ƒ /dashboard/notifications
+├ ƒ /dashboard/profile
+├ ƒ /dashboard/profile/accessibility
+├ ƒ /dashboard/realite-alternative
+├ ƒ /dashboard/recompenses
+├ ƒ /dashboard/referral
+├ ƒ /dashboard/rituel-7s
+├ ƒ /dashboard/rituel-hebdo
+├ ƒ /dashboard/rituel-minimaliste
+├ ƒ /dashboard/settings
+├ ƒ /dashboard/settings/abonnement
+├ ƒ /dashboard/subconscient
+├ ƒ /dashboard/subconscient/journee
+├ ƒ /dashboard/subconscient/mes-affirmations
+├ ƒ /dashboard/subconscient/nuit
+├ ƒ /dashboard/wallet
+├ ƒ /dashboard/wallet/connect
+├ ƒ /fiscal
+├ ƒ /forgot-password
+├ ƒ /go/[slug]
+├ ƒ /impact
+├ ƒ /login
+├ ƒ /mentions-legales
+├ ƒ /offline
+├ ƒ /politique-confidentialite
+├ ƒ /pricing
+├ ○ /robots.txt
+├ ƒ /signup
+├ ○ /sitemap.xml
+└ ƒ /subscribe
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

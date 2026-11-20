@@ -1,5 +1,5 @@
 // MUKTI — AURORA OMEGA helpers (G5)
-// Respiration neural override — 4 variantes × 5 phases + cohérence + niveaux Brume→Polaris.
+// Guided breathing — four variants, participation records and optional feedback.
 // Pure-logic en haut (utilisable server & client). Helpers DB en bas (server only).
 
 import {
@@ -70,10 +70,8 @@ export function isValidVariant(v: string): v is AuroraVariant {
 }
 
 /**
- * Calcule un score de cohérence (0-1) à partir des timings réels du user vs timings planifiés.
- * Détection simple : variance relative. Plus la variance est faible, plus le score est élevé.
- * - Si variance < 0.1 → score ≥ 0.9 (excellent)
- * - Si variance > 0.5 → score < 0.5 (instable, recommander SOFT)
+ * Legacy timing utility for software clocks. No breathing is measured.
+ * Never use this value to infer health, ability, or recommended intensity.
  */
 export function computeCoherence(plannedSec: number[], actualSec: number[]): number {
   if (plannedSec.length === 0 || plannedSec.length !== actualSec.length) return 0
@@ -89,17 +87,12 @@ export function computeCoherence(plannedSec: number[], actualSec: number[]): num
   return Math.round(score * 1000) / 1000
 }
 
-/**
- * Détermine le Power Switch recommandé selon la cohérence et le niveau utilisateur.
- * Règle sécurité : cohérence < 0.5 OU niveau Brume → toujours SOFT.
- */
+/** A participation counter cannot justify increasing breathing intensity. */
 export function recommendPowerSwitch(
-  coherence: number,
-  level: AuroraLevel
+  _coherence: number,
+  _level: AuroraLevel
 ): AuroraPowerSwitch {
-  if (coherence < 0.5 || level === 'brume') return 'soft'
-  if (coherence >= 0.8 && (level === 'aura' || level === 'polaris')) return 'omega'
-  return 'core'
+  return 'soft'
 }
 
 /** Retourne la meta d'un power switch. */
@@ -108,16 +101,16 @@ export function getPowerSwitchMeta(id: AuroraPowerSwitch) {
 }
 
 /**
- * Calcule le niveau AURORA à partir de la streak et du nombre de sessions.
+ * Repère de participation cumulée ; aucun niveau de santé ni exigence de série.
  * Les seuils sont cumulatifs : on prend le plus haut niveau atteint.
  */
 export function computeAuroraLevel(
-  currentDays: number,
+  _currentDays: number,
   totalSessions: number
 ): AuroraLevel {
   const reversed = [...AURORA_LEVELS].reverse()
   for (const lv of reversed) {
-    if (currentDays >= lv.min_days && totalSessions >= lv.min_sessions) {
+    if (totalSessions >= lv.min_sessions) {
       return lv.id
     }
   }
@@ -274,105 +267,16 @@ export async function dbCompleteSession(input: {
   level_reached: AuroraLevel | null
   streak_days: number
 }> {
-  const sb = createServiceClient()
-
-  // Vérifie ownership + pas déjà complété
-  const { data: existing, error: readError } = await sb
-    .schema('mukti')
-    .from('aurora_sessions')
-    .select('id, user_id, completed_at, variant')
-    .eq('id', input.session_id)
-    .eq('user_id', input.user_id)
-    .maybeSingle()
-  if (readError || !existing) {
-    return { ok: false, error: 'Session introuvable.', level_reached: null, streak_days: 0 }
+  const { data, error } = await createServiceClient().schema('mukti').rpc('complete_aurora_session', {
+    p_user_id: input.user_id,
+    p_session_id: input.session_id,
+    p_phases: input.phases_completed,
+    p_duration: input.total_duration_sec,
+    p_reason: input.stopped_reason,
+  })
+  if (error || !data || data.ok !== true) {
+    return { ok: false, error: error?.code === 'P0002' ? 'Session introuvable.' :
+      'Enregistrement non confirmé. Réessaie avec la même session.', level_reached: null, streak_days: 0 }
   }
-  const existingRow = existing as { completed_at: string | null; variant: AuroraVariant }
-  if (existingRow.completed_at) {
-    return { ok: false, error: 'Session déjà complétée.', level_reached: null, streak_days: 0 }
-  }
-
-  // Lit streak courante (trigger auto-create garantit la présence)
-  const { data: streakRow } = await sb
-    .schema('mukti')
-    .from('aurora_streaks')
-    .select('current_days, best_days, last_session_date, total_minutes, total_sessions, current_level')
-    .eq('user_id', input.user_id)
-    .maybeSingle()
-  const prev = (streakRow as {
-    current_days: number
-    best_days: number
-    last_session_date: string | null
-    total_minutes: number
-    total_sessions: number
-  } | null) ?? {
-    current_days: 0,
-    best_days: 0,
-    last_session_date: null,
-    total_minutes: 0,
-    total_sessions: 0,
-  }
-
-  const next = nextStreakState(
-    {
-      current_days: prev.current_days,
-      best_days: prev.best_days,
-      last_session_date: prev.last_session_date,
-      total_minutes: prev.total_minutes,
-      total_sessions: prev.total_sessions,
-    },
-    new Date().toISOString(),
-    input.total_duration_sec
-  )
-
-  // Update session row
-  const { error: updError } = await sb
-    .schema('mukti')
-    .from('aurora_sessions')
-    .update({
-      completed_at: new Date().toISOString(),
-      duration_sec: Math.max(0, Math.min(1800, Math.round(input.total_duration_sec))),
-      phases_completed: input.phases_completed,
-      coherence_score: Math.max(0, Math.min(1, input.coherence_score)),
-      level_reached: next.current_level,
-      stopped_reason: input.stopped_reason,
-    })
-    .eq('id', input.session_id)
-    .eq('user_id', input.user_id)
-  if (updError) {
-    return { ok: false, error: 'Impossible de compléter la session.', level_reached: null, streak_days: 0 }
-  }
-
-  // Upsert streak
-  const { error: streakError } = await sb
-    .schema('mukti')
-    .from('aurora_streaks')
-    .upsert(
-      {
-        user_id: input.user_id,
-        current_days: next.current_days,
-        best_days: next.best_days,
-        last_session_date: next.last_session_date,
-        total_minutes: next.total_minutes,
-        total_sessions: next.total_sessions,
-        current_level: next.current_level,
-      },
-      { onConflict: 'user_id' }
-    )
-  if (streakError) {
-    // Session OK mais streak KO — renvoie warning non-bloquant
-    return {
-      ok: true,
-      error: null,
-      level_reached: next.current_level,
-      streak_days: next.current_days,
-    }
-  }
-
-  return {
-    ok: true,
-    error: null,
-    level_reached: next.current_level,
-    streak_days: next.current_days,
-  }
+  return { ok: true, error: null, level_reached: data.level_reached, streak_days: data.streak_days }
 }
