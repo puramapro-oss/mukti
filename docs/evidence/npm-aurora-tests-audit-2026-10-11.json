@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-11",
+  "scope": "Verrouillage autonome des tests AURORA",
+  "command": "npm audit --package-lock-only --json",
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 1,
+      "dev": 232,
+      "optional": 65,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 232
+    }
+  },
+  "vulnerabilities": {}
+}

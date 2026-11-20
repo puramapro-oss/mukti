@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-11-10T02:41:06.160Z",
+  "runtime": "v24.22.1",
+  "network_requests_sent": 0,
+  "results": [
+    {
+      "check": "Zod rejects an oversized constrained array before per-element issue accumulation",
+      "status": "PASS"
+    },
+    {
+      "check": "Anthropic SDK exposes the create and stream APIs used by the application; no request sent",
+      "status": "PASS"
+    },
+    {
+      "check": "Installed sharp native binary encodes and reads a local synthetic PNG",
+      "status": "PASS"
+    },
+    {
+      "check": "fflate ZIP encode/decode round trip with a local fixture",
+      "status": "PASS"
+    },
+    {
+      "check": "Private smarana dependency remains pinned to the original verified commit",
+      "commit": "6b97a377fd17022286e88ab8e09be1e9bceb4ada",
+      "status": "PASS"
+    }
+  ],
+  "limitations": [
+    "No application build or complete typecheck",
+    "No Android or iOS compilation",
+    "No live Anthropic, blockchain, payment or database operation"
+  ]
+}

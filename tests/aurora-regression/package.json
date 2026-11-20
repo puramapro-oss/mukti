@@ -1,0 +1,47 @@
+{
+  "name": "mukti-aurora-regression",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "node --max-old-space-size=512 node_modules/typescript/bin/tsc --project tsconfig.json",
+    "test:browser": "playwright test --config browser/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "0.91.1",
+    "@capacitor/app": "7.1.2",
+    "@capacitor/core": "7.6.2",
+    "@electric-sql/pglite": "0.5.16",
+    "@playwright/test": "1.59.1",
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.6.0",
+    "@supabase/ssr": "0.10.0",
+    "@supabase/supabase-js": "2.101.1",
+    "@tailwindcss/postcss": "4.2.2",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.184.0",
+    "clsx": "2.1.1",
+    "framer-motion": "12.38.0",
+    "jsdom": "26.1.0",
+    "lucide-react": "1.7.0",
+    "next": "16.4.6",
+    "postcss": "8.5.29",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "sonner": "2.0.7",
+    "tailwind-merge": "3.5.0",
+    "tailwindcss": "4.2.2",
+    "three": "0.184.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.3",
+    "zod": "4.6.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

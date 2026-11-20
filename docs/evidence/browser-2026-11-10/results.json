@@ -1,0 +1,445 @@
+{
+  "config": {
+    "configFile": "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/browser/playwright.config.ts",
+    "rootDir": "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/browser",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/browser/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/browser",
+        "testIgnore": [],
+        "testMatch": [
+          "ui.spec.ts",
+          "ritual.browser.spec.ts"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/browser/test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 1,
+    "webServer": {
+      "command": "node ../node_modules/vite/bin/vite.js --config vite.config.ts",
+      "cwd": "/workspace/scratch/0aea786cb4d6/mukti/tests/aurora-regression/browser/",
+      "url": "http://127.0.0.1:4173",
+      "reuseExistingServer": false,
+      "timeout": 90000
+    }
+  },
+  "suites": [
+    {
+      "title": "ritual.browser.spec.ts",
+      "file": "ritual.browser.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "mobile : préparation, consentement, texte seul, pause, export et brouillon conservé",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8109,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:55:59.411Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "mobile-layout-preparation.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJwYWRkaW5nIjogewogICAgInRvcCI6IDExMiwKICAgICJsZWZ0IjogMjAsCiAgICAicmlnaHQiOiAyMAogIH0sCiAgImhlYWRlciI6IHsKICAgICJ4IjogMCwKICAgICJ5IjogLTExMzQsCiAgICAid2lkdGgiOiAzOTAsCiAgICAiaGVpZ2h0IjogNjgKICB9LAogICJmaXJzdENvbnRlbnQiOiB7CiAgICAieCI6IDIwLAogICAgInkiOiAtMTAyMiwKICAgICJ3aWR0aCI6IDIxOC41LAogICAgImhlaWdodCI6IDE2CiAgfSwKICAiY2xlYXJhbmNlIjogNDQsCiAgImJ1dHRvbnMiOiBbCiAgICB7CiAgICAgICJuYW1lIjogIlByw6lwYXJlciBsZSB0ZXh0ZSIsCiAgICAgICJ3aWR0aCI6IDE1MS4yMDMxMjUsCiAgICAgICJoZWlnaHQiOiA0NiwKICAgICAgInBhZGRpbmciOiBbCiAgICAgICAgMTIsCiAgICAgICAgMTYsCiAgICAgICAgMTIsCiAgICAgICAgMTYKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgIm5hbWUiOiAiQ29tbWVuY2VyIG1vbiByaXR1ZWwiLAogICAgICAid2lkdGgiOiAxOTUuNjU2MjUsCiAgICAgICJoZWlnaHQiOiA0NiwKICAgICAgInBhZGRpbmciOiBbCiAgICAgICAgMTIsCiAgICAgICAgMTYsCiAgICAgICAgMTIsCiAgICAgICAgMTYKICAgICAgXQogICAgfQogIF0KfQ=="
+                    },
+                    {
+                      "name": "mobile-layout-playback.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJwYWRkaW5nIjogewogICAgInRvcCI6IDExMiwKICAgICJsZWZ0IjogMjAsCiAgICAicmlnaHQiOiAyMAogIH0sCiAgImhlYWRlciI6IHsKICAgICJ4IjogMCwKICAgICJ5IjogLTkyOSwKICAgICJ3aWR0aCI6IDM5MCwKICAgICJoZWlnaHQiOiA2OAogIH0sCiAgImZpcnN0Q29udGVudCI6IHsKICAgICJ4IjogMjAsCiAgICAieSI6IC04MTcsCiAgICAid2lkdGgiOiAyMTguNSwKICAgICJoZWlnaHQiOiAxNgogIH0sCiAgImNsZWFyYW5jZSI6IDQ0LAogICJidXR0b25zIjogWwogICAgewogICAgICAibmFtZSI6ICJNZXR0cmUgbGUgcml0dWVsIGVuIHBhdXNlIiwKICAgICAgIndpZHRoIjogMjA2LjI4MTI1LAogICAgICAiaGVpZ2h0IjogNDYsCiAgICAgICJwYWRkaW5nIjogWwogICAgICAgIDEyLAogICAgICAgIDE2LAogICAgICAgIDEyLAogICAgICAgIDE2CiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJuYW1lIjogIkFycsOqdGVyIGxlIHJpdHVlbCIsCiAgICAgICJ3aWR0aCI6IDE0MC45MjE4NzUsCiAgICAgICJoZWlnaHQiOiA0NiwKICAgICAgInBhZGRpbmciOiBbCiAgICAgICAgMTIsCiAgICAgICAgMTYsCiAgICAgICAgMTIsCiAgICAgICAgMTYKICAgICAgXQogICAgfQogIF0KfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fd5779f30325273d8dff-9ff1ce47cfe4a0259056",
+          "file": "ritual.browser.spec.ts",
+          "line": 76,
+          "column": 1
+        },
+        {
+          "title": "durée modifiable, aperçu invalidé et entrée Unicode sans troncature",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5424,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:07.691Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fd5779f30325273d8dff-6723cba1bfbaa78db5c5",
+          "file": "ritual.browser.spec.ts",
+          "line": 119,
+          "column": 1
+        },
+        {
+          "title": "vrai Web Audio : musique audible dans le graphe, silence immédiat, reprise et arrêt",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4125,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:13.174Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fd5779f30325273d8dff-35465fc254c9dd8a8c52",
+          "file": "ritual.browser.spec.ts",
+          "line": 144,
+          "column": 1
+        },
+        {
+          "title": "absence de voix locale : erreur explicite, puis démarrage en texte seul",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3505,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:17.312Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fd5779f30325273d8dff-9e503dbfd898a00ee952",
+          "file": "ritual.browser.spec.ts",
+          "line": 171,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "ui.spec.ts",
+      "file": "ui.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "journal: saved text has no default AI processing and deletion targets the selected entry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1957,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:20.854Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d425444c687fa36b5882-541a6c196e1bd572861c",
+          "file": "ui.spec.ts",
+          "line": 31,
+          "column": 1
+        },
+        {
+          "title": "journal: an error preserves the draft, retry id and explicit reflection choice",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1778,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:22.834Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d425444c687fa36b5882-fe38cc24ef841fcaa180",
+          "file": "ui.spec.ts",
+          "line": 71,
+          "column": 1
+        },
+        {
+          "title": "audio: real Chromium MediaRecorder releases synthetic tracks and waits for transcription consent",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2850,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:24.625Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d425444c687fa36b5882-c17704d8f6f89b8cf514",
+          "file": "ui.spec.ts",
+          "line": 105,
+          "column": 1
+        },
+        {
+          "title": "minimal ritual: rest preserves progress without declaring a completed exercise",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1667,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:27.492Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d425444c687fa36b5882-64d2847f4417a6a5d0bb",
+          "file": "ui.spec.ts",
+          "line": 150,
+          "column": 1
+        },
+        {
+          "title": "recognition: a retry produces one non-financial daily entry and retains historical receipts",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1442,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:29.182Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d425444c687fa36b5882-afe36667a2f5448e1856",
+          "file": "ui.spec.ts",
+          "line": 176,
+          "column": 1
+        },
+        {
+          "title": "wellbeing: explicit choices persist and feedback on the supplied session pauses its suggestion",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1563,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-10T02:56:30.643Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d425444c687fa36b5882-1c6357f604dea4660385",
+          "file": "ui.spec.ts",
+          "line": 206,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-10T02:55:57.139Z",
+    "duration": 35247.297,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

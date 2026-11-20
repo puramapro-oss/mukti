@@ -39,6 +39,7 @@ export default function AuroraSessionPreview({ variant }: AuroraSessionPreviewPr
         breathState={breath}
         color={meta.color}
         particlesEnabled={particlesOn}
+        animationEnabled={active}
       />
 
       {/* Pulse of safety (sur expire) */}
