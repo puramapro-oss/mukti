@@ -2,6 +2,7 @@ package dev.purama.mukti;
 
 import static org.junit.Assert.*;
 
+import android.app.Instrumentation;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +14,7 @@ import android.webkit.WebView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.WebViewListener;
 import dev.purama.mukti.widgets.AffirmationWidgetProvider;
@@ -54,9 +56,15 @@ public class WrapperInstrumentedTest {
     }
 
     @Test public void openingTheWidgetOnAnExistingActivityRequestsItsFixedRoute() {
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Context context = instrumentation.getTargetContext();
+        Intent launcher = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        assertNotNull(launcher);
+        launcher.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        MainActivity activity = (MainActivity) instrumentation.startActivitySync(launcher);
         AtomicBoolean seen = new AtomicBoolean();
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(activity -> {
+        try {
+            instrumentation.runOnMainSync(() -> {
                 activity.getBridge().addWebViewListener(new WebViewListener() {
                     @Override public void onPageStarted(WebView view) { observe(view, seen); }
                     @Override public void onPageLoaded(WebView view) { observe(view, seen); }
@@ -70,10 +78,15 @@ public class WrapperInstrumentedTest {
             });
             long until = SystemClock.elapsedRealtime() + 15000;
             while (!seen.get() && SystemClock.elapsedRealtime() < until) {
-                scenario.onActivity(activity -> observe(activity.getBridge().getWebView(), seen));
+                instrumentation.runOnMainSync(() -> observe(activity.getBridge().getWebView(), seen));
                 SystemClock.sleep(100);
             }
             assertTrue("Expected the product WebView to request " + WIDGET_ROUTE, seen.get());
+        } finally {
+            // MainActivity consumes and replaces the widget intent. Close the original
+            // instance directly so cleanup does not depend on matching the launch intent.
+            instrumentation.runOnMainSync(activity::finishAndRemoveTask);
+            instrumentation.waitForIdleSync();
         }
     }
 
