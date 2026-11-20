@@ -50,3 +50,22 @@ npm run test:browser
 ```
 
 La configuration de build de l'application exclut ce dossier et ses dépendances imbriquées. `npm run typecheck` vérifie séparément les tests, les composants, les routes du lot et leurs imports. Le workflow `wellbeing-regression.yml` exécute la suite, son contrôle TypeScript et les scénarios navigateur avec un seul worker, sans secret et sans URL de production.
+
+## Correctif d’horloge du 10 novembre 2026
+
+Le moteur conserve le temps actif après une frame tardive, y compris si plusieurs phases sont traversées. Pause et arrêt réconcilient la même horloge sans jouer de consignes manquées. Les 13 nouveaux cas sont dans `phase-timing.test.ts`.
+
+Le banc résout maintenant aussi l’import racine `next` depuis ses dépendances locales. La compilation WebAssembly de PGlite est limitée à une tâche et le tas JavaScript à 512 Mo dans le **processus de test**, via `test.execArgv` : Vitest ne transmet pas automatiquement les options V8 du processus parent. Ces limites de ressources conservent toutes les assertions et les migrations testées.
+
+Dans un environnement disposant de peu de ressources, les commandes réellement qualifiées sont :
+
+```sh
+cd tests/aurora-regression
+RAYON_NUM_THREADS=1 npm test
+RAYON_NUM_THREADS=1 npm run typecheck
+cd browser
+RAYON_NUM_THREADS=1 node ../node_modules/vite/bin/vite.js build --config vite.config.ts
+```
+
+Le rapport de cette reprise, les empreintes des sources et la portée exacte des vérifications sont dans [AURORA_TIMING_2026-11-10.md](../../docs/AURORA_TIMING_2026-11-10.md). Ce build Vite qualifie le banc client ; il ne remplace pas le build Next de production.
+

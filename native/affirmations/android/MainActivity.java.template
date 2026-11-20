@@ -1,0 +1,39 @@
+package dev.purama.mukti;
+
+import android.content.Intent;
+import android.os.Bundle;
+import com.getcapacitor.BridgeActivity;
+import dev.purama.mukti.widgets.AffirmationWidgetPlugin;
+import dev.purama.mukti.widgets.AffirmationWidgetProvider;
+
+// Managed by scripts/widgets/apply-android.py; custom changes are never overwritten silently.
+public class MainActivity extends BridgeActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(AffirmationWidgetPlugin.class);
+        super.onCreate(savedInstanceState);
+        openAffirmationWidget(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null) setIntent(intent);
+        openAffirmationWidget(intent);
+    }
+
+    private void openAffirmationWidget(Intent intent) {
+        if (intent == null || !AffirmationWidgetProvider.ACTION_OPEN.equals(intent.getAction())
+            || !intent.getBooleanExtra(AffirmationWidgetProvider.EXTRA_OPEN, false)
+            || intent.getData() != null || getBridge() == null || getBridge().getWebView() == null) return;
+        // Consume the one-purpose marker. A restored Activity must not navigate a second time.
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.removeExtra(AffirmationWidgetProvider.EXTRA_OPEN);
+        getBridge().getWebView().post(() -> {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                // No URI, route, HTML, JavaScript or authentication data is read from the intent.
+                getBridge().getWebView().loadUrl(AffirmationWidgetProvider.DESTINATION);
+            }
+        });
+    }
+}

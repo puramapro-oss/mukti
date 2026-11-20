@@ -64,7 +64,7 @@ describe('AURORA active time and phase transitions', () => {
     for (const time of [0, 2100, 4101, 6200, 8010]) clock.frame(time)
     expect(result.current.meta.currentPhaseName).toBe('double_sigh')
     expect(onBreathStep).toHaveBeenLastCalledWith('inspire')
-    expect(result.current.state.progress).toBe(0)
+    expect(result.current.state.progress).toBeCloseTo(0.01 / 3)
   })
 
   it.each(['soft', 'core'] as const)('honours the %s hold setting', (powerSwitch) => {

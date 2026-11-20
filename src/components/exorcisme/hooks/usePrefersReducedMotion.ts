@@ -1,14 +1,4 @@
-import { useEffect, useState } from 'react'
+'use client'
 
-export function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    queueMicrotask(() => setReduced(mq.matches))
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches)
-    mq.addEventListener?.('change', onChange)
-    return () => mq.removeEventListener?.('change', onChange)
-  }, [])
-  return reduced
-}
+// Use the same system and in-app motion preference throughout MUKTI.
+export { useReducedMotion as usePrefersReducedMotion } from '@/hooks/useReducedMotion'

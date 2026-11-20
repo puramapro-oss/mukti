@@ -1,0 +1,16 @@
+{
+  "appId": "dev.purama.mukti",
+  "appName": "MUKTI",
+  "webDir": "public",
+  "server": {
+    "url": "https://mukti.purama.dev",
+    "cleartext": false
+  },
+  "ios": {
+    "scheme": "App"
+  },
+  "android": {
+    "webContentsDebuggingEnabled": false,
+    "allowMixedContent": false
+  }
+}
