@@ -76,7 +76,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           install -D tests/android-wrapper/WrapperInstrumentedTest.java android/app/src/androidTest/java/dev/purama/mukti/WrapperInstrumentedTest.java
-          android/gradlew -p android assembleRelease assembleDebug assembleDebugAndroidTest --no-daemon
+          android/gradlew -p android :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
           python3 tests/android-wrapper/verify-apk.py android/app/build/outputs/apk/release/app-release-unsigned.apk
           python3 tests/android-wrapper/verify-apk.py android/app/build/outputs/apk/debug/app-debug.apk
 
@@ -100,7 +100,7 @@ jobs:
             adb shell svc wifi disable
             adb shell svc data disable
             adb shell settings get global airplane_mode_on | tr -d '\r' | grep -qx 1
-            android/gradlew -p android connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.purama.mukti.WrapperInstrumentedTest --no-daemon
+            android/gradlew -p android :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.purama.mukti.WrapperInstrumentedTest --no-daemon
 
       - name: Retain emulator test reports
         if: always() && github.event_name == 'pull_request'
