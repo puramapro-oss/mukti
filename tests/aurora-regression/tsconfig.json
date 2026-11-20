@@ -56,6 +56,15 @@
       "zod": [
         "node_modules/zod"
       ],
+      "framer-motion": [
+        "node_modules/framer-motion"
+      ],
+      "clsx": [
+        "node_modules/clsx"
+      ],
+      "tailwind-merge": [
+        "node_modules/tailwind-merge"
+      ],
       "@supabase/ssr": [
         "node_modules/@supabase/ssr"
       ],
@@ -96,3 +105,4 @@
     "../../src/app/(dashboard)/dashboard/subconscient/ecran-verrouille/page.tsx"
   ]
 }
+

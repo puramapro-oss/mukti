@@ -11,6 +11,13 @@ Base de travail : `cdb9c2c6b3cda70141b0fc0d4f813d6d81a77089`, branche
 continuité, de journal et d’AURORA de cette branche. Les modifications locales
 indépendantes du checkout principal ne sont pas incorporées implicitement.
 
+La reprise du 12 novembre 2026 prolonge la PR #8 existante, à partir de
+`6b863eb9476819fb55b19e2db408a8b6dec89ca9`. Cette branche réunit déjà les
+affirmations natives, Harmonie et les préférences d’accessibilité. Les 54 fichiers
+propres au widget avaient conservé les mêmes blobs entre les PR #5, #6 et #8 ;
+aucune nouvelle application, branche publique concurrente ou copie du catalogue
+n’est nécessaire pour cet incrément.
+
 | Élément | Intégration |
 | --- | --- |
 | Accès utilisateur | Carte dans `/dashboard/subconscient` |
@@ -47,6 +54,56 @@ incertain ne devient jamais une confirmation d’enregistrement.
 Le widget utilise ensuite le cache hors connexion. Cela ne rend pas l’éditeur
 web ou le catalogue réseau disponibles hors connexion. L’installation du widget
 sur l’écran reste une action de l’utilisateur, distincte de l’enregistrement.
+
+## Récupération et état de l’édition
+
+L’éditeur distingue le brouillon affiché et la dernière sélection relue sur le
+téléphone. Une modification du rythme, du texte ou de l’ordre des phrases est
+signalée ; un enregistrement identique ne lance pas une nouvelle écriture. Le
+bouton de restauration reprend le dernier snapshot vérifié sans modifier le
+téléphone. Ce brouillon reste en mémoire pendant l’édition : il ne constitue pas
+une nouvelle sauvegarde automatique ni un nouveau stockage des préférences.
+
+Les erreurs du catalogue et du téléphone restent distinctes. Une actualisation du
+catalogue ne masque pas un échec natif et ne remplit pas une sélection volontairement
+vidée. Cette protection s’applique aussi à la réponse tardive du catalogue initial.
+Une connexion native peut être réessayée depuis la page ; elle conserve les choix
+en cours. Une première lecture récupérée ne restaure le cache que si l’utilisateur
+n’a pas encore fait de choix délibéré.
+
+Le retour au premier plan relit l’état natif sans remplacer le brouillon. Si une
+écriture est en cours, cette relecture est différée jusqu’à sa fin. Les écouteurs
+sont retirés à la fermeture, y compris si leur inscription se termine tardivement.
+Une actualisation manuelle de l’état reste disponible.
+
+Une opération non confirmée affiche **« État enregistré à vérifier »**, même si la
+dernière sélection connue correspond encore au brouillon. Une suppression peut en
+effet réussir avant que sa relecture échoue. L’interface n’annonce alors ni une
+sélection à jour, ni la présence actuelle d’un widget.
+
+### Ajout Android depuis l’application
+
+Après un enregistrement vérifié, le bouton d’ajout appelle le `requestPin()` natif
+déjà présent. Il est disponible sur Android, pour une sélection enregistrée sans
+modification en attente et sans widget déjà signalé comme présent. Le retour
+`requested: true` signifie seulement que la demande a été envoyée au système ;
+l’utilisateur confirme ensuite l’ajout. Seule une relecture de `installed` permet
+d’afficher la présence du widget. Une réponse invalide est refusée et un lanceur
+sans ajout direct conserve le parcours manuel depuis ses widgets.
+
+### Accessibilité de l’éditeur
+
+Les tailles de texte sont relatives et reprennent la préférence MUKTI existante.
+La disposition s’adapte à la place disponible, y compris dans le conteneur du
+dashboard. L’aperçu grandit avec son texte, sans masquer la phrase par sa légende.
+Le contraste renforcé utilise les mêmes attributs de préférence que l’application,
+avec des couleurs adaptées aux thèmes clair et sombre ; les couleurs forcées du
+système gardent des repères de sélection et de focus.
+
+Après retrait d’une phrase, le focus passe à la commande voisine ou au titre de la
+sélection. Après une opération native déclenchée au clavier, il rejoint le statut
+ou l’erreur. Cela couvre aussi une demande d’ajout lente, dont le bouton est
+temporairement désactivé. Aucun nouveau panneau d’accessibilité n’est créé.
 
 ## Données et limites de confiance
 
@@ -120,10 +177,21 @@ ruby native/affirmations/ios/tests/installer_test.rb
 
 Le banc web utilise des données synthétiques et des doubles explicites du serveur
 et du bridge. Il vérifie les erreurs, la récupération, les traductions, les liens,
-la sauvegarde relue et les courses entre requêtes. Les tests Foundation/Java
+la sauvegarde relue et les courses entre requêtes. Le banc navigateur monte aussi
+le véritable `AccessibilityPreferencesRoot` et sa feuille de style : il vérifie le
+texte à 200 %, les largeurs de 320 et 640 pixels avec la marge du dashboard, les
+cibles tactiles, le focus après retrait et les états natifs simulés. Ces scénarios
+ne demandent aucune permission de microphone. Les tests Foundation/Java
 exécutent le véritable modèle natif et ses règles calendaires ; les installateurs
 sont testés sur de vrais projets générés ou fixtures Xcode. Ces preuves ont des
 périmètres différents et ne remplacent pas un essai de bout en bout sur appareil.
+
+Lors de cette reprise, l’indexation GitNexus actuelle n’a pas terminé dans ses deux
+fenêtres de 120 secondes. Les impacts ont été demandés avant édition ; l’index
+historique ne fournit pas de couverture actuelle des appelants et son risque reste
+`UNKNOWN`. La lecture des sources de PR #8 confirme le périmètre direct : bridge,
+hook, éditeur et route unique de configuration. Les tests et le diff complètent
+ce contrôle ; ils ne transforment pas cette limite du graphe en résultat réussi.
 
 Avant livraison mobile : vérifier le catalogue authentifié réel, l’enregistrement
 via le bridge, l’ajout du widget, les liens à froid et à chaud, l’affichage hors
@@ -137,5 +205,9 @@ présence de ces fichiers ou d’un workflow.
 - [Apple : actualisation des widgets](https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date)
 - [Apple : widgets accessoires](https://developer.apple.com/documentation/widgetkit/creating-accessory-widgets-and-watch-complications)
 - [Android : widgets avancés](https://developer.android.com/develop/ui/views/appwidgets/advanced)
+- [Android : ajout d’un widget depuis l’application](https://developer.android.com/develop/ui/views/appwidgets/discoverability)
+- [Capacitor 7 : cycle de vie de l’application](https://capacitorjs.com/docs/v7/apis/app)
 - [Capacitor 7 : code iOS](https://capacitorjs.com/docs/v7/ios/custom-code)
 - [Capacitor 7 : code Android](https://capacitorjs.com/docs/v7/android/custom-code)
+- [W3C : agrandissement du texte](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html)
+- [W3C : redistribution du contenu](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html)

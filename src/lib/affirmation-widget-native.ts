@@ -11,6 +11,7 @@ interface WidgetPlugin {
   getState(): Promise<NativeWidgetState>
   configure(options: { payload: string }): Promise<{ saved: boolean }>
   clear(): Promise<{ cleared: boolean }>
+  requestPin(): Promise<{ requested: boolean }>
 }
 const widget = registerPlugin<WidgetPlugin>('AffirmationWidget')
 export function widgetPlatform(): 'ios' | 'android' | 'web' {
@@ -33,11 +34,25 @@ export async function readNativeWidget(): Promise<NativeWidgetState> {
   }
   const state = await bounded(widget.getState())
   if (typeof state?.supported !== 'boolean' || typeof state.configured !== 'boolean') throw new Error('État du widget illisible.')
+  if (state.installed !== undefined && typeof state.installed !== 'boolean') throw new Error('État du widget illisible.')
+  if (!state.supported && (state.configured || state.installed === true)) throw new Error('État du widget incohérent.')
   if (state.configured) {
     if (typeof state.payload !== 'string') throw new Error('Sélection enregistrée illisible. Reconfigure le widget.')
     parseWidgetPayload(state.payload)
   }
   return state
+}
+
+/** A launcher request is not proof of installation; only getState reports widget presence.
+ * @see https://developer.android.com/develop/ui/views/appwidgets/discoverability
+ */
+export async function requestNativeWidgetPin(): Promise<{ requested: boolean }> {
+  if (!Capacitor.isNativePlatform() || widgetPlatform() !== 'android' || !Capacitor.isPluginAvailable('AffirmationWidget')) {
+    return { requested: false }
+  }
+  const result = await bounded(widget.requestPin())
+  if (typeof result?.requested !== 'boolean') throw new Error('Demande d’ajout non confirmée par le téléphone.')
+  return { requested: result.requested }
 }
 
 export async function saveNativeWidget(payload: WidgetPayload): Promise<NativeWidgetState> {
