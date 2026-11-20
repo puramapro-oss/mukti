@@ -15,12 +15,27 @@ on:
       - 'native/affirmations/android/**'
       - 'native/affirmations/ios/**'
       - 'scripts/widgets/**'
+      - 'scripts/mobile/**'
+      - '.github/workflows/mobile-build.yml'
+  pull_request:
+    paths:
+      - 'capacitor.config.ts'
+      - 'package*.json'
+      - 'public/**'
+      - 'resources/**'
+      - 'native/affirmations/android/**'
+      - 'scripts/widgets/**'
+      - 'scripts/mobile/**'
+      - 'tests/android-wrapper/**'
       - '.github/workflows/mobile-build.yml'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 jobs:
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -29,15 +44,8 @@ jobs:
         with:
           node-version: 22
 
-      # Déps git privées (@purama/smarana) : le lockfile résout en git+ssh,
-      # illisible sur un runner sans clé — réécriture vers https + token.
-      - name: Configure git for private npm deps
-        env:
-          GH_PRIVATE_DEPS_TOKEN: ${{ secrets.GH_PRIVATE_DEPS_TOKEN }}
-        run: git config --global url."https://x-access-token:${GH_PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-
-      - name: Install deps
-        run: npm ci --legacy-peer-deps
+      - name: Install native dependencies from the application lock
+        run: node scripts/mobile/install-wrapper-deps.mjs
 
       - name: Setup JDK 21
         uses: actions/setup-java@v4
@@ -52,8 +60,8 @@ jobs:
 
       - name: Scaffold Android platform (Capacitor)
         run: |
-          npx cap add android
-          npx cap sync android
+          ./node_modules/.bin/cap add android
+          ./node_modules/.bin/cap sync android
 
       - name: Install native affirmation widget
         run: |
@@ -62,9 +70,54 @@ jobs:
 
       - name: Generate icons + splash
         run: |
-          npx @capacitor/assets generate --android --iconBackgroundColor '#0a0a0f' --iconBackgroundColorDark '#0a0a0f' --splashBackgroundColor '#0a0a0f' --splashBackgroundColorDark '#0a0a0f'
+          npm exec --yes --package=@capacitor/assets@4.0.0 -- capacitor-assets generate --android --iconBackgroundColor '#0a0a0f' --iconBackgroundColorDark '#0a0a0f' --splashBackgroundColor '#0a0a0f' --splashBackgroundColorDark '#0a0a0f'
+
+      - name: Compile the application and verify the packaged resources
+        if: github.event_name == 'pull_request'
+        run: |
+          install -D tests/android-wrapper/WrapperInstrumentedTest.java android/app/src/androidTest/java/dev/purama/mukti/WrapperInstrumentedTest.java
+          # Capacitor's example test retains its template package when the host is generated.
+          template_test=android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java
+          if test -f "$template_test"; then
+            sed -i 's/"com\.getcapacitor\.app"/"dev.purama.mukti"/' "$template_test"
+          fi
+          android/gradlew -p android :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon
+          python3 tests/android-wrapper/verify-apk.py android/app/build/outputs/apk/release/app-release-unsigned.apk
+          python3 tests/android-wrapper/verify-apk.py android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Allow the hosted Android emulator to use KVM
+        if: github.event_name == 'pull_request'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Exercise the actual wrapper on an offline Android emulator
+        if: github.event_name == 'pull_request'
+        uses: reactivecircus/android-emulator-runner@b530d96654c385303d652368551fb075bc2f0b6b # v2.35.0
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            adb shell cmd connectivity airplane-mode enable
+            adb shell svc wifi disable
+            adb shell svc data disable
+            adb shell settings get global airplane_mode_on | tr -d '\r' | grep -qx 1
+            android/gradlew -p android :app:connectedDebugAndroidTest --no-daemon
+
+      - name: Retain emulator test reports
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mukti-android-wrapper-tests
+          path: android/app/build/outputs/androidTest-results/connected/
+          if-no-files-found: ignore
+          retention-days: 5
 
       - name: Inject release signing config
+        if: github.event_name != 'pull_request'
         run: |
           cat > android/app/signing.gradle << 'GRADLE_EOF'
           android {
@@ -93,9 +146,11 @@ jobs:
           echo "apply from: 'signing.gradle'" >> android/app/build.gradle
 
       - name: Decode keystore
+        if: github.event_name != 'pull_request'
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/purama-mobile-release.jks"
 
       - name: Build signed release APK
+        if: github.event_name != 'pull_request'
         working-directory: android
         env:
           PURAMA_KEYSTORE_PATH: ${{ runner.temp }}/purama-mobile-release.jks
@@ -105,6 +160,7 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Verify APK is signed
+        if: github.event_name != 'pull_request'
         run: |
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           echo "APK: $APK"
@@ -116,12 +172,14 @@ jobs:
           fi
 
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: mukti-android-release-apk
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
 
   build-ios:
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
     timeout-minutes: 30
     env:
@@ -134,15 +192,8 @@ jobs:
         with:
           node-version: 22
 
-      # Déps git privées (@purama/smarana) : le lockfile résout en git+ssh,
-      # illisible sur un runner sans clé — réécriture vers https + token.
-      - name: Configure git for private npm deps
-        env:
-          GH_PRIVATE_DEPS_TOKEN: ${{ secrets.GH_PRIVATE_DEPS_TOKEN }}
-        run: git config --global url."https://x-access-token:${GH_PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-
-      - name: Install deps
-        run: npm ci --legacy-peer-deps
+      - name: Install native dependencies from the application lock
+        run: node scripts/mobile/install-wrapper-deps.mjs
 
       - name: Scaffold iOS platform (Capacitor)
         run: |
