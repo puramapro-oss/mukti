@@ -57,5 +57,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status })
   }
 
-  return NextResponse.json(result, { status: 201 })
+  return NextResponse.json({ ok: true, ...result }, { status: 201 })
 }

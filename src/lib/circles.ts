@@ -15,8 +15,6 @@ import {
 } from './constants'
 import type {
   CircleStatus,
-  CircleAudioMode,
-  CircleParticipantRole,
   Circle,
   CircleParticipant,
   CircleRotation,

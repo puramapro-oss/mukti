@@ -1,9 +1,9 @@
-// GET /api/mystery-rewards/history — liste historique coffres.
+// Compatibility URL: daily acknowledgements and unchanged legacy reward receipts.
 
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
-import { listRewards } from '@/lib/mystery-rewards'
+import { getRecognitionOverview, RecognitionError } from '@/lib/mystery-rewards'
 
 export const runtime = 'nodejs'
 export const maxDuration = 10
@@ -28,6 +28,17 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url)
   const limit = Number(url.searchParams.get('limit') ?? '14')
-  const rewards = await listRewards(Number.isFinite(limit) ? limit : 14)
-  return NextResponse.json({ rewards })
+  try {
+    const overview = await getRecognitionOverview(limit)
+    return NextResponse.json({
+      ok: true,
+      ...overview,
+      // Existing history readers keep their field; delivery remains unverified.
+      rewards: overview.legacy_rewards,
+    }, { headers: { 'Cache-Control': 'private, no-store' } })
+  } catch (error) {
+    return NextResponse.json({
+      error: error instanceof RecognitionError ? error.message : 'Historique indisponible. Réessaie plus tard.',
+    }, { status: error instanceof RecognitionError ? error.status : 503 })
+  }
 }

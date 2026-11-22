@@ -1,0 +1,70 @@
+name: Accessibility controls (isolated)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/accessibility-controls.yml'
+      - 'src/lib/accessibility.ts'
+      - 'src/lib/a11y.ts'
+      - 'src/hooks/useAccessibilityPrefs.ts'
+      - 'src/hooks/useReducedMotion.ts'
+      - 'src/components/exorcisme/hooks/usePrefersReducedMotion.ts'
+      - 'src/components/shared/AccessibilityPreferencesRoot.tsx'
+      - 'src/components/shared/ShareStoryButton.tsx'
+      - 'src/components/ui/Modal.tsx'
+      - 'src/components/ui/Button.tsx'
+      - 'src/lib/utils.ts'
+      - 'src/app/layout.tsx'
+      - 'src/app/globals.css'
+      - 'src/app/accessibility.css'
+      - 'postcss.config.mjs'
+      - 'src/app/(dashboard)/dashboard/profile/accessibility/**'
+      - 'tests/accessibility/**'
+      - 'tsconfig.accessibility.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accessibility-controls-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Install isolated QA dependencies
+        shell: bash
+        run: |
+          qa_dir="$RUNNER_TEMP/mukti-accessibility-qa"
+          mkdir -p "$qa_dir"
+          npm install --prefix "$qa_dir" --no-package-lock --ignore-scripts typescript@5.7.2 react@19.2.4 react-dom@19.2.4 @types/react@19.1.2 @types/react-dom@19.1.2 @types/node@20.17.30 esbuild@0.28.2 playwright@1.62.1 axe-core@4.11.0 tailwindcss@4.2.2 @tailwindcss/postcss@4.2.2 postcss@8.5.23 lucide-react@1.7.0 clsx@2.1.1 tailwind-merge@3.5.0 jsdom@26.1.0 @testing-library/dom@10.4.1
+          test ! -e node_modules
+          ln -s "$qa_dir/node_modules" node_modules
+          "$qa_dir/node_modules/.bin/playwright" install --with-deps chromium
+          printf 'A11Y_TOOLING_PACKAGE=%s/package.json\n' "$qa_dir" >> "$GITHUB_ENV"
+      - name: Verify preference behavior and targeted types
+        shell: bash
+        run: |
+          mkdir -p tests/accessibility/evidence
+          node --test tests/accessibility/*.test.mjs | tee tests/accessibility/evidence/unit.log
+          node node_modules/typescript/bin/tsc -p tsconfig.accessibility.json | tee tests/accessibility/evidence/types.log
+      - name: Verify the actual page and components in a browser fixture
+        run: node tests/accessibility/browser.mjs
+      - name: Preserve scoped evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mukti-accessibility-controls-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            tests/accessibility/evidence/*-report.json
+            tests/accessibility/evidence/*.png
+            tests/accessibility/evidence/*.log

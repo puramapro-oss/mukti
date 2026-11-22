@@ -2,10 +2,10 @@
 
 // MUKTI — G5.2 Pulse of Safety
 // Micro-vague horizontale qui traverse l'écran à chaque expire longue.
-// Ancrage neurologique subtil (brief section 5) — effet calme profond.
-// Purement CSS + state React, aucun shader (perf friendly).
+// Repère visuel facultatif, sans effet thérapeutique établi.
+// Purement CSS, aucun shader.
 
-import { useEffect, useState } from 'react'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { BreathPhase } from './types'
 
 export interface PulseOfSafetyProps {
@@ -14,13 +14,8 @@ export interface PulseOfSafetyProps {
 }
 
 export default function PulseOfSafety({ breathPhase, color }: PulseOfSafetyProps) {
-  const [pulseKey, setPulseKey] = useState(0)
-
-  useEffect(() => {
-    if (breathPhase === 'expire') {
-      queueMicrotask(() => setPulseKey((k) => k + 1))
-    }
-  }, [breathPhase])
+  const reducedMotion = useReducedMotion()
+  if (breathPhase !== 'expire' || reducedMotion) return null
 
   return (
     <div
@@ -29,7 +24,6 @@ export default function PulseOfSafety({ breathPhase, color }: PulseOfSafetyProps
       style={{ mixBlendMode: 'screen' }}
     >
       <span
-        key={pulseKey}
         className="mukti-aurora-pulse"
         style={{ ['--pulse-color' as string]: color }}
       />
@@ -60,6 +54,12 @@ export default function PulseOfSafety({ breathPhase, color }: PulseOfSafetyProps
           100% {
             opacity: 0;
             transform: translateY(-50%) scaleX(1.2);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .mukti-aurora-pulse {
+            animation: none;
+            display: none;
           }
         }
       `}</style>

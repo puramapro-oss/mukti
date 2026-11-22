@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "filename": "MUKTI_432Hz_son_pur.wav",
+      "status": "PASS",
+      "duration_seconds": 12,
+      "sample_rate": 48000,
+      "channels": 1,
+      "digital_peak": 0.079986572265625,
+      "tone_estimates_hz": [
+        431.99999699622447
+      ],
+      "melody_note_estimate_hz": null,
+      "scope": "PCM files only; no physical loudspeaker or phone tested"
+    },
+    {
+      "filename": "MUKTI_432Hz_melodie_et_tonalite.wav",
+      "status": "PASS",
+      "duration_seconds": 24,
+      "sample_rate": 48000,
+      "channels": 1,
+      "digital_peak": 0.082000732421875,
+      "tone_estimates_hz": [
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.99966102841455,
+        431.9983948595577
+      ],
+      "melody_note_estimate_hz": 323.54736328125,
+      "scope": "PCM files only; no physical loudspeaker or phone tested"
+    }
+  ]
+}

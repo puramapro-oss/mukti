@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from './supabase-server'
 import { createServiceClient } from './supabase'
 import { askClaudeJSON } from './claude'
 import {
+  EXORCISME_MAX_ELAPSED_SEC,
   EXORCISME_MAX_TEXT_LENGTH,
   pickFallbackAffirmation,
   sanitizePossessionText,
@@ -122,14 +123,15 @@ export async function generateReprogAffirmation(input: {
   const { data: existing } = await service
     .schema('mukti')
     .from('mode_sessions')
-    .select('id, sensor_data')
+    .select('id, completed_at, sensor_data')
     .eq('id', input.session_id)
     .eq('user_id', profileId)
     .eq('mode', 'exorcisme')
     .maybeSingle()
 
   if (!existing) return { error: 'Séance introuvable.' }
-  const existingRow = existing as { id: string; sensor_data: ExorcismeSensorData | null }
+  const existingRow = existing as { id: string; completed_at: string | null; sensor_data: ExorcismeSensorData | null }
+  if (existingRow.completed_at) return { error: 'Séance déjà terminée.' }
 
   const model = process.env.ANTHROPIC_MODEL_FAST || 'claude-haiku-4-5-20251001'
 
@@ -158,8 +160,8 @@ Renvoie UNIQUEMENT ce JSON :
       'Tu es un guide de libération MUKTI. Tu réponds UNIQUEMENT en JSON valide, sans markdown ni prose autour. Tutoiement FR, non religieux, non promesse, court.',
   }).catch(() => null)
 
-  const frRaw = (haiku?.fr ?? '').trim()
-  const enRaw = (haiku?.en ?? '').trim()
+  const frRaw = typeof haiku?.fr === 'string' ? haiku.fr.trim() : ''
+  const enRaw = typeof haiku?.en === 'string' ? haiku.en.trim() : ''
 
   if (frRaw.length >= 10 && frRaw.length <= 180 && enRaw.length >= 10 && enRaw.length <= 180) {
     affirmation_fr = frRaw
@@ -177,13 +179,18 @@ Renvoie UNIQUEMENT ce JSON :
     affirmation_en,
     affirmation_source: source,
   }
-  await service
+  const { data: saved, error: saveError } = await service
     .schema('mukti')
     .from('mode_sessions')
     .update({ sensor_data: mergedSensor })
     .eq('id', input.session_id)
     .eq('user_id', profileId)
+    .eq('mode', 'exorcisme')
+    .is('completed_at', null)
+    .select('id')
+    .maybeSingle()
 
+  if (saveError || saved?.id !== input.session_id) return { error: 'Affirmation non enregistrée : séance terminée ou stockage indisponible.' }
   return { affirmation_fr, affirmation_en, source }
 }
 
@@ -196,9 +203,9 @@ export async function completeExorcismeSession(input: {
   phases_ms?: Partial<Record<ExorcismePhaseName, number>>
   sealed?: boolean
   affirmation_used?: string
-}): Promise<{ ok: true; stats: ExorcismeStats } | { error: string }> {
+}): Promise<{ ok: true; stats: ExorcismeStats | null; stats_unavailable?: true } | { error: string }> {
   if (!input.session_id) return { error: 'Séance invalide.' }
-  if (input.duration_sec < 0 || input.duration_sec > 60 * 15) {
+  if (!Number.isFinite(input.duration_sec) || input.duration_sec < 0 || input.duration_sec > EXORCISME_MAX_ELAPSED_SEC) {
     return { error: 'Durée incohérente.' }
   }
 
@@ -215,21 +222,18 @@ export async function completeExorcismeSession(input: {
   const { data: existing } = await service
     .schema('mukti')
     .from('mode_sessions')
-    .select('id, completed_at, sensor_data')
+    .select('id, completed_at, duration_sec, outcome, sensor_data')
     .eq('id', input.session_id)
     .eq('user_id', profileId)
     .eq('mode', 'exorcisme')
     .maybeSingle()
 
   if (!existing) return { error: 'Séance introuvable.' }
-  const row = existing as {
-    id: string
-    completed_at: string | null
-    sensor_data: ExorcismeSensorData | null
-  }
+  const row = existing as ExorcismeCompletionRow
   if (row.completed_at) {
-    const stats = await computeExorcismeStats(profileId)
-    return { ok: true, stats }
+    if (!confirmsCompletion(row, input)) return { error: 'Séance déjà enregistrée avec un autre résultat.' }
+    const stats = await computeExorcismeStats(profileId).catch(() => null)
+    return { ok: true, stats, ...(stats === null ? { stats_unavailable: true as const } : {}) }
   }
 
   const mergedSensor: ExorcismeSensorData = {
@@ -240,7 +244,7 @@ export async function completeExorcismeSession(input: {
     ...(input.affirmation_used ? { affirmation_fr: input.affirmation_used } : {}),
   }
 
-  const { error: updErr } = await service
+  const { data: saved, error: updErr } = await service
     .schema('mukti')
     .from('mode_sessions')
     .update({
@@ -251,11 +255,47 @@ export async function completeExorcismeSession(input: {
     })
     .eq('id', input.session_id)
     .eq('user_id', profileId)
+    .eq('mode', 'exorcisme')
+    .is('completed_at', null)
+    .select('id, completed_at, duration_sec, outcome, sensor_data')
+    .maybeSingle()
 
   if (updErr) return { error: 'Impossible d\'enregistrer la fin — réessaie.' }
+  // A competing completion can win the guarded update. Read its actual receipt
+  // and acknowledge it only when it represents this same frozen payload.
+  let receipt = saved as ExorcismeCompletionRow | null
+  if (!receipt) {
+    const { data } = await service.schema('mukti').from('mode_sessions')
+      .select('id, completed_at, duration_sec, outcome, sensor_data')
+      .eq('id', input.session_id).eq('user_id', profileId).eq('mode', 'exorcisme').maybeSingle()
+    receipt = data as ExorcismeCompletionRow | null
+  }
+  if (!receipt?.completed_at) return { error: 'Enregistrement non confirmé.' }
+  if (!confirmsCompletion(receipt, input)) return { error: 'Séance déjà enregistrée avec un autre résultat.' }
 
-  const stats = await computeExorcismeStats(profileId)
-  return { ok: true, stats }
+  const stats = await computeExorcismeStats(profileId).catch(() => null)
+  return { ok: true, stats, ...(stats === null ? { stats_unavailable: true as const } : {}) }
+}
+
+interface ExorcismeCompletionRow {
+  id: string
+  completed_at: string | null
+  duration_sec: number | null
+  outcome: ExorcismeOutcome | null
+  sensor_data: ExorcismeSensorData | null
+}
+
+function confirmsCompletion(row: ExorcismeCompletionRow, input: Parameters<typeof completeExorcismeSession>[0]): boolean {
+  const sensor = row.sensor_data ?? {}
+  const phases = sensor.phases_ms ?? {}
+  const expectedPhases = input.phases_ms ?? {}
+  return row.id === input.session_id && row.outcome === input.outcome
+    && row.duration_sec === Math.max(0, Math.round(input.duration_sec))
+    && Boolean(sensor.sealed) === Boolean(input.sealed)
+    && (sensor.taps_destruction ?? 0) === Math.max(0, Math.min(99, Math.round(input.taps_destruction ?? 0)))
+    && Object.keys(phases).length === Object.keys(expectedPhases).length
+    && Object.entries(expectedPhases).every(([phase, duration]) => phases[phase as ExorcismePhaseName] === duration)
+    && (!input.affirmation_used || sensor.affirmation_fr === input.affirmation_used)
 }
 
 /** Stats on-the-fly : total, today, sealed, 10 récents. */
@@ -263,7 +303,7 @@ export async function computeExorcismeStats(profileId: string): Promise<Exorcism
   const service = createServiceClient()
   const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data } = await service
+  const { data, error } = await service
     .schema('mukti')
     .from('mode_sessions')
     .select('id, started_at, completed_at, duration_sec, outcome, sensor_data')
@@ -273,7 +313,9 @@ export async function computeExorcismeStats(profileId: string): Promise<Exorcism
     .order('started_at', { ascending: false })
     .limit(200)
 
-  const rows = (data ?? []) as Array<{
+  if (error || !Array.isArray(data)) throw new Error('Statistiques temporairement indisponibles.')
+
+  const rows = data as Array<{
     id: string
     started_at: string
     completed_at: string | null

@@ -15,11 +15,11 @@
 //   - meta  : { currentPhaseIndex, currentPhaseName, totalPhases: 5,
 //              phaseStartSec, sessionElapsedSec, coherence, breathsCounted,
 //              phasesCompleted[], running, paused }
-//   - actions : start, pause, resume, stop, markDizzy
+//   - actions : start, pause, resume, stop, markDizzy, rewindPausedTo (rituel)
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AURORA_PHASES } from '@/lib/constants'
-import type { AuroraPhase } from '@/lib/constants'
+import { planBreathCycle } from './aurora-phase-helpers'
 import type { BreathPhase, BreathState } from './types'
 import type {
   AuroraPhaseMeta,
@@ -37,22 +37,13 @@ export type {
   UseAuroraPhaseOptions,
 }
 
-function planBreathCycle(breath: AuroraPhase['breath']): BreathSubStep[] {
-  const out: BreathSubStep[] = []
-  out.push({ sub: 'inspire', plannedSec: breath.in })
-  if (breath.top_up && breath.top_up > 0) {
-    // top_up = continuation de l'inspire — même phase visuelle
-    out.push({ sub: 'inspire', plannedSec: breath.top_up })
-  }
-  if (breath.hold && breath.hold > 0) {
-    out.push({ sub: 'hold', plannedSec: breath.hold })
-  }
-  out.push({ sub: 'expire', plannedSec: breath.out })
-  return out
-}
+type TimelineCommand = { type: 'pause' } | { type: 'stop'; reason: StoppedReason }
 
 export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
-  const phases = useMemo(() => AURORA_PHASES[opts.variant], [opts.variant])
+  const phases = useMemo(() => AURORA_PHASES[opts.variant].map((phase) => ({
+    ...phase,
+    breath: { ...phase.breath, hold: opts.powerSwitch === 'soft' ? 0 : phase.breath.hold },
+  })), [opts.variant, opts.powerSwitch])
   const sessionTotalSec = useMemo(
     () => phases.reduce((s, p) => s + p.duration_sec, 0),
     [phases]
@@ -91,7 +82,6 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   const subIndexRef = useRef(0) // index dans cycle en cours
   const cycleRef = useRef<BreathSubStep[]>([])
   const subStartTsRef = useRef(0)
-  const pauseAccumRef = useRef(0) // ms cumulés pendant pauses
   const pauseStartRef = useRef<number | null>(null)
 
   // Cohérence : ratios actuel/planifié par sub-step, rolling window
@@ -103,7 +93,7 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   const phasesCompletedRef = useRef<PhaseCompletionRecord[]>([])
 
   // Loop ref to break circular dependency
-  const loopRef = useRef<((now: number) => void) | null>(null)
+  const loopRef = useRef<((now: number, command?: TimelineCommand) => void) | null>(null)
 
   // --------- Helpers ---------
   const computeRollingCoherence = useCallback((): number => {
@@ -126,117 +116,144 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   }, [])
 
   // --------- RAF loop ---------
-  const loop = useCallback((now: number): void => {
+  const loop = useCallback((now: number, command?: TimelineCommand): void => {
       if (!runningRef.current) return
-      if (pausedRef.current) {
-        rafRef.current = requestAnimationFrame(loopRef.current!)
+      if (pausedRef.current && command?.type !== 'stop') {
+        rafRef.current = null
         return
       }
+      // A user action can arrive before a delayed RAF. Reconcile that same
+      // timeline first, without playing a cue or leaving a frame scheduled.
+      if (command) {
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
 
-      const idx = phaseIndexRef.current
-      if (idx >= phases.length) {
-        // Session finie — géré par completePhase() au moment de terminer la dernière phase
+      const previousPhaseIndex = phaseIndexRef.current
+      if (previousPhaseIndex >= phases.length) {
         return
       }
-      const currentPhase = phases[idx]
+      let breathChanged = false
+      let frameTimingRecorded = false
+      let reachedEnd = false
+      let currentPhase = phases[phaseIndexRef.current]
 
-      const phaseElapsedMs =
-        now - phaseStartTsRef.current - pauseAccumRef.current
-      const phaseElapsedSec = phaseElapsedMs / 1000
-
-      // Progression globale (session) pour UI
-      const sessionElapsedSec = phaseStartSessionSecRef.current + phaseElapsedSec
-
-      // Plan cycle actuel si absent
-      if (cycleRef.current.length === 0) {
-        cycleRef.current = planBreathCycle(currentPhase.breath)
-        subIndexRef.current = 0
-        subStartTsRef.current = now
-      }
-
-      const cycle = cycleRef.current
-      const subIdx = subIndexRef.current
-      const currentSub = cycle[subIdx]
-      const subElapsedMs =
-        now - subStartTsRef.current - pauseAccumRef.current
-      const subElapsedSec = subElapsedMs / 1000
-      const subProgress = Math.min(1, subElapsedSec / currentSub.plannedSec)
-
-      // Check fin de sub-step
-      if (subElapsedSec >= currentSub.plannedSec) {
-        // Enregistre cohérence de ce sub-step
-        recordSubStepCoherence(subElapsedSec, currentSub.plannedSec)
-
-        // Next sub
-        const nextSubIdx = subIdx + 1
-        if (nextSubIdx >= cycle.length) {
-          // Cycle complet = 1 souffle
-          phaseBreathsRef.current += 1
-          // Prépare nouveau cycle
+      // Advance along scheduled boundaries, not the arrival time of this frame.
+      // A late RAF may cross several breaths or phases; none of that active time
+      // should disappear. Missed cues are deliberately not replayed below.
+      while (true) {
+        const phaseEndTs = phaseStartTsRef.current + currentPhase.duration_sec * 1000
+        const observedUntilTs = Math.min(now, phaseEndTs)
+        if (cycleRef.current.length === 0) {
           cycleRef.current = planBreathCycle(currentPhase.breath)
           subIndexRef.current = 0
-        } else {
-          subIndexRef.current = nextSubIdx
+          subStartTsRef.current = phaseStartTsRef.current
         }
-        subStartTsRef.current = now
-        pauseAccumRef.current = 0 // reset pause accum pour le nouveau sub
-        const newSub = cycleRef.current[subIndexRef.current]
-        opts.onBreathStep?.(newSub.sub)
-      }
 
-      // Check fin de phase ?
-      if (phaseElapsedSec >= currentPhase.duration_sec) {
-        // Complète la phase
+        let currentSub = cycleRef.current[subIndexRef.current]
+        while (subStartTsRef.current + currentSub.plannedSec * 1000 <= observedUntilTs) {
+          // Only the first crossed step was displayed before this frame. Keep
+          // its timing sample; do not invent perfectly timed samples for all
+          // skipped steps. This remains an animation metric, not a breath sensor.
+          if (!frameTimingRecorded) {
+            recordSubStepCoherence((now - subStartTsRef.current) / 1000, currentSub.plannedSec)
+            frameTimingRecorded = true
+          }
+          subStartTsRef.current += currentSub.plannedSec * 1000
+          subIndexRef.current += 1
+          if (subIndexRef.current >= cycleRef.current.length) {
+            // Scheduled cycles, consistent with rewindPausedTo's reconstruction.
+            phaseBreathsRef.current += 1
+            subIndexRef.current = 0
+          }
+          currentSub = cycleRef.current[subIndexRef.current]
+          breathChanged = true
+        }
+
+        if (now < phaseEndTs) break
+
         const rec: PhaseCompletionRecord = {
           phase: currentPhase.name,
-          duration_sec: Math.round(phaseElapsedSec * 10) / 10,
+          duration_sec: currentPhase.duration_sec,
           breaths_counted: phaseBreathsRef.current,
           coherence: computeRollingCoherence(),
         }
         phasesCompletedRef.current.push(rec)
 
-        const nextIdx = idx + 1
+        const nextIdx = phaseIndexRef.current + 1
         if (nextIdx >= phases.length) {
-          // Session complète
-          runningRef.current = false
-          setState({ phase: 'idle', progress: 1, elapsedSec: sessionTotalSec, phaseDurationSec: 0 })
-          const finalMeta: AuroraPhaseMeta = {
-            currentPhaseIndex: phases.length - 1,
-            currentPhaseName: 'glide_out',
-            currentPhaseLabel: 'Session complète',
-            totalPhases: 5,
-            sessionElapsedSec: sessionTotalSec,
-            sessionTotalSec,
-            phaseStartSec: phaseStartSessionSecRef.current,
-            phaseDurationSec: currentPhase.duration_sec,
-            breathsCounted: phaseBreathsRef.current,
-            coherence: computeRollingCoherence(),
-            phasesCompleted: [...phasesCompletedRef.current],
-            running: false,
-            paused: false,
-            stoppedReason: 'glide_out_complete',
-          }
-          setMeta(finalMeta)
-          opts.onComplete?.(finalMeta)
-          return
+          reachedEnd = true
+          break
         }
 
         // Passe à la phase suivante
         phaseIndexRef.current = nextIdx
         phaseStartSessionSecRef.current += currentPhase.duration_sec
-        phaseStartTsRef.current = now
-        pauseAccumRef.current = 0
+        phaseStartTsRef.current = phaseEndTs
         phaseBreathsRef.current = 0
-        cycleRef.current = [] // reset cycle plan
-        opts.onPhaseChange?.(phases[nextIdx].name, nextIdx)
+        cycleRef.current = planBreathCycle(phases[nextIdx].breath)
+        subIndexRef.current = 0
+        subStartTsRef.current = phaseEndTs
+        currentPhase = phases[nextIdx]
+      }
+
+      const sessionElapsedSec = reachedEnd ? sessionTotalSec
+        : phaseStartSessionSecRef.current + (now - phaseStartTsRef.current) / 1000
+      const coherence = computeRollingCoherence()
+
+      if (reachedEnd || command?.type === 'stop') {
+        if (!reachedEnd) {
+          phasesCompletedRef.current.push({
+            phase: currentPhase.name,
+            duration_sec: Math.round((now - phaseStartTsRef.current) / 100) / 10,
+            breaths_counted: phaseBreathsRef.current,
+            coherence,
+          })
+        }
+        runningRef.current = false
+        pausedRef.current = false
+        pauseStartRef.current = null
+        rafRef.current = null
+        const reason = command?.type === 'stop' ? command.reason : 'glide_out_complete'
+        const finalMeta: AuroraPhaseMeta = {
+          currentPhaseIndex: phaseIndexRef.current,
+          currentPhaseName: currentPhase.name,
+          currentPhaseLabel: command?.type === 'stop' ? currentPhase.label_fr : 'Session complète',
+          totalPhases: phases.length,
+          sessionElapsedSec,
+          sessionTotalSec,
+          phaseStartSec: phaseStartSessionSecRef.current,
+          phaseDurationSec: currentPhase.duration_sec,
+          breathsCounted: phaseBreathsRef.current,
+          coherence,
+          phasesCompleted: [...phasesCompletedRef.current],
+          running: false,
+          paused: false,
+          stoppedReason: reason,
+        }
+        setMeta(finalMeta)
+        setState({ phase: 'idle', progress: command?.type === 'stop' ? 0 : 1, elapsedSec: sessionElapsedSec, phaseDurationSec: 0 })
+        if (command?.type === 'stop') opts.onStop?.(reason, finalMeta)
+        else opts.onComplete?.(finalMeta)
+        return
+      }
+
+      const pausing = command?.type === 'pause'
+      if (pausing) {
+        pausedRef.current = true
+        pauseStartRef.current = now
+      }
+      const phaseChanged = phaseIndexRef.current !== previousPhaseIndex
+      if (!command) {
+        if (phaseChanged) opts.onPhaseChange?.(currentPhase.name, phaseIndexRef.current)
+        if (phaseChanged || breathChanged) opts.onBreathStep?.(cycleRef.current[subIndexRef.current].sub)
       }
 
       // Update UI state
-      const currentCycleSub = cycleRef.current[subIndexRef.current] ?? currentSub
+      const currentCycleSub = cycleRef.current[subIndexRef.current]
       const uiPhase: BreathPhase = currentCycleSub?.sub ?? 'idle'
       const uiDuration = currentCycleSub?.plannedSec ?? 1
-      const uiProgress = Math.max(0, Math.min(1, subProgress))
-      const coherence = computeRollingCoherence()
+      const uiProgress = Math.max(0, Math.min(1, (now - subStartTsRef.current) / 1000 / uiDuration))
 
       setState({
         phase: uiPhase,
@@ -256,10 +273,10 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
         breathsCounted: phaseBreathsRef.current,
         coherence,
         running: true,
-        paused: false,
+        paused: pausing,
       }))
 
-      rafRef.current = requestAnimationFrame(loopRef.current!)
+      if (!pausing) rafRef.current = requestAnimationFrame(loopRef.current!)
   }, [phases, opts, sessionTotalSec, computeRollingCoherence, recordSubStepCoherence])
 
   // Update loopRef after loop is defined
@@ -275,79 +292,132 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
     phaseIndexRef.current = 0
     phaseStartTsRef.current = performance.now()
     subIndexRef.current = 0
-    cycleRef.current = []
-    subStartTsRef.current = performance.now()
-    pauseAccumRef.current = 0
+    cycleRef.current = planBreathCycle(phases[0].breath)
+    subStartTsRef.current = phaseStartTsRef.current
     pauseStartRef.current = null
     phaseBreathsRef.current = 0
     phaseStartSessionSecRef.current = 0
     phasesCompletedRef.current = []
     coherenceSamplesRef.current = []
+    setState({ phase: 'inspire', progress: 0, elapsedSec: 0, phaseDurationSec: cycleRef.current[0].plannedSec })
+    setMeta({
+      currentPhaseIndex: 0, currentPhaseName: phases[0].name, currentPhaseLabel: phases[0].label_fr,
+      totalPhases: phases.length, sessionElapsedSec: 0, sessionTotalSec, phaseStartSec: 0,
+      phaseDurationSec: phases[0].duration_sec, breathsCounted: 0, coherence: 1,
+      phasesCompleted: [], running: true, paused: false, stoppedReason: null,
+    })
 
     opts.onPhaseChange?.(phases[0].name, 0)
     opts.onBreathStep?.('inspire')
 
     rafRef.current = requestAnimationFrame(loopRef.current!)
-  }, [opts, phases])
+  }, [opts, phases, sessionTotalSec])
 
   const pause = useCallback(() => {
     if (!runningRef.current || pausedRef.current) return
-    pausedRef.current = true
-    pauseStartRef.current = performance.now()
-    setMeta((p) => ({ ...p, paused: true }))
+    loopRef.current?.(performance.now(), { type: 'pause' })
   }, [])
+
+  /**
+   * Ritual-only replay support: reposition an already paused session without
+   * starting a second clock or emitting breathing/audio/haptic callbacks.
+   * The caller decides when to replay its narration and call resume().
+   */
+  const rewindPausedTo = useCallback((seconds: number): boolean => {
+    if (!runningRef.current || !pausedRef.current || pauseStartRef.current === null ||
+        typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0 ||
+        seconds >= sessionTotalSec) return false
+
+    const currentPhase = phases[phaseIndexRef.current]
+    if (!currentPhase) return false
+    const elapsedAtPause = phaseStartSessionSecRef.current + Math.max(0, Math.min(
+      currentPhase.duration_sec, (pauseStartRef.current - phaseStartTsRef.current) / 1000
+    ))
+    if (seconds > elapsedAtPause) return false
+
+    let targetIndex = 0
+    let targetPhaseStart = 0
+    while (targetIndex < phases.length - 1 &&
+           seconds >= targetPhaseStart + phases[targetIndex].duration_sec) {
+      targetPhaseStart += phases[targetIndex].duration_sec
+      targetIndex += 1
+    }
+    const targetPhase = phases[targetIndex]
+    const phaseElapsed = seconds - targetPhaseStart
+    const cycle = planBreathCycle(targetPhase.breath)
+    const cycleDuration = cycle.reduce((sum, step) => sum + step.plannedSec, 0)
+    const completedCycles = Math.floor(phaseElapsed / cycleDuration)
+    let subElapsed = phaseElapsed - completedCycles * cycleDuration
+    let targetSubIndex = 0
+    while (targetSubIndex < cycle.length - 1 && subElapsed >= cycle[targetSubIndex].plannedSec) {
+      subElapsed -= cycle[targetSubIndex].plannedSec
+      targetSubIndex += 1
+    }
+    const targetSub = cycle[targetSubIndex]
+    const now = performance.now()
+
+    // Rebase all timestamps together. Time already spent paused cannot be
+    // counted on the next resume, and no RAF is requested while rewinding.
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    rafRef.current = null
+    phaseIndexRef.current = targetIndex
+    phaseStartSessionSecRef.current = targetPhaseStart
+    phaseStartTsRef.current = now - phaseElapsed * 1000
+    cycleRef.current = cycle
+    subIndexRef.current = targetSubIndex
+    subStartTsRef.current = now - subElapsed * 1000
+    pauseStartRef.current = now
+    phaseBreathsRef.current = completedCycles
+    phasesCompletedRef.current = phasesCompletedRef.current.slice(0, targetIndex)
+    // Samples are not timestamped, so retaining them would include observations
+    // from after the rewind point. Completed earlier phase records remain intact.
+    coherenceSamplesRef.current = []
+
+    setState({
+      phase: targetSub.sub,
+      progress: subElapsed / targetSub.plannedSec,
+      elapsedSec: seconds,
+      phaseDurationSec: targetSub.plannedSec,
+    })
+    setMeta((previous) => ({
+      ...previous,
+      currentPhaseIndex: targetIndex,
+      currentPhaseName: targetPhase.name,
+      currentPhaseLabel: targetPhase.label_fr,
+      totalPhases: phases.length,
+      sessionElapsedSec: seconds,
+      sessionTotalSec,
+      phaseStartSec: targetPhaseStart,
+      phaseDurationSec: targetPhase.duration_sec,
+      breathsCounted: completedCycles,
+      coherence: computeRollingCoherence(),
+      phasesCompleted: [...phasesCompletedRef.current],
+      running: true,
+      paused: true,
+      stoppedReason: null,
+    }))
+    return true
+  }, [phases, sessionTotalSec, computeRollingCoherence])
 
   const resume = useCallback(() => {
     if (!runningRef.current || !pausedRef.current) return
     pausedRef.current = false
     if (pauseStartRef.current !== null) {
-      pauseAccumRef.current += performance.now() - pauseStartRef.current
+      const pausedMs = performance.now() - pauseStartRef.current
+      phaseStartTsRef.current += pausedMs
+      subStartTsRef.current += pausedMs
       pauseStartRef.current = null
     }
     setMeta((p) => ({ ...p, paused: false }))
+    rafRef.current = requestAnimationFrame(loopRef.current!)
   }, [])
 
   const stop = useCallback(
     (reason: StoppedReason = 'user_stop') => {
       if (!runningRef.current) return
-      runningRef.current = false
-      pausedRef.current = false
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-
-      // Enregistre la phase courante comme partielle
-      const idx = phaseIndexRef.current
-      const phase = phases[idx]
-      const elapsedSecNow =
-        (performance.now() - phaseStartTsRef.current - pauseAccumRef.current) / 1000
-      phasesCompletedRef.current.push({
-        phase: phase.name,
-        duration_sec: Math.round(elapsedSecNow * 10) / 10,
-        breaths_counted: phaseBreathsRef.current,
-        coherence: computeRollingCoherence(),
-      })
-
-      const finalMeta: AuroraPhaseMeta = {
-        currentPhaseIndex: idx,
-        currentPhaseName: phase.name,
-        currentPhaseLabel: phase.label_fr,
-        totalPhases: 5,
-        sessionElapsedSec: phaseStartSessionSecRef.current + elapsedSecNow,
-        sessionTotalSec,
-        phaseStartSec: phaseStartSessionSecRef.current,
-        phaseDurationSec: phase.duration_sec,
-        breathsCounted: phaseBreathsRef.current,
-        coherence: computeRollingCoherence(),
-        phasesCompleted: [...phasesCompletedRef.current],
-        running: false,
-        paused: false,
-        stoppedReason: reason,
-      }
-      setMeta(finalMeta)
-      setState({ phase: 'idle', progress: 0, elapsedSec: finalMeta.sessionElapsedSec, phaseDurationSec: 0 })
-      opts.onStop?.(reason, finalMeta)
+      loopRef.current?.(pauseStartRef.current ?? performance.now(), { type: 'stop', reason })
     },
-    [phases, sessionTotalSec, computeRollingCoherence, opts]
+    []
   )
 
   const markDizzy = useCallback(() => stop('dizzy'), [stop])
@@ -363,6 +433,6 @@ export function useAuroraPhase(opts: UseAuroraPhaseOptions) {
   return {
     state,
     meta,
-    actions: { start, pause, resume, stop, markDizzy },
+    actions: { start, pause, resume, stop, markDizzy, rewindPausedTo },
   }
 }

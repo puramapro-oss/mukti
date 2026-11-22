@@ -39,6 +39,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Profil introuvable.' }, { status: 404 })
   }
 
-  const stats = await computeExorcismeStats(profileId)
-  return NextResponse.json({ stats }, { status: 200 })
+  try {
+    const stats = await computeExorcismeStats(profileId)
+    return NextResponse.json({ stats }, { status: 200 })
+  } catch {
+    return NextResponse.json({ error: 'Statistiques temporairement indisponibles.' }, { status: 503 })
+  }
 }

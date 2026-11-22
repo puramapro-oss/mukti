@@ -12,7 +12,7 @@ const AuroraCanvasInner = dynamic(() => import('./AuroraCanvasInner'), {
   loading: () => (
     <div className="flex h-full min-h-[400px] w-full items-center justify-center bg-[#05050a] text-white/60">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-12 w-12 animate-pulse rounded-full bg-gradient-to-br from-[#7C3AED] via-[#06B6D4] to-[#F472B6]" />
+        <div className="h-12 w-12 animate-pulse motion-reduce:animate-none rounded-full bg-gradient-to-br from-[#7C3AED] via-[#06B6D4] to-[#F472B6]" />
         <p className="text-xs uppercase tracking-[0.25em]">Chargement AURORA…</p>
       </div>
     </div>
