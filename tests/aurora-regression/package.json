@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --config vitest.config.ts",
-    "typecheck": "node --max-old-space-size=512 node_modules/typescript/bin/tsc --project tsconfig.json",
-    "test:browser": "playwright test --config browser/playwright.config.ts"
+    "typecheck": "node --max-old-space-size=1024 node_modules/typescript/bin/tsc --project tsconfig.json",
+    "test:browser": "playwright test --config browser/playwright.config.ts",
+    "test:models": "node --test mediapipe-regression.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "0.91.1",

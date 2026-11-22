@@ -42,8 +42,8 @@ export default async function ExorcismePage() {
 
   const profileRow = profile as { id: string } | null
   const stats = profileRow?.id
-    ? await computeExorcismeStats(profileRow.id)
-    : { total: 0, today_count: 0, sealed_count: 0, recent: [] }
+    ? await computeExorcismeStats(profileRow.id).catch(() => null)
+    : null
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] pb-20 text-white">
@@ -76,21 +76,22 @@ export default async function ExorcismePage() {
           enraciné. Prévois 3 à 5 minutes au calme, casque si tu peux.
         </p>
 
+        {!stats && <p role="status" className="mt-6 text-sm text-white/80">Statistiques temporairement indisponibles. Réessaie dans quelques instants.</p>}
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
           <StatCard
             icon={<Sparkles className="h-4 w-4 text-[#A855F7]" />}
             label="Séances"
-            value={String(stats.total)}
+            value={stats ? String(stats.total) : '—'}
           />
           <StatCard
             icon={<CheckCircle2 className="h-4 w-4 text-[#FFD700]" />}
             label="Scellées"
-            value={String(stats.sealed_count)}
+            value={stats ? String(stats.sealed_count) : '—'}
           />
           <StatCard
             icon={<History className="h-4 w-4 text-white/50" />}
             label="Aujourd'hui"
-            value={String(stats.today_count)}
+            value={stats ? String(stats.today_count) : '—'}
           />
         </div>
 
@@ -136,7 +137,7 @@ export default async function ExorcismePage() {
       </section>
 
       {/* Historique */}
-      {stats.recent.length > 0 && (
+      {stats && stats.recent.length > 0 && (
         <section className="mx-auto mt-14 max-w-4xl px-6">
           <h2 className="mb-4 text-sm font-medium uppercase tracking-[0.25em] text-white/50">
             10 dernières séances
@@ -170,7 +171,7 @@ export default async function ExorcismePage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-white/60">
                   {r.duration_sec !== null && (
-                    <span className="font-mono">{r.duration_sec}s</span>
+                    <span className="font-mono" title="Temps écoulé, attentes comprises">{r.duration_sec}s écoulées</span>
                   )}
                   {r.sealed && (
                     <span className="rounded-full border border-[#FFD700]/40 bg-[#FFD700]/10 px-2 py-0.5 uppercase tracking-widest text-[#FFD700]">
@@ -184,7 +185,7 @@ export default async function ExorcismePage() {
         </section>
       )}
 
-      {stats.recent.length === 0 && (
+      {stats && stats.recent.length === 0 && (
         <section className="mx-auto mt-14 max-w-4xl px-6">
           <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#7C3AED]/10 to-transparent p-6 text-center backdrop-blur-xl">
             <p className="text-sm text-white/70">

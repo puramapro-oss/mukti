@@ -7,6 +7,7 @@ interface Props {
   possessionDraft: string
   setPossessionDraft: (text: string) => void
   startError: string | null
+  starting: boolean
   onSubmit: () => void
 }
 
@@ -14,6 +15,7 @@ export default function ExorcismePhaseRevelation({
   possessionDraft,
   setPossessionDraft,
   startError,
+  starting,
   onSubmit,
 }: Props) {
   return (
@@ -33,6 +35,7 @@ export default function ExorcismePhaseRevelation({
       <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
         <textarea
           value={possessionDraft}
+          disabled={starting}
           onChange={e => setPossessionDraft(e.target.value.slice(0, EXORCISME_MAX_TEXT_LENGTH))}
           maxLength={EXORCISME_MAX_TEXT_LENGTH}
           rows={2}
@@ -48,16 +51,17 @@ export default function ExorcismePhaseRevelation({
       </div>
 
       {startError && (
-        <p className="mt-3 text-sm text-rose-300/90">{startError}</p>
+        <p role="alert" className="mt-3 text-sm text-rose-300/90">{startError}</p>
       )}
 
       <button
         type="button"
         onClick={onSubmit}
-        disabled={possessionDraft.trim().length === 0}
+        disabled={starting || possessionDraft.trim().length === 0}
+        aria-busy={starting}
         className="mt-6 rounded-full border border-[#A855F7]/50 bg-gradient-to-r from-[#7C3AED]/30 to-[#A855F7]/30 px-8 py-3 text-sm font-medium text-white shadow-[0_0_40px_rgba(168,85,247,0.25)] transition-all hover:from-[#7C3AED]/50 hover:to-[#A855F7]/50 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Nommer
+        {starting ? 'Démarrage…' : 'Nommer'}
       </button>
     </motion.div>
   )

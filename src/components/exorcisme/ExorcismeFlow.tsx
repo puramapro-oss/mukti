@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import ExorcismeCanvas from './ExorcismeCanvas'
 import ExorcismeCloseButton from './ExorcismeCloseButton'
 import ExorcismeProgressBar from './ExorcismeProgressBar'
+import ExorcismeCompletion from './ExorcismeCompletion'
 import ExorcismePhaseInvocation from './phases/ExorcismePhaseInvocation'
 import ExorcismePhaseRevelation from './phases/ExorcismePhaseRevelation'
 import ExorcismePhaseDestruction from './phases/ExorcismePhaseDestruction'
@@ -40,6 +41,12 @@ export default function ExorcismeFlow() {
     handleSubmitPossession,
     exitSession,
     closing,
+    starting,
+    saving,
+    saveError,
+    canRetry,
+    retrySave,
+    leaveWithoutSaving,
   } = useExorcismeSession(phaseData, tapsRef, affirmationFrRef)
 
   const {
@@ -48,9 +55,9 @@ export default function ExorcismeFlow() {
     affirmationLoading,
     affirmationError,
     handleDestructionTap,
-  } = useExorcismeDestruction(sessionRef, tapsRef, affirmationFrRef, goToPhase)
+  } = useExorcismeDestruction(sessionRef, tapsRef, affirmationFrRef, goToPhase, !closing)
 
-  const { sealing, handleSeal } = useExorcismeSealing(exitSession)
+  const { sealing, handleSeal } = useExorcismeSealing(exitSession, !closing)
 
   useExorcismeEscape(exitSession)
 
@@ -58,6 +65,9 @@ export default function ExorcismeFlow() {
     if (taps <= 0) return 0
     return Math.min(1, taps / EXORCISME_SHATTER_TAPS)
   }, [taps])
+
+  if (closing) return <ExorcismeCompletion saving={saving} error={saveError} canRetry={canRetry}
+    onRetry={() => void retrySave()} onLeave={leaveWithoutSaving} />
 
   return (
     <div className="fixed inset-0 z-[40] overflow-hidden bg-[#050308] text-white">
@@ -97,6 +107,7 @@ export default function ExorcismeFlow() {
       <div
         role="dialog"
         aria-modal="true"
+        aria-label="Séance guidée"
         aria-live="polite"
         className="relative z-20 flex h-full flex-col items-center justify-center px-6 py-10"
       >
@@ -108,6 +119,7 @@ export default function ExorcismeFlow() {
               possessionDraft={possessionDraft}
               setPossessionDraft={setPossessionDraft}
               startError={startError}
+              starting={starting}
               onSubmit={() => void handleSubmitPossession()}
             />
           )}
