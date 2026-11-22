@@ -8,11 +8,6 @@ import { createServiceClient } from './supabase'
 import { ADDICTION_TYPES, PROGRAM_REGEN_COOLDOWN_DAYS } from './constants'
 import type { Addiction } from './addictions'
 import type {
-  ProgramPhase,
-  MicroMeditation,
-  PlantInfo,
-  AntiPulsionAction,
-  HypnoseScript,
   ProgramStructure,
   StoredProgram,
 } from './programs-types'

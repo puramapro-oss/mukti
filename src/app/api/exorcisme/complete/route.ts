@@ -65,7 +65,9 @@ export async function POST(req: Request) {
   if ('error' in result) {
     const status = result.error.includes('Connexion')
       ? 401
-      : result.error.includes('introuvable')
+      : result.error.includes('déjà')
+        ? 409
+        : result.error.includes('introuvable')
         ? 404
         : 500
     return NextResponse.json({ error: result.error }, { status })

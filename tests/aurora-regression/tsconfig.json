@@ -102,7 +102,9 @@
     "../../src/hooks/useAffirmationWidget.ts",
     "../../src/lib/affirmation-widget*.ts",
     "../../src/app/api/affirmations/widget/route.ts",
-    "../../src/app/(dashboard)/dashboard/subconscient/ecran-verrouille/page.tsx"
+    "../../src/app/(dashboard)/dashboard/subconscient/ecran-verrouille/page.tsx",
+    "../../src/components/exorcisme/**/*.tsx",
+    "../../src/components/exorcisme/**/*.ts",
+    "../../src/components/reprogrammation/NightPlayer.tsx"
   ]
 }
-

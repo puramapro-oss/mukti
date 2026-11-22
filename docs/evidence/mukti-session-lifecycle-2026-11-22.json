@@ -1,0 +1,54 @@
+{
+  "scope": "MUKTI lifecycle, ritual requests and persisted receipts",
+  "base": "5564d991e75281af0cb6afb89fbb0655fc2f0cb3",
+  "validation": "Matiss: validation collective du 21 novembre 2026 et demande de reprise du 22 novembre",
+  "owner": "mukti_completion",
+  "source_preservation": "Original worktrees untouched; uncommitted corrections from 21 November copied into isolated checkout.",
+  "gates": [
+    {
+      "name": "targeted_behavior",
+      "status": "PASS",
+      "command": "node node_modules/vitest/vitest.mjs run --config vitest.config.ts exorcisme-lifecycle.test.tsx exorcisme-routes.test.mjs exorcisme-storage.test.mjs exorcisme-completion.test.tsx lifecycle-hooks.test.tsx",
+      "cwd": "tests/aurora-regression",
+      "exit": 0,
+      "tests": 44,
+      "files": 5,
+      "duration_seconds": 4.35
+    },
+    {
+      "name": "mediapipe_lifecycle",
+      "status": "PASS",
+      "command": "node --test mediapipe-regression.mjs",
+      "cwd": "tests/aurora-regression",
+      "exit": 0,
+      "tests": 9,
+      "skipped": 0
+    },
+    {
+      "name": "full_regression_local",
+      "status": "BLOCKED",
+      "command": "npm --prefix tests/aurora-regression test",
+      "exit": 137,
+      "reason": "Process killed during shared memory pressure. No completed result."
+    },
+    {
+      "name": "extended_typecheck_local",
+      "status": "BLOCKED",
+      "command": "npm --prefix tests/aurora-regression run typecheck",
+      "exit": 137,
+      "reason": "Shared memory pressure. Initial 512 MiB heap exhausted; client scope expanded, script budget is now 1024 MiB."
+    },
+    {
+      "name": "browser_local",
+      "status": "BLOCKED",
+      "command": "MUKTI_TEST_CHROMIUM_PATH=/usr/bin/chromium node node_modules/@playwright/test/cli.js test --config browser/playwright.config.ts exorcisme.browser.spec.ts",
+      "exit": 1,
+      "reason": "Browser launch denied socket syscall before application opened. CI qualification pending."
+    }
+  ],
+  "limitations": [
+    "No production provider, database, camera, GPU or physical device was contacted.",
+    "Server regression boundary is scripted PostgREST, not native PostgreSQL.",
+    "No deployment; branch deployment explicitly disabled."
+  ]
+}

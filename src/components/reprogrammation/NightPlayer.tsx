@@ -51,7 +51,7 @@ export default function NightPlayer({
   const playedIdsRef = useRef<Set<string>>(new Set())
   const stopSessionRef = useRef<() => Promise<void>>(async () => undefined)
 
-  const { volumePct, elapsedSec, rampProgress, rampRemainingSec } = useNightPlayerVolume({
+  const { volumePct, rampProgress, rampRemainingSec } = useNightPlayerVolume({
     running,
     rampEnabled,
     onVolumeChange: useCallback((vol: number) => natureRef.current?.setVolume(vol), []),
@@ -90,7 +90,6 @@ export default function NightPlayer({
     }, AFFIRMATION_INTERVAL_SEC * 1000)
     affirmationTimerRef.current = interval
     return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, affirmations, voiceEnabled])
 
   // --- Session actions ---

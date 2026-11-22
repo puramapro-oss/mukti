@@ -8,11 +8,13 @@ export default defineConfig({
     alias: [
       // The unrelated breathing WebGL canvas is outside the ritual/audio gate.
       { find: './AuroraCanvas', replacement: here('./CanvasPlaceholder.tsx') },
+      // Ritual request/timing gate: no WebGL or physiological claim.
+      { find: './ExorcismeCanvas', replacement: here('./CanvasPlaceholder.tsx') },
       { find: '@', replacement: here('../../../src') },
       { find: 'next/link', replacement: here('./next-link.tsx') },
       { find: 'next/navigation', replacement: here('./modes-navigation.ts') },
       { find: 'tailwindcss', replacement: here('../node_modules/tailwindcss/index.css') },
-      ...['react', 'react-dom', 'sonner', 'lucide-react', 'zod', '@capacitor/core', '@capacitor/app'].map(name => ({
+      ...['react', 'react-dom', 'sonner', 'lucide-react', 'zod', 'framer-motion', '@capacitor/core', '@capacitor/app'].map(name => ({
         find: new RegExp(`^${name}(/.*)?$`), replacement: `${here(`../node_modules/${name}`)}$1`,
       })),
     ],

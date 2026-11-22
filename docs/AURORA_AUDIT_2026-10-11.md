@@ -85,3 +85,18 @@ Vérifications exécutées : 46 tests réussis sur 4 fichiers, TypeScript ciblé
 Limites : Canvas/WebGL, audio, vibration et serveur sont remplacés dans le banc. Il n'y a pas de mesure FPS, thermique ou énergétique, de validation visuelle sur téléphone, de build complet, de déploiement ou de test physique. Les blocages de production listés plus haut restent ouverts ; cette reprise ne les clôture pas.
 
 Référence technique consultée le 12 octobre 2026 : documentation officielle React Three Fiber, « Scaling performance », rendu à la demande et invalidation sur changement de propriétés : https://r3f.docs.pmnd.rs/advanced/scaling-performance . Cette documentation justifie le mécanisme choisi, pas un gain mesuré sur les appareils PURAMA.
+
+
+## Reprise du 22 novembre 2026 — cycles de vie et confirmations de séance
+
+Base : `5564d991e75281af0cb6afb89fbb0655fc2f0cb3`, tête actuelle de la branche de revue. Les correctifs locaux du 21 novembre (horloge nocturne, durées des phases et libération MediaPipe) sont repris sans modifier leur dossier d’origine.
+
+Le rituel accepte un démarrage à la fois, refuse les réponses invalides et invalide les réponses tardives après la sortie. Les actions et requêtes ne sont plus déclenchées depuis un updater React. Les transitions et le scellement sont uniques et leurs minuteurs sont retirés à la sortie. L’interface attend une confirmation de sauvegarde, conserve le corps exact pour une reprise explicite et permet de quitter une attente sans prétendre annuler une écriture déjà engagée côté serveur.
+
+La clôture serveur met à jour uniquement une séance encore ouverte et vérifie le reçu effectivement retourné. Une reprise identique est acceptée ; un résultat concurrent différent est signalé. Une affirmation tardive ne peut plus remplacer les données d’une séance terminée.
+
+**PASS local :** 44 tests ciblés dans 5 fichiers, 9 tests MediaPipe, `git diff --check`. Les réponses API, la base et les modèles sont simulés ; aucun résultat matériel ou thérapeutique n’est déduit de ces contrôles.
+
+**BLOQUÉ local :** la suite complète et le typage étendu ont été tués en code 137 durant une pression mémoire partagée. Le lancement de Chromium est refusé par la restriction de socket avant l’ouverture de l’application. Ces essais ne sont pas des succès. La CI existante inclut désormais les neuf tests MediaPipe et les deux parcours du rituel (sortie pendant démarrage ; sauvegarde refusée puis reprise du même reçu).
+
+Déploiement de la branche de correction désactivé. Aucune migration ni mise en production. Détails des commandes et limites : `docs/evidence/mukti-session-lifecycle-2026-11-22.json`. Les tests JS de routes/stockage exécutent les vrais handlers avec leurs dépendances simulées ; le typage isolé couvre les composants clients et hooks, pas une qualification complète des dépendances privées serveur.

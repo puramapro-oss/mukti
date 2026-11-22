@@ -36,6 +36,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm audit --package-lock-only --audit-level=high
       - run: npm test
+      - run: npm run test:models
       - run: npm run typecheck
       - run: npx --no-install playwright install --with-deps --only-shell chromium
       - run: npx --no-install playwright test --config browser/playwright.config.ts
