@@ -25,7 +25,7 @@ function deferred<T>() {
 const flush = async () => { await act(async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }) }
 const wrapper = ({ children }: PropsWithChildren) => <StrictMode>{children}</StrictMode>
 function phaseData(): UseExorcismePhaseReturn {
-  return { phase: 'revelation', phaseMsRef: { current: {} }, startTsRef: { current: 0 },
+  return { phase: 'revelation', phaseMsRef: { current: {} }, startTsRef: { current: -3_000 },
     goToPhase: vi.fn(), snapshotPhaseDurations: vi.fn(() => ({ invocation: 1_000, revelation: 2_000 })) }
 }
 function sessionHook() {
@@ -164,6 +164,33 @@ describe('ritual start and completion lifecycle', () => {
     expect(view.result.current.saveError).toBeTruthy()
     expect(dependencies.success).not.toHaveBeenCalled()
     expect(dependencies.router.push).not.toHaveBeenCalled()
+  })
+
+  it('preserves actual elapsed duration after a user-paced phase longer than fifteen minutes', async () => {
+    const request = vi.fn().mockResolvedValueOnce(started()).mockResolvedValueOnce(response({ ok: true, stats: {} }))
+    vi.stubGlobal('fetch', request)
+    const view = sessionHook(); await begin(view)
+    view.phase.startTsRef.current = -1_200_000
+    vi.mocked(view.phase.snapshotPhaseDurations).mockReturnValue({ revelation: 1_200_000 })
+    await act(() => view.result.current.exitSession('interrupted', false))
+    expect(JSON.parse(request.mock.calls[1][1].body)).toMatchObject({ duration_sec: 1_200, phases_ms: { revelation: 1_200_000 } })
+    expect(dependencies.success).toHaveBeenCalledWith('Séance enregistrée.')
+  })
+
+  it('does not send or endlessly retry a measurement beyond the supported telemetry limit', async () => {
+    const request = vi.fn().mockResolvedValueOnce(started())
+    vi.stubGlobal('fetch', request)
+    const view = sessionHook(); await begin(view)
+    view.phase.startTsRef.current = -90_000_000
+    vi.mocked(view.phase.snapshotPhaseDurations).mockReturnValue({ revelation: 90_000_000 })
+    await act(() => view.result.current.exitSession('interrupted', false))
+    await act(() => view.result.current.retrySave())
+    expect(request).toHaveBeenCalledOnce()
+    expect(view.result.current.saveError).toMatch(/24 h/)
+    expect(view.result.current.canRetry).toBe(false)
+    expect(dependencies.success).not.toHaveBeenCalled()
+    act(() => view.result.current.leaveWithoutSaving())
+    expect(dependencies.router.push).toHaveBeenCalledOnce()
   })
 })
 

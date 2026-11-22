@@ -6,25 +6,25 @@ import { z } from 'zod'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { completeExorcismeSession } from '@/lib/exorcisme'
-import { EXORCISME_MAX_TEXT_LENGTH } from '@/lib/exorcisme-utils'
+import { EXORCISME_MAX_ELAPSED_SEC, EXORCISME_MAX_TEXT_LENGTH } from '@/lib/exorcisme-utils'
 
 export const runtime = 'nodejs'
 export const maxDuration = 10
 
 const PhasesSchema = z
   .object({
-    invocation: z.number().nonnegative().max(60_000).optional(),
-    revelation: z.number().nonnegative().max(10 * 60_000).optional(),
-    destruction: z.number().nonnegative().max(10 * 60_000).optional(),
-    reprogrammation: z.number().nonnegative().max(60_000).optional(),
-    scellement: z.number().nonnegative().max(60_000).optional(),
+    invocation: z.number().nonnegative().max(EXORCISME_MAX_ELAPSED_SEC * 1000).optional(),
+    revelation: z.number().nonnegative().max(EXORCISME_MAX_ELAPSED_SEC * 1000).optional(),
+    destruction: z.number().nonnegative().max(EXORCISME_MAX_ELAPSED_SEC * 1000).optional(),
+    reprogrammation: z.number().nonnegative().max(EXORCISME_MAX_ELAPSED_SEC * 1000).optional(),
+    scellement: z.number().nonnegative().max(EXORCISME_MAX_ELAPSED_SEC * 1000).optional(),
   })
   .optional()
 
 const CompleteSchema = z.object({
   session_id: z.string().uuid(),
   outcome: z.enum(['completed', 'interrupted']),
-  duration_sec: z.number().min(0).max(60 * 15),
+  duration_sec: z.number().min(0).max(EXORCISME_MAX_ELAPSED_SEC),
   taps_destruction: z.number().int().min(0).max(99).optional(),
   phases_ms: PhasesSchema,
   sealed: z.boolean().optional(),

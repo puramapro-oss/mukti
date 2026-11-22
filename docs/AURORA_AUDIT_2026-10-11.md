@@ -100,3 +100,10 @@ La clôture serveur met à jour uniquement une séance encore ouverte et vérifi
 **BLOQUÉ local :** la suite complète et le typage étendu ont été tués en code 137 durant une pression mémoire partagée. Le lancement de Chromium est refusé par la restriction de socket avant l’ouverture de l’application. Ces essais ne sont pas des succès. La CI existante inclut désormais les neuf tests MediaPipe et les deux parcours du rituel (sortie pendant démarrage ; sauvegarde refusée puis reprise du même reçu).
 
 Déploiement de la branche de correction désactivé. Aucune migration ni mise en production. Détails des commandes et limites : `docs/evidence/mukti-session-lifecycle-2026-11-22.json`. Les tests JS de routes/stockage exécutent les vrais handlers avec leurs dépendances simulées ; le typage isolé couvre les composants clients et hooks, pas une qualification complète des dépendances privées serveur.
+
+
+### Relecture et correction des longues phases
+
+Une phase de saisie laissée ouverte plus de dix minutes révélait une incompatibilité entre la télémétrie cliente et les bornes serveur. Le temps réellement mesuré, attentes comprises, est désormais conservé jusqu’à 24 h ; les durées prévues du guidage restent inchangées. Une mesure au-delà de cette limite ou incohérente est arrêtée localement, expliquée et ne peut pas produire une boucle de reprises invalides. Les statistiques inaccessibles sont distinguées d’un historique vide et ne font pas échouer artificiellement une clôture dont le reçu est vérifié.
+
+**PASS :** 54 tests ciblés après cette relecture. La première CI de la PR a validé 647 tests, les 9 tests MediaPipe, le typage et l’audit npm ; 22 parcours navigateur sur 23 ont réussi. L’échec restant venait d’un sélecteur qui omettait les guillemets du texte rendu. Le contrôle porte désormais sur le contenu exact du blockquote et le scénario couvre une étape de saisie de 20 minutes. La nouvelle révision requiert sa propre CI ; les résultats précédents ne lui sont pas attribués automatiquement.

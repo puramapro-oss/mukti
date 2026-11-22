@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { safeVibrate } from '@/lib/accessibility'
-import { sanitizePossessionText } from '@/lib/exorcisme-utils'
+import { exorcismeCompletionTiming, sanitizePossessionText } from '@/lib/exorcisme-utils'
 import { wellbeingRequest } from '@/lib/wellbeing-request'
 import type { UseExorcismePhaseReturn } from './useExorcismePhase'
 
@@ -20,6 +20,7 @@ export interface UseExorcismeSessionReturn {
   closing: boolean
   saving: boolean
   saveError: string | null
+  canRetry: boolean
   retrySave: () => Promise<void>
   leaveWithoutSaving: () => void
 }
@@ -39,6 +40,7 @@ export function useExorcismeSession(
   const [closing, setClosing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [canRetry, setCanRetry] = useState(true)
   const sessionRef = useRef<SessionState | null>(null)
   const mounted = useRef(false)
   const leaving = useRef(false)
@@ -108,11 +110,19 @@ export function useExorcismeSession(
     setClosing(true)
     if (!currentSession) { leaveWithoutSaving(); return }
     const now = performance.now()
+    let timing
+    try {
+      timing = exorcismeCompletionTiming(now - startTsRef.current, snapshotPhaseDurations(now))
+    } catch (error) {
+      setCanRetry(false)
+      setSaveError(error instanceof Error ? error.message : 'La durée mesurée ne peut pas être enregistrée.')
+      return
+    }
     completionBody.current = JSON.stringify({
       session_id: currentSession.id, outcome,
-      duration_sec: Math.min(15 * 60, Math.max(0, Math.round((now - startTsRef.current) / 1000))),
+      ...timing,
       taps_destruction: tapsRef.current,
-      phases_ms: snapshotPhaseDurations(now), sealed,
+      sealed,
       ...(affirmationFrRef.current ? { affirmation_used: affirmationFrRef.current } : {}),
     })
     await retrySave()
@@ -154,5 +164,5 @@ export function useExorcismeSession(
   }, [goToPhase, possessionDraft])
 
   return { session, sessionRef, startError, possessionDraft, setPossessionDraft,
-    handleSubmitPossession, exitSession, starting, closing, saving, saveError, retrySave, leaveWithoutSaving }
+    handleSubmitPossession, exitSession, starting, closing, saving, saveError, canRetry, retrySave, leaveWithoutSaving }
 }

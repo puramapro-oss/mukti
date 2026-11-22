@@ -44,6 +44,7 @@ export default function ExorcismeFlow() {
     starting,
     saving,
     saveError,
+    canRetry,
     retrySave,
     leaveWithoutSaving,
   } = useExorcismeSession(phaseData, tapsRef, affirmationFrRef)
@@ -65,7 +66,7 @@ export default function ExorcismeFlow() {
     return Math.min(1, taps / EXORCISME_SHATTER_TAPS)
   }, [taps])
 
-  if (closing) return <ExorcismeCompletion saving={saving} error={saveError}
+  if (closing) return <ExorcismeCompletion saving={saving} error={saveError} canRetry={canRetry}
     onRetry={() => void retrySave()} onLeave={leaveWithoutSaving} />
 
   return (

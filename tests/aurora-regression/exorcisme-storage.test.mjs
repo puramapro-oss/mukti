@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 
 // The actual server helper runs against a scripted PostgREST boundary.
 // No provider, database or user account is contacted by these tests.
-const state = vi.hoisted(() => ({ reads: [], saved: null, error: null, queries: [], generated: vi.fn() }))
+const state = vi.hoisted(() => ({ reads: [], saved: null, error: null, statsError: null, queries: [], generated: vi.fn() }))
 vi.mock('../../src/lib/supabase-server', () => ({ createServerSupabaseClient: async () => ({
   auth: { getUser: async () => ({ data: { user: { id: 'actor' } } }) },
   schema: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'profile' } }) }) }) }) }),
@@ -16,13 +16,13 @@ vi.mock('../../src/lib/supabase', () => ({ createServiceClient: () => ({ schema:
     eq(key, value) { query.filters.push(['eq', key, value]); return builder },
     is(key, value) { query.filters.push(['is', key, value]); return builder },
     gte() { return builder }, order() { return builder },
-    limit: async () => ({ data: [] }),
+    limit: async () => ({ data: state.statsError ? null : [], error: state.statsError }),
     maybeSingle: async () => query.update ? { data: state.saved, error: state.error } : { data: state.reads.shift() },
   }
   return builder
 } }) }) }))
 vi.mock('../../src/lib/claude', () => ({ askClaudeJSON: state.generated }))
-import { completeExorcismeSession, generateReprogAffirmation } from '../../src/lib/exorcisme'
+import { completeExorcismeSession, computeExorcismeStats, generateReprogAffirmation } from '../../src/lib/exorcisme'
 
 const ID = '00000000-0000-4000-8000-000000000001'
 const input = { session_id: ID, outcome: 'completed', duration_sec: 12, taps_destruction: 4,
@@ -31,7 +31,7 @@ const open = () => ({ id: ID, completed_at: null, sensor_data: { possession_text
 const saved = (changes = {}) => ({ id: ID, completed_at: '2026-11-22T00:00:00Z', duration_sec: 12, outcome: 'completed',
   sensor_data: { taps_destruction: 4, phases_ms: input.phases_ms, sealed: true, affirmation_fr: input.affirmation_used }, ...changes })
 beforeEach(() => {
-  state.reads = [open()]; state.saved = saved(); state.error = null; state.queries = []
+  state.reads = [open()]; state.saved = saved(); state.error = null; state.statsError = null; state.queries = []
   state.generated.mockReset().mockResolvedValue({ fr: 'Je choisis une autre habitude.', en: 'I choose another habit today.' })
 })
 
@@ -82,4 +82,21 @@ it('never lets late generated guidance overwrite a completed session snapshot', 
   expect(result.error).toMatch(/non enregistrée/)
   const update = state.queries.find(query => query.update)
   expect(update.filters).toContainEqual(['is', 'completed_at', null])
+})
+
+it('does not turn unavailable statistics into fabricated zero counts', async () => {
+  state.statsError = { message: 'synthetic read failure' }
+  await expect(computeExorcismeStats('profile')).rejects.toThrow(/indisponibles/)
+})
+
+it('keeps a verified saved receipt separate from a failed statistics read', async () => {
+  state.statsError = { message: 'synthetic read failure' }
+  expect(await completeExorcismeSession(input)).toEqual({ ok: true, stats: null, stats_unavailable: true })
+})
+
+it('uses fallback guidance for malformed model JSON without throwing a type error', async () => {
+  state.generated.mockResolvedValue({ fr: { nested: 'invalid' }, en: [] })
+  const result = await generateReprogAffirmation({ session_id: ID, possession_text: 'une habitude' })
+  expect(result.source).toBe('fallback')
+  expect(typeof result.affirmation_fr).toBe('string')
 })

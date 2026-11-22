@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from './supabase-server'
 import { createServiceClient } from './supabase'
 import { askClaudeJSON } from './claude'
 import {
+  EXORCISME_MAX_ELAPSED_SEC,
   EXORCISME_MAX_TEXT_LENGTH,
   pickFallbackAffirmation,
   sanitizePossessionText,
@@ -202,9 +203,9 @@ export async function completeExorcismeSession(input: {
   phases_ms?: Partial<Record<ExorcismePhaseName, number>>
   sealed?: boolean
   affirmation_used?: string
-}): Promise<{ ok: true; stats: ExorcismeStats } | { error: string }> {
+}): Promise<{ ok: true; stats: ExorcismeStats | null; stats_unavailable?: true } | { error: string }> {
   if (!input.session_id) return { error: 'Séance invalide.' }
-  if (input.duration_sec < 0 || input.duration_sec > 60 * 15) {
+  if (!Number.isFinite(input.duration_sec) || input.duration_sec < 0 || input.duration_sec > EXORCISME_MAX_ELAPSED_SEC) {
     return { error: 'Durée incohérente.' }
   }
 
@@ -231,8 +232,8 @@ export async function completeExorcismeSession(input: {
   const row = existing as ExorcismeCompletionRow
   if (row.completed_at) {
     if (!confirmsCompletion(row, input)) return { error: 'Séance déjà enregistrée avec un autre résultat.' }
-    const stats = await computeExorcismeStats(profileId)
-    return { ok: true, stats }
+    const stats = await computeExorcismeStats(profileId).catch(() => null)
+    return { ok: true, stats, ...(stats === null ? { stats_unavailable: true as const } : {}) }
   }
 
   const mergedSensor: ExorcismeSensorData = {
@@ -272,8 +273,8 @@ export async function completeExorcismeSession(input: {
   if (!receipt?.completed_at) return { error: 'Enregistrement non confirmé.' }
   if (!confirmsCompletion(receipt, input)) return { error: 'Séance déjà enregistrée avec un autre résultat.' }
 
-  const stats = await computeExorcismeStats(profileId)
-  return { ok: true, stats }
+  const stats = await computeExorcismeStats(profileId).catch(() => null)
+  return { ok: true, stats, ...(stats === null ? { stats_unavailable: true as const } : {}) }
 }
 
 interface ExorcismeCompletionRow {
@@ -302,7 +303,7 @@ export async function computeExorcismeStats(profileId: string): Promise<Exorcism
   const service = createServiceClient()
   const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data } = await service
+  const { data, error } = await service
     .schema('mukti')
     .from('mode_sessions')
     .select('id, started_at, completed_at, duration_sec, outcome, sensor_data')
@@ -312,7 +313,9 @@ export async function computeExorcismeStats(profileId: string): Promise<Exorcism
     .order('started_at', { ascending: false })
     .limit(200)
 
-  const rows = (data ?? []) as Array<{
+  if (error || !Array.isArray(data)) throw new Error('Statistiques temporairement indisponibles.')
+
+  const rows = data as Array<{
     id: string
     started_at: string
     completed_at: string | null

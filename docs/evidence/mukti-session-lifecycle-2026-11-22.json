@@ -50,5 +50,40 @@
     "No production provider, database, camera, GPU or physical device was contacted.",
     "Server regression boundary is scripted PostgREST, not native PostgreSQL.",
     "No deployment; branch deployment explicitly disabled."
-  ]
+  ],
+  "review_followup": {
+    "findings": [
+      "Long user-paced phases produced an invalid completion that retry repeated unchanged.",
+      "Statistics failures were returned as empty history."
+    ],
+    "changes": [
+      "Measure actual elapsed time, including waiting, consistently up to 24 hours. Reject invalid measurements locally with an explicit exit and no retry loop.",
+      "Keep unavailable statistics explicit and separate them from a verified save receipt.",
+      "Match the actual quotation marks in the browser assertion; extend the complete-flow scenario to a 20-minute text phase."
+    ],
+    "targeted_tests": {
+      "status": "PASS",
+      "tests": 54,
+      "files": 5,
+      "exit": 0
+    },
+    "previous_candidate_ci": {
+      "head": "8fd3add1c41085448ed1c5bfbb17ade77d6b4444",
+      "merge_commit": "dfbf1c012fa44c744819eee1767c17a2d046c54e",
+      "run": 44964772496,
+      "status": "FAIL",
+      "unit_tests_passed": 647,
+      "model_tests_passed": 9,
+      "typecheck": "PASS",
+      "npm_audit": "PASS",
+      "browser_passed": 22,
+      "browser_failed": 1,
+      "failure": "The assertion omitted the literal quotation marks surrounding the rendered guidance."
+    },
+    "typecheck_local_followup": {
+      "status": "BLOCKED",
+      "exit": 137,
+      "reason": "Shared memory pressure; previous candidate typecheck passed locally and in CI. New head still needs its own CI."
+    }
+  }
 }

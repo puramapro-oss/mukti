@@ -20,3 +20,11 @@ it('exposes an unconfirmed save and lets the person retry the existing payload',
   expect(retry).toHaveBeenCalledOnce()
   expect(leave).not.toHaveBeenCalled()
 })
+
+it('offers an exit but no impossible retry for an invalid elapsed measurement', () => {
+  const leave = vi.fn()
+  render(<ExorcismeCompletion saving={false} canRetry={false} error="Durée invalide." onLeave={leave} onRetry={vi.fn()} />)
+  expect(screen.queryByRole('button', { name: 'Réessayer l’enregistrement' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Quitter sans confirmation' }))
+  expect(leave).toHaveBeenCalledOnce()
+})

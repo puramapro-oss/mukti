@@ -65,6 +65,23 @@ export const EXORCISME_MAX_TEXT_LENGTH = 80
 /** Nombre de tapes requis pour briser le texte durant Destruction. */
 export const EXORCISME_SHATTER_TAPS = 4
 
+/** Elapsed telemetry may include a user-paced pause or a suspended tab. */
+export const EXORCISME_MAX_ELAPSED_SEC = 24 * 60 * 60
+
+export function exorcismeCompletionTiming(
+  elapsedMs: number,
+  phasesMs: Partial<Record<ExorcismePhaseName, number>>,
+): { duration_sec: number; phases_ms: Partial<Record<ExorcismePhaseName, number>> } {
+  const maxMs = EXORCISME_MAX_ELAPSED_SEC * 1000
+  const values = Object.values(phasesMs)
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0 || elapsedMs > maxMs
+    || values.some(value => !Number.isFinite(value) || value < 0 || value > maxMs)
+    || Math.abs(values.reduce((sum, value) => sum + value, 0) - elapsedMs) > 1_000) {
+    throw new Error('La durée mesurée ne peut pas être enregistrée (limite de 24 h). La séance est arrêtée sur cet appareil.')
+  }
+  return { duration_sec: Math.round(elapsedMs / 1000), phases_ms: { ...phasesMs } }
+}
+
 /** Affirmations fallback FR — utilisées si Haiku indisponible. Tutoiement, non religieux. */
 export const EXORCISME_FALLBACK_AFFIRMATIONS_FR: readonly string[] = [
   'Ce qui me possédait n\'a plus de prise. Je choisis ce qui me nourrit.',
